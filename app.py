@@ -1,6 +1,6 @@
 import os
 import sys
-from flask import Flask, jsonify, render_template, send_from_directory
+from flask import Flask, jsonify, render_template, send_from_directory, send_file
 from dbfread import DBF
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
@@ -15,6 +15,9 @@ _db_mtimes = {}
 def get_latest_dbf_dir():
     """Finds the newest spv*.wdb directory inside SEARCH_DIR containing the DBF folder."""
     if not os.path.exists(SEARCH_DIR):
+        local_dbf = os.path.join(os.path.dirname(__file__), "dbf_data")
+        if os.path.isdir(local_dbf):
+            return local_dbf
         return None
     
     candidates = []
@@ -23,13 +26,11 @@ def get_latest_dbf_dir():
         if os.path.isdir(path) and name.lower().startswith("spv") and name.lower().endswith(".wdb"):
             dbf_path = os.path.join(path, "SPV2000", "SPV2000", "DBF")
             if os.path.isdir(dbf_path):
-                # Use folder modification time or folder name sorting
                 candidates.append((path, dbf_path))
                 
     if not candidates:
         return None
     
-    # Sort by directory name (which contains timestamp e.g. spv1150810_121516.wdb)
     candidates.sort(key=lambda x: os.path.basename(x[0]), reverse=True)
     return candidates[0][1]
 
@@ -631,8 +632,12 @@ def api_debug_class():
 def api_check_file_time():
     try:
         excel_path = r"D:\土城高中\School_Schedule_Solved.xlsx"
+        if not os.path.exists(excel_path) or not os.path.exists(r"D:\土城高中"):
+            excel_path = os.path.join(os.path.dirname(__file__), "School_Schedule_Solved.xlsx")
+            
         if not os.path.exists(excel_path):
             return jsonify({"status": "error", "message": "Solved file not found"})
+            
         import time
         mtime = os.path.getmtime(excel_path)
         mtime_str = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(mtime))
@@ -641,6 +646,20 @@ def api_check_file_time():
             "current_time": time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())),
             "size": os.path.getsize(excel_path)
         })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/download-solved")
+def api_download_solved():
+    try:
+        excel_path = r"D:\土城高中\School_Schedule_Solved.xlsx"
+        if not os.path.exists(excel_path) or not os.path.exists(r"D:\土城高中"):
+            excel_path = os.path.join(os.path.dirname(__file__), "School_Schedule_Solved.xlsx")
+            
+        if not os.path.exists(excel_path):
+            return jsonify({"status": "error", "message": "Solved schedule file not found. Please run the solver first."}), 404
+            
+        return send_file(excel_path, as_attachment=True, download_name="School_Schedule_Solved.xlsx")
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 

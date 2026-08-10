@@ -459,6 +459,7 @@ function setupSolverPanel() {
     const closeSolverBtn = document.getElementById('closeSolverBtn');
     const runSolverBtn = document.getElementById('runSolverBtn');
     const validateSolverBtn = document.getElementById('validateSolverBtn');
+    const downloadSolvedBtn = document.getElementById('downloadSolvedBtn');
     const solverConsole = document.getElementById('solverConsole');
     const clearConsoleBtn = document.getElementById('clearConsoleBtn');
 
@@ -490,6 +491,10 @@ function setupSolverPanel() {
         // Disable buttons
         runSolverBtn.disabled = true;
         validateSolverBtn.disabled = true;
+        if (downloadSolvedBtn) {
+            downloadSolvedBtn.style.pointerEvents = 'none';
+            downloadSolvedBtn.style.opacity = '0.5';
+        }
         
         // Setup console loading state
         solverConsole.innerHTML = `
@@ -534,6 +539,10 @@ function setupSolverPanel() {
         } finally {
             runSolverBtn.disabled = false;
             validateSolverBtn.disabled = false;
+            if (downloadSolvedBtn) {
+                downloadSolvedBtn.style.pointerEvents = 'auto';
+                downloadSolvedBtn.style.opacity = '1';
+            }
             solverConsole.scrollTop = solverConsole.scrollHeight;
         }
     });
@@ -542,6 +551,10 @@ function setupSolverPanel() {
     validateSolverBtn.addEventListener('click', async () => {
         runSolverBtn.disabled = true;
         validateSolverBtn.disabled = true;
+        if (downloadSolvedBtn) {
+            downloadSolvedBtn.style.pointerEvents = 'none';
+            downloadSolvedBtn.style.opacity = '0.5';
+        }
 
         solverConsole.innerHTML = `
             <p class="system-msg"><i class="fa-solid fa-circle-notch console-spinner"></i> 正在執行高精準度衝堂衝突雙向驗證...</p>
@@ -586,6 +599,10 @@ function setupSolverPanel() {
         } finally {
             runSolverBtn.disabled = false;
             validateSolverBtn.disabled = false;
+            if (downloadSolvedBtn) {
+                downloadSolvedBtn.style.pointerEvents = 'auto';
+                downloadSolvedBtn.style.opacity = '1';
+            }
             solverConsole.scrollTop = solverConsole.scrollHeight;
         }
     });

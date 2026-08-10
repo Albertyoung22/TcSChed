@@ -9,6 +9,9 @@ sys.stdout.reconfigure(encoding='utf-8')
 def find_latest_dbf_dir():
     search_dir = r"D:\土城高中"
     if not os.path.exists(search_dir):
+        local_dbf = os.path.join(os.path.dirname(__file__), "dbf_data")
+        if os.path.isdir(local_dbf):
+            return local_dbf
         return None
     candidates = []
     for name in os.listdir(search_dir):
@@ -471,6 +474,9 @@ def run_solver():
             
         # Write to Excel
         output_path = r"D:\土城高中\School_Schedule_Solved.xlsx"
+        if not os.path.exists(r"D:\土城高中"):
+            output_path = os.path.join(os.path.dirname(__file__), "School_Schedule_Solved.xlsx")
+            
         df_out = pd.DataFrame(solved_records)
         df_out.to_excel(output_path, index=False)
         log(f"Successfully wrote solved schedule to: {output_path}")
