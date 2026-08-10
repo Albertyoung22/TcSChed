@@ -693,6 +693,47 @@ body {
     }
 }
 
+/* Manual Edit Mode Cells Styles */
+.schedule-table.edit-mode td.interactive-slot {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.schedule-table.edit-mode td.interactive-slot:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.schedule-table td.slot-feasible {
+    background: rgba(16, 185, 129, 0.2) !important;
+    border: 1px solid rgba(16, 185, 129, 0.5) !important;
+    box-shadow: inset 0 0 15px rgba(16, 185, 129, 0.2) !important;
+}
+
+.schedule-table td.slot-soft-conflict {
+    background: rgba(245, 158, 11, 0.2) !important;
+    border: 1px solid rgba(245, 158, 11, 0.5) !important;
+    box-shadow: inset 0 0 15px rgba(245, 158, 11, 0.2) !important;
+}
+
+.schedule-table td.slot-forbidden {
+    background: rgba(239, 68, 68, 0.1) !important;
+    border: 1px solid rgba(239, 68, 68, 0.3) !important;
+    cursor: not-allowed !important;
+    opacity: 0.6;
+}
+
+.schedule-table td.slot-current {
+    background: rgba(59, 130, 246, 0.2) !important;
+    border: 1px solid rgba(59, 130, 246, 0.5) !important;
+    box-shadow: inset 0 0 15px rgba(59, 130, 246, 0.2) !important;
+}
+
+.schedule-cell.source-selected {
+    border: 2px solid #06b6d4 !important;
+    box-shadow: 0 0 10px rgba(6, 182, 212, 0.5);
+    transform: scale(1.02);
+}
+
 /* Header Actions Layout */
 .header-actions {
     display: flex;

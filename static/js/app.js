@@ -5,6 +5,8 @@ let metadata = {
     classrooms: [],
     period_times: {}
 };
+let isManualEditMode = false;
+let selectedSourceItem = null;
 
 // DOM Elements
 const searchInput = document.getElementById('searchInput');
@@ -90,6 +92,30 @@ function setupEventListeners() {
             searchDropdown.style.display = 'none';
         }
     });
+
+    // Manual Edit Button
+    const manualEditToggleBtn = document.getElementById('manualEditToggleBtn');
+    if (manualEditToggleBtn) {
+        manualEditToggleBtn.addEventListener('click', () => {
+            isManualEditMode = !isManualEditMode;
+            if (isManualEditMode) {
+                manualEditToggleBtn.innerHTML = '<i class="fa-solid fa-xmark"></i> 退出手調';
+                manualEditToggleBtn.style.background = 'rgba(239, 68, 68, 0.15)';
+                manualEditToggleBtn.style.borderColor = 'rgba(239, 68, 68, 0.4)';
+                manualEditToggleBtn.style.color = '#ef4444';
+                showToast("已開啟手排微調模式。點擊課表內的課程以進行調整。");
+                document.getElementById('scheduleTable').classList.add('edit-mode');
+            } else {
+                manualEditToggleBtn.innerHTML = '<i class="fa-solid fa-screwdriver-wrench"></i> 手手調課';
+                manualEditToggleBtn.style.background = 'rgba(6, 182, 212, 0.15)';
+                manualEditToggleBtn.style.borderColor = 'rgba(6, 182, 212, 0.3)';
+                manualEditToggleBtn.style.color = '#06b6d4';
+                document.getElementById('scheduleTable').classList.remove('edit-mode');
+                resetManualEditState();
+                handleHashChange();
+            }
+        });
+    }
 }
 
 // Fetch Metadata (Classes, Teachers, Rooms)
@@ -367,6 +393,19 @@ function renderScheduleGrid(type, code, slots) {
             const cell = document.createElement('td');
             const lessons = grid[p-1][d-1];
             
+            cell.classList.add('interactive-slot');
+            cell.dataset.day = d;
+            cell.dataset.period = p;
+            
+            cell.addEventListener('click', (e) => {
+                if (!isManualEditMode || !selectedSourceItem) return;
+                if (e.target.closest('.lesson-block')) return;
+                
+                if (cell.classList.contains('slot-feasible') || cell.classList.contains('slot-soft-conflict')) {
+                    executeSwap(selectedSourceItem.id, d, p, null);
+                }
+            });
+            
             if (lessons.length === 0) {
                 cell.innerHTML = '<div class="schedule-cell"></div>';
             } else {
@@ -381,6 +420,32 @@ function renderScheduleGrid(type, code, slots) {
                     lessonDiv.style.flexDirection = 'column';
                     lessonDiv.style.alignItems = 'center';
                     lessonDiv.style.gap = '2px';
+                    
+                    lessonDiv.className = 'lesson-block';
+                    lessonDiv.dataset.id = lesson.id;
+                    
+                    lessonDiv.addEventListener('click', (e) => {
+                        if (!isManualEditMode) return;
+                        e.preventDefault();
+                        e.stopPropagation();
+                        
+                        if (selectedSourceItem && selectedSourceItem.id === lesson.id) {
+                            resetManualEditState();
+                            return;
+                        }
+                        
+                        if (selectedSourceItem && (cell.classList.contains('slot-feasible') || cell.classList.contains('slot-soft-conflict'))) {
+                            executeSwap(selectedSourceItem.id, d, p, lesson.id);
+                            return;
+                        }
+                        
+                        // Select as source
+                        resetManualEditState();
+                        selectedSourceItem = lesson;
+                        cellContainer.classList.add('source-selected');
+                        highlightSlots(lesson.id);
+                    });
+                    
                     if (index > 0) {
                         lessonDiv.style.borderTop = '1px dashed rgba(255,255,255,0.1)';
                         lessonDiv.style.paddingTop = '6px';
@@ -606,4 +671,97 @@ function setupSolverPanel() {
             solverConsole.scrollTop = solverConsole.scrollHeight;
         }
     });
+}
+
+function resetManualEditState() {
+    selectedSourceItem = null;
+    const cells = document.querySelectorAll('#scheduleTable td');
+    cells.forEach(c => {
+        c.classList.remove('slot-feasible', 'slot-soft-conflict', 'slot-forbidden', 'slot-current');
+    });
+    const divs = document.querySelectorAll('.schedule-cell');
+    divs.forEach(d => d.classList.remove('source-selected'));
+}
+
+async function highlightSlots(itemId) {
+    try {
+        const response = await fetch(`/api/check-swap-slots/${itemId}`);
+        const data = await response.json();
+        
+        if (data.status === 'error') {
+            showToast(data.message);
+            return;
+        }
+        
+        const slots = data.slots;
+        for (const slotKey in slots) {
+            const parts = slotKey.split('-');
+            const d = parts[0];
+            const p = parts[1];
+            
+            const cell = document.querySelector(`#scheduleTable td[data-day="${d}"][data-period="${p}"]`);
+            if (cell) {
+                cell.classList.remove('slot-feasible', 'slot-soft-conflict', 'slot-forbidden', 'slot-current');
+                const status = slots[slotKey].status;
+                if (status === 'feasible') {
+                    cell.classList.add('slot-feasible');
+                } else if (status === 'soft_conflict') {
+                    cell.classList.add('slot-soft-conflict');
+                } else if (status === 'forbidden') {
+                    cell.classList.add('slot-forbidden');
+                } else if (status === 'current') {
+                    cell.classList.add('slot-current');
+                }
+                
+                cell.title = slots[slotKey].message;
+            }
+        }
+    } catch (e) {
+        console.error("Highlight slots failed:", e);
+    }
+}
+
+async function executeSwap(sourceId, targetDay, targetPeriod, targetId) {
+    let confirmMsg = "您確定要將此課程調整至該時段嗎？";
+    if (targetId !== null) {
+        confirmMsg = "目標時段已排課，您確定要將兩門課程對調嗎？";
+    }
+    
+    if (!confirm(confirmMsg)) return;
+    
+    try {
+        const response = await fetch('/api/execute-swap', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                source_id: sourceId,
+                target_day: targetDay,
+                target_period: targetPeriod,
+                target_id: targetId
+            })
+        });
+        
+        const res = await response.json();
+        if (res.status === 'success') {
+            isManualEditMode = false;
+            const btn = document.getElementById('manualEditToggleBtn');
+            if (btn) {
+                btn.innerHTML = '<i class="fa-solid fa-screwdriver-wrench"></i> 手手調課';
+                btn.style.background = 'rgba(6, 182, 212, 0.15)';
+                btn.style.borderColor = 'rgba(6, 182, 212, 0.3)';
+                btn.style.color = '#06b6d4';
+            }
+            document.getElementById('scheduleTable').classList.remove('edit-mode');
+            resetManualEditState();
+            showToast(res.message);
+            handleHashChange();
+        } else {
+            showToast("調整失敗：" + res.message);
+        }
+    } catch (e) {
+        console.error("Execute swap failed:", e);
+        showToast("伺服器連線異常，調課失敗。");
+    }
 }

@@ -1,6 +1,6 @@
 import os
 import sys
-from flask import Flask, jsonify, render_template, send_from_directory, send_file
+from flask import Flask, jsonify, render_template, send_from_directory, send_file, request
 from dbfread import DBF
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
@@ -113,43 +113,106 @@ def load_schedule_data():
                 })
         teachers.sort(key=lambda x: x["name"])
 
-        # 4. Parse claspv.dbf (schedules)
-        db_claspv = DBF(resolved_paths["claspv"], ignore_missing_memofile=True)
+        # 4. Load schedules (either from solved Excel or from claspv.dbf fallback)
+        solved_excel = r"D:\土城高中\School_Schedule_Solved.xlsx"
+        if not os.path.exists(solved_excel) or not os.path.exists(r"D:\土城高中"):
+            solved_excel = os.path.join(os.path.dirname(__file__), "School_Schedule_Solved.xlsx")
+            
         schedules = []
         classrooms = {}
         
-        for r in db_claspv:
-            class_code = r.get("班級", "").strip()
-            class_name = r.get("班級名稱", "").strip()
-            subject_code = r.get("科目", "").strip()
-            subject_name = r.get("科目名稱", "").strip()
-            teacher_code = r.get("教師", "").strip()
-            teacher_name = r.get("教師名稱", "").strip()
-            room_code = r.get("教室", "").strip()
-            room_name = r.get("教室名稱", "").strip()
-            day = r.get("星期", "").strip()
-            period = r.get("節次", "").strip()
-            week_mode = r.get("週別設定", 0)
-            ud = r.get("上下修", 0)
-            
-            if room_code and room_name:
-                classrooms[room_code] = room_name
+        if os.path.exists(solved_excel):
+            import pandas as pd
+            df = pd.read_excel(solved_excel)
+            df = df.fillna("")
+            for idx, r in df.iterrows():
+                class_code = str(r.get("班級代碼", "")).strip().split(".")[0]
+                class_name = str(r.get("班級名稱", "")).strip()
+                subject_code = str(r.get("科目代碼", "")).strip().split(".")[0]
+                subject_name = str(r.get("科目名稱", "")).strip()
                 
-            schedules.append({
-                "class_code": class_code,
-                "class_name": class_name,
-                "subject_code": subject_code,
-                "subject_name": subject_name,
-                "teacher_code": teacher_code,
-                "teacher_name": teacher_name,
-                "room_code": room_code,
-                "room_name": room_name,
-                "day": day,
-                "period": period,
-                "week_mode": week_mode,
-                "ud": ud
-            })
-            
+                teacher_code = str(r.get("教師代碼", "")).strip().split(".")[0]
+                if teacher_code.replace(".0", "") == "nan" or teacher_code.lower() == "nan":
+                    teacher_code = ""
+                teacher_name = str(r.get("教師姓名", "")).strip()
+                if teacher_name.lower() == "nan":
+                    teacher_name = ""
+                    
+                room_name = str(r.get("教室名稱", "")).strip()
+                if room_name.lower() == "nan":
+                    room_name = ""
+                room_code = room_name
+                
+                day = str(r.get("星期", "")).strip().split(".")[0]
+                period = str(r.get("節次", "")).strip().split(".")[0]
+                
+                try:
+                    week_mode = int(float(r.get("週別設定", 0)))
+                except:
+                    week_mode = 0
+                    
+                try:
+                    ud = int(float(r.get("上下修", 0)))
+                except:
+                    ud = 0
+                    
+                if room_code and room_name:
+                    classrooms[room_code] = room_name
+                    
+                schedules.append({
+                    "id": int(idx),
+                    "class_code": class_code,
+                    "class_name": class_name,
+                    "subject_code": subject_code,
+                    "subject_name": subject_name,
+                    "teacher_code": teacher_code,
+                    "teacher_name": teacher_name,
+                    "room_code": room_code,
+                    "room_name": room_name,
+                    "day": day,
+                    "period": period,
+                    "week_mode": week_mode,
+                    "ud": ud
+                })
+        else:
+            db_claspv = DBF(resolved_paths["claspv"], ignore_missing_memofile=True)
+            for idx, r in enumerate(db_claspv):
+                class_code = r.get("班級", "").strip()
+                class_name = r.get("班級名稱", "").strip()
+                subject_code = r.get("科目", "").strip()
+                subject_name = r.get("科目名稱", "").strip()
+                teacher_code = r.get("教師", "").strip()
+                teacher_name = r.get("教師名稱", "").strip()
+                room_code = r.get("教室", "").strip()
+                room_name = r.get("教室名稱", "").strip()
+                day = r.get("星期", "").strip()
+                period = r.get("節次", "").strip()
+                
+                wm_val = r.get("週別設定")
+                week_mode = int(wm_val) if wm_val is not None else 0
+                
+                ud_val = r.get("上下修")
+                ud = int(ud_val) if ud_val is not None else 0
+                
+                if room_code and room_name:
+                    classrooms[room_code] = room_name
+                    
+                schedules.append({
+                    "id": idx,
+                    "class_code": class_code,
+                    "class_name": class_name,
+                    "subject_code": subject_code,
+                    "subject_name": subject_name,
+                    "teacher_code": teacher_code,
+                    "teacher_name": teacher_name,
+                    "room_code": room_code,
+                    "room_name": room_name,
+                    "day": day,
+                    "period": period,
+                    "week_mode": week_mode,
+                    "ud": ud
+                })
+                
         classroom_list = [{"code": k, "name": v} for k, v in sorted(classrooms.items())]
         
         _cached_data = {
@@ -660,6 +723,187 @@ def api_download_solved():
             
         return send_file(excel_path, as_attachment=True, download_name="School_Schedule_Solved.xlsx")
     except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/check-swap-slots/<int:item_id>")
+def api_check_swap_slots(item_id):
+    try:
+        data = load_schedule_data()
+        if "error" in data:
+            return jsonify(data), 500
+            
+        schedules = data["schedules"]
+        item = None
+        for s in schedules:
+            if s["id"] == item_id:
+                item = s
+                break
+                
+        if not item:
+            return jsonify({"status": "error", "message": "Course item not found"}), 404
+            
+        dbf_dir = get_latest_dbf_dir()
+        db_no_teach = list(DBF(os.path.join(dbf_dir, "no_teach.dbf"), ignore_missing_memofile=True))
+        db_no_sub = list(DBF(os.path.join(dbf_dir, "no_sub.dbf"), ignore_missing_memofile=True))
+        
+        teacher_blocked = set()
+        t_code = item["teacher_code"]
+        if t_code:
+            for rule in db_no_teach:
+                if rule.get("TEACHER_NO", "").strip() == t_code:
+                    sd = rule.get("START_DAY", 1)
+                    ed = rule.get("END_DAY", 1)
+                    ss = rule.get("START_SEC", 1)
+                    es = rule.get("END_SEC", 1)
+                    for d in range(sd, ed + 1):
+                        for p in range(ss, es + 1):
+                            teacher_blocked.add((d, p))
+                            
+        class_sub_blocked = set()
+        c_code = item["class_code"]
+        s_code = item["subject_code"]
+        if c_code and s_code:
+            for rule in db_no_sub:
+                if rule.get("CLASS_NO", "").strip() == c_code and rule.get("SUBJECT_NO", "").strip() == s_code:
+                    sd = rule.get("START_DAY", 1)
+                    ed = rule.get("END_DAY", 1)
+                    ss = rule.get("START_SEC", 1)
+                    es = rule.get("END_SEC", 1)
+                    for d in range(sd, ed + 1):
+                        for p in range(ss, es + 1):
+                            class_sub_blocked.add((d, p))
+                            
+        slots_status = {}
+        for d in range(1, 6):
+            for p in range(1, 9):
+                slot_key = f"{d}-{p}"
+                
+                if item["day"] == str(d) and item["period"] == str(p):
+                    slots_status[slot_key] = {"status": "current", "message": "目前時段"}
+                    continue
+                    
+                t_conflicts = []
+                if t_code:
+                    for s in schedules:
+                        if s["id"] != item_id and s["teacher_code"] == t_code and s["day"] == str(d) and s["period"] == str(p):
+                            t_conflicts.append(s)
+                            
+                c_conflicts = []
+                if c_code:
+                    for s in schedules:
+                        if s["id"] != item_id and s["class_code"] == c_code and s["day"] == str(d) and s["period"] == str(p):
+                            c_conflicts.append(s)
+                            
+                if t_conflicts or c_conflicts:
+                    reasons = []
+                    for s in t_conflicts:
+                        reasons.append(f"教師衝堂：與 {s['class_name']} 班 {s['subject_name']} 衝堂")
+                    for s in c_conflicts:
+                        reasons.append(f"班級衝堂：與 {s['subject_name']} ({s['teacher_name']}) 衝堂")
+                    slots_status[slot_key] = {
+                        "status": "forbidden",
+                        "message": " / ".join(reasons)
+                    }
+                elif (d, p) in teacher_blocked:
+                    slots_status[slot_key] = {
+                        "status": "soft_conflict",
+                        "message": "教師不排課時段"
+                    }
+                elif (d, p) in class_sub_blocked:
+                    slots_status[slot_key] = {
+                        "status": "soft_conflict",
+                        "message": "科目禁止排課時段"
+                    }
+                else:
+                    slots_status[slot_key] = {
+                        "status": "feasible",
+                        "message": "完全可行"
+                    }
+                    
+        return jsonify({
+            "item": item,
+            "slots": slots_status
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/execute-swap", methods=["POST"])
+def api_execute_swap():
+    try:
+        req_data = request.get_json()
+        source_id = int(req_data.get("source_id"))
+        target_day = req_data.get("target_day")
+        target_period = req_data.get("target_period")
+        target_id = req_data.get("target_id")
+        if target_id is not None:
+            target_id = int(target_id)
+            
+        solved_excel = r"D:\土城高中\School_Schedule_Solved.xlsx"
+        if not os.path.exists(solved_excel) or not os.path.exists(r"D:\土城高中"):
+            solved_excel = os.path.join(os.path.dirname(__file__), "School_Schedule_Solved.xlsx")
+            
+        if not os.path.exists(solved_excel):
+            data = load_schedule_data()
+            if "error" in data:
+                return jsonify(data), 500
+            import pandas as pd
+            records = []
+            for s in data["schedules"]:
+                records.append({
+                    "班級代碼": s["class_code"],
+                    "科目代碼": s["subject_code"],
+                    "教師代碼": s["teacher_code"],
+                    "班級名稱": s["class_name"],
+                    "科目名稱": s["subject_name"],
+                    "教師姓名": s["teacher_name"],
+                    "教室名稱": s["room_name"],
+                    "時間代碼": f"{s['day']}{s['period']}{s['week_mode']}{s['ud']}",
+                    "星期": int(s["day"]),
+                    "節次": int(s["period"]),
+                    "週別設定": s["week_mode"],
+                    "說明": ""
+                })
+            df = pd.DataFrame(records)
+            df.to_excel(solved_excel, index=False)
+            
+        import pandas as pd
+        df = pd.read_excel(solved_excel)
+        df = df.fillna("")
+        
+        if source_id < 0 or source_id >= len(df):
+            return jsonify({"status": "error", "message": "Source item index out of bounds"}), 400
+            
+        if target_id is not None:
+            if target_id < 0 or target_id >= len(df):
+                return jsonify({"status": "error", "message": "Target item index out of bounds"}), 400
+                
+            day_a = df.loc[source_id, "星期"]
+            period_a = df.loc[source_id, "節次"]
+            
+            df.loc[source_id, "星期"] = df.loc[target_id, "星期"]
+            df.loc[source_id, "節次"] = df.loc[target_id, "節次"]
+            df.loc[source_id, "時間代碼"] = f"{df.loc[target_id, '星期']}{df.loc[target_id, '節次']}{df.loc[source_id, '週別設定']}0"
+            df.loc[source_id, "說明"] = "手排課 (鎖定)"
+            
+            df.loc[target_id, "星期"] = day_a
+            df.loc[target_id, "節次"] = period_a
+            df.loc[target_id, "時間代碼"] = f"{day_a}{period_a}{df.loc[target_id, '週別設定']}0"
+            df.loc[target_id, "說明"] = "手排課 (鎖定)"
+        else:
+            df.loc[source_id, "星期"] = int(target_day)
+            df.loc[source_id, "節次"] = int(target_period)
+            df.loc[source_id, "時間代碼"] = f"{target_day}{target_period}{df.loc[source_id, '週別設定']}0"
+            df.loc[source_id, "說明"] = "手排課 (鎖定)"
+            
+        df.to_excel(solved_excel, index=False)
+        
+        global _cached_data
+        _cached_data = None
+        
+        return jsonify({"status": "success", "message": "課表調整完成並已自動鎖定保護！"})
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
         return jsonify({"status": "error", "message": str(e)}), 500
 
 if __name__ == "__main__":
