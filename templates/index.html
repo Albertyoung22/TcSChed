@@ -121,13 +121,17 @@
                 </div>
             </div>
 
-            <!-- Print Header (Hidden on screen) -->
+            <!-- Print Header (Hidden on screen, visible only when printing) -->
             <div class="print-header only-print">
-                <h1>台南市立土城高中 114 學年度第一學期 課表</h1>
-                <div class="print-meta">
-                    <span id="printScheduleTitle">班級課表</span>
-                    <span id="printTutorInfo"></span>
-                    <span class="print-date">列印日期：<span id="printDateSpan"></span></span>
+                <div class="print-school-title">臺南市立土城高級中學 114 學年度第一學期 正式課表</div>
+                <div class="print-meta-bar">
+                    <div class="meta-left">
+                        <span id="printScheduleTitle" class="print-target-name">課表</span>
+                        <span id="printTutorInfo" class="print-tutor"></span>
+                    </div>
+                    <div class="meta-right">
+                        <span>教務處核定版</span> | <span>列印日期：<span id="printDateSpan"></span></span>
+                    </div>
                 </div>
             </div>
 
@@ -148,6 +152,18 @@
                         <!-- Table rows generated dynamically by app.js -->
                     </tbody>
                 </table>
+            </div>
+
+            <!-- Print Footer Signatures & Notices (Hidden on screen, visible only when printing) -->
+            <div class="print-footer only-print">
+                <div class="print-notice">
+                    ※ 備註：1. 請依排定時段與教室上課，如有調派課需求請至教務處辦理登記。 2. 班級課表請張貼於教室公告欄備查。
+                </div>
+                <div class="print-signature-box">
+                    <div class="sig-item">班導師 / 教師簽章：_______________</div>
+                    <div class="sig-item">教學组長：_______________</div>
+                    <div class="sig-item">教務主任：_______________</div>
+                </div>
             </div>
 
             <div class="schedule-footer no-print">
