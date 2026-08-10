@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>土城高中課表查詢系統</title>
+    <meta name="description" content="台南市立土城高中課表查詢系統 - 快速、美觀、方便，支援班級、教師及教室課表查詢與列印。">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="/static/css/style.css">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="decor-circle circle-1"></div>
+    <div class="decor-circle circle-2"></div>
+    <div class="decor-circle circle-3"></div>
+
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header no-print">
+            <div class="logo">
+                <i class="fa-solid fa-calendar-days logo-icon"></i>
+                <div class="logo-text">
+                    <h1>土城高中課表查詢</h1>
+                    <span class="sub-text">Tainan Municipal Tucheng High School</span>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button id="solverPanelBtn" class="solver-panel-btn" title="開啟 AI 智慧排課系統">
+                    <i class="fa-solid fa-brain"></i> AI 智慧排課
+                </button>
+                <div class="db-badge" id="dbBadge" title="自動偵測自最新排課系統資料庫">
+                    <i class="fa-solid fa-database"></i> <span id="dbPathText">載入中...</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Search and Navigation Section -->
+        <section class="controls-section no-print">
+            <div class="search-card glass">
+                <div class="search-box-wrapper">
+                    <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                    <input type="text" id="searchInput" placeholder="輸入班級、教師姓名或教室進行搜尋..." autocomplete="off">
+                    <button id="clearSearchBtn" class="clear-btn" style="display: none;">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                    <!-- Autocomplete dropdown -->
+                    <div id="searchDropdown" class="search-dropdown glass" style="display: none;"></div>
+                </div>
+                
+                <div class="tab-container">
+                    <button class="tab-btn active" data-tab="class" id="tabClassBtn">
+                        <i class="fa-solid fa-graduation-cap"></i> 班級課表
+                    </button>
+                    <button class="tab-btn" data-tab="teacher" id="tabTeacherBtn">
+                        <i class="fa-solid fa-chalkboard-user"></i> 教師課表
+                    </button>
+                    <button class="tab-btn" data-tab="room" id="tabRoomBtn">
+                        <i class="fa-solid fa-school"></i> 教室課表
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Quick Select Grid -->
+        <section class="quick-select-section no-print" id="quickSelectSection">
+            <div class="section-title">
+                <h2><i class="fa-solid fa-bolt"></i> 快速選擇</h2>
+            </div>
+            
+            <div class="quick-grid-wrapper glass">
+                <!-- Class Tabs Subsections (Junior High vs High School) -->
+                <div id="classQuickContainer" class="quick-container active">
+                    <div class="group-title">高中部</div>
+                    <div class="quick-grid" id="highSchoolGrid"></div>
+                    <div class="group-title">國中部</div>
+                    <div class="quick-grid" id="juniorHighGrid"></div>
+                </div>
+                
+                <!-- Teacher List Container -->
+                <div id="teacherQuickContainer" class="quick-container">
+                    <div class="quick-grid teacher-grid" id="teachersGrid"></div>
+                </div>
+
+                <!-- Classroom List Container -->
+                <div id="roomQuickContainer" class="quick-container">
+                    <div class="quick-grid" id="roomsGrid"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Schedule Display Section -->
+        <main class="schedule-section" id="scheduleSection" style="display: none;">
+            <div class="schedule-header">
+                <div class="title-area">
+                    <button id="backBtn" class="back-btn no-print" title="返回快速選擇">
+                        <i class="fa-solid fa-chevron-left"></i>
+                    </button>
+                    <div>
+                        <h2 id="scheduleTitle">載入中...</h2>
+                        <p id="scheduleSubtitle" class="tutor-info"></p>
+                    </div>
+                </div>
+                <div class="action-buttons no-print">
+                    <button id="shareBtn" class="action-btn" title="複製分享連結">
+                        <i class="fa-solid fa-share-nodes"></i> 分享
+                    </button>
+                    <button id="printBtn" class="action-btn primary" title="列印此課表">
+                        <i class="fa-solid fa-print"></i> 列印課表
+                    </button>
+                </div>
+            </div>
+
+            <!-- Print Header (Hidden on screen) -->
+            <div class="print-header only-print">
+                <h1>台南市立土城高中 114 學年度第一學期 課表</h1>
+                <div class="print-meta">
+                    <span id="printScheduleTitle">班級課表</span>
+                    <span id="printTutorInfo"></span>
+                    <span class="print-date">列印日期：<span id="printDateSpan"></span></span>
+                </div>
+            </div>
+
+            <!-- Schedule Grid Table -->
+            <div class="table-responsive glass">
+                <table class="schedule-table" id="scheduleTable">
+                    <thead>
+                        <tr>
+                            <th class="time-col">節次 / 時間</th>
+                            <th>星期一</th>
+                            <th>星期二</th>
+                            <th>星期三</th>
+                            <th>星期四</th>
+                            <th>星期五</th>
+                        </tr>
+                    </thead>
+                    <tbody id="scheduleBody">
+                        <!-- Table rows generated dynamically by app.js -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="schedule-footer no-print">
+                <div class="note-box">
+                    <span class="note-title"><i class="fa-solid fa-circle-info"></i> 說明：</span>
+                    <ul class="note-list">
+                        <li>點擊課表內藍色連結（如教師名稱、教室或班級），可直接切換跳轉至該對象的課表。</li>
+                        <li>若課表欄位右上角標示 <span class="badge-sample odd">單</span> 或 <span class="badge-sample even">雙</span>，代表該節課僅在單週或雙週上課。</li>
+                        <li>本系統資料自動與學校 SPV2000 排課系統資料庫同步。</li>
+                    </ul>
+                </div>
+            </div>
+        </main>
+        
+        <!-- Footer -->
+        <footer class="app-footer no-print">
+            <p>© 2026 台南市立土城高中. All Rights Reserved. Designed by Antigravity AI.</p>
+        </footer>
+    </div>
+
+    <!-- Solver Modal -->
+    <div id="solverModal" class="modal-overlay no-print" style="display: none;">
+        <div class="modal-content glass">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <i class="fa-solid fa-brain modal-icon"></i>
+                    <div>
+                        <h2>AI 智慧排課控制台</h2>
+                        <p class="sub-text">基於 Google OR-Tools CP-SAT 的高維度限制滿足求解器</p>
+                    </div>
+                </div>
+                <button id="closeSolverBtn" class="close-modal-btn">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            
+            <div class="modal-body">
+                <div class="solver-info-cards">
+                    <div class="info-card">
+                        <span class="card-label">硬性限制條件</span>
+                        <span class="card-value">教師不衝堂、班級不衝堂、同時上課群同步</span>
+                    </div>
+                    <div class="info-card">
+                        <span class="card-label">軟性最佳化目標</span>
+                        <span class="card-value">連堂課程相鄰、科目均勻分散、避開不排課時段</span>
+                    </div>
+                </div>
+                
+                <div class="solver-actions">
+                    <button id="runSolverBtn" class="solver-action-btn primary-btn">
+                        <i class="fa-solid fa-play"></i> 執行 AI 自動排課
+                    </button>
+                    <button id="validateSolverBtn" class="solver-action-btn secondary-btn">
+                        <i class="fa-solid fa-shield-halved"></i> 驗證課表衝突
+                    </button>
+                </div>
+                
+                <div class="solver-console-wrapper">
+                    <div class="console-header">
+                        <span><i class="fa-solid fa-terminal"></i> 系統日誌</span>
+                        <button id="clearConsoleBtn" class="clear-console-btn">清除</button>
+                    </div>
+                    <div id="solverConsole" class="solver-console">
+                        <p class="system-msg">AI 排課控制台就緒。請點擊上方按鈕執行排課或驗證。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast">
+        <i class="fa-solid fa-circle-check"></i> <span id="toastText">已複製分享連結！</span>
+    </div>
+
+    <!-- JS Scripts -->
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
