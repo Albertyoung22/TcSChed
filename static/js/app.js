@@ -1888,6 +1888,37 @@ function renderGradeCurriculumTable() {
 let restorePointsData = [];
 
 async function loadRestorePoints() {
+    const importInput = document.getElementById('importConfigFileInput');
+    if (importInput && importInput.dataset.listener !== 'true') {
+        importInput.dataset.listener = 'true';
+        importInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const resp = await fetch('/api/import-config', {
+                    method: 'POST',
+                    body: formData
+                });
+                const res = await resp.json();
+                if (res.status === 'success') {
+                    showToast(res.message);
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1200);
+                } else {
+                    showToast("匯入失敗：" + res.message);
+                }
+            } catch (err) {
+                showToast("伺服器連線異常。");
+            }
+            importInput.value = '';
+        });
+    }
+
     const createBtn = document.getElementById('createNewRestorePointBtn');
     if (createBtn && createBtn.dataset.listener !== 'true') {
         createBtn.dataset.listener = 'true';

@@ -977,7 +977,54 @@ def api_execute_swap():
         traceback.print_exc()
         return jsonify({"status": "error", "message": str(e)}), 500
 
-CONFIG_RULES_FILE = os.path.join(os.path.dirname(__file__), "config_rules.json")
+DATA_DIR = os.environ.get("DATA_DIR", os.path.dirname(__file__))
+CONFIG_RULES_FILE = os.path.join(DATA_DIR, "config_rules.json")
+
+GITHUB_REPO = os.environ.get("GITHUB_REPO", "")     # e.g. "your_username/School_Schedule"
+GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")   # Free GitHub Personal Access Token
+GITHUB_BRANCH = os.environ.get("GITHUB_BRANCH", "main")
+
+def sync_to_github_cloud(filename, content_str, commit_message="Cloud Web UI Auto Save"):
+    if not GITHUB_REPO or not GITHUB_TOKEN:
+        return False
+    def _bg_sync():
+        try:
+            import urllib.request, base64
+            url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{filename}"
+            req_get = urllib.request.Request(url, headers={
+                "Authorization": f"token {GITHUB_TOKEN}",
+                "User-Agent": "Flask-Cloud-Sync"
+            })
+            sha = None
+            try:
+                with urllib.request.urlopen(req_get) as resp:
+                    res_data = json.loads(resp.read().decode('utf-8'))
+                    sha = res_data.get("sha")
+            except Exception:
+                pass
+
+            encoded_content = base64.b64encode(content_str.encode('utf-8')).decode('utf-8')
+            payload = {
+                "message": commit_message,
+                "content": encoded_content,
+                "branch": GITHUB_BRANCH
+            }
+            if sha:
+                payload["sha"] = sha
+
+            req_put = urllib.request.Request(url, data=json.dumps(payload).encode('utf-8'), headers={
+                "Authorization": f"token {GITHUB_TOKEN}",
+                "Content-Type": "application/json",
+                "User-Agent": "Flask-Cloud-Sync"
+            }, method="PUT")
+
+            with urllib.request.urlopen(req_put) as resp:
+                print(f"Cloud Auto-Sync {filename} to GitHub: SUCCESS")
+        except Exception as e:
+            print("GitHub Cloud Sync Error:", e)
+
+    import threading
+    threading.Thread(target=_bg_sync, daemon=True).start()
 
 def load_config_rules():
     if os.path.exists(CONFIG_RULES_FILE):
@@ -986,9 +1033,21 @@ def load_config_rules():
                 return json.load(f)
         except Exception:
             pass
+    # Try fetching from GitHub if GITHUB_REPO set
+    if GITHUB_REPO:
+        try:
+            import urllib.request
+            raw_url = f"https://raw.githubusercontent.com/{GITHUB_REPO}/{GITHUB_BRANCH}/config_rules.json"
+            with urllib.request.urlopen(raw_url) as resp:
+                data = json.loads(resp.read().decode('utf-8'))
+                with open(CONFIG_RULES_FILE, "w", encoding="utf-8") as f:
+                    json.dump(data, f, ensure_ascii=False, indent=2)
+                return data
+        except Exception:
+            pass
     return {
-        "custom_no_teach": {}, # teacher_code -> list of "d-p"
-        "custom_no_sub": {},   # "class_code|subject_code" -> list of "d-p"
+        "custom_no_teach": {},
+        "custom_no_sub": {},
         "weights": {
             "consecutive_weight": 500,
             "no_teach_penalty": 200,
@@ -998,8 +1057,49 @@ def load_config_rules():
     }
 
 def save_config_rules(data):
+    json_str = json.dumps(data, ensure_ascii=False, indent=2)
     with open(CONFIG_RULES_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+        f.write(json_str)
+    sync_to_github_cloud("config_rules.json", json_str, "Cloud Web UI Auto Save config_rules.json")
+
+@app.route("/api/export-config", methods=["GET"])
+def api_export_config():
+    try:
+        cfg = load_config_rules()
+        import io
+        mem = io.BytesIO()
+        mem.write(json.dumps(cfg, ensure_ascii=False, indent=2).encode('utf-8'))
+        mem.seek(0)
+        return send_file(
+            mem,
+            mimetype="application/json",
+            as_attachment=True,
+            download_name="School_Schedule_Config_Backup.json"
+        )
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/import-config", methods=["POST"])
+def api_import_config():
+    try:
+        if "file" not in request.files:
+            return jsonify({"status": "error", "message": "No file uploaded"}), 400
+        file = request.files["file"]
+        if file.filename == "":
+            return jsonify({"status": "error", "message": "No file selected"}), 400
+            
+        data = json.load(file)
+        if not isinstance(data, dict):
+            return jsonify({"status": "error", "message": "Invalid JSON structure"}), 400
+            
+        save_config_rules(data)
+        
+        global _cached_data
+        _cached_data = None
+        
+        return jsonify({"status": "success", "message": "全校配課與排課規則備份檔已成功匯入！"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route("/api/config-rules", methods=["GET"])
 def api_get_config_rules():
@@ -1564,7 +1664,7 @@ def api_save_grade_curriculum():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
-RESTORE_POINTS_DIR = os.path.join(os.path.dirname(__file__), "restore_points")
+RESTORE_POINTS_DIR = os.path.join(DATA_DIR, "restore_points")
 
 def get_restore_points_manifest():
     if not os.path.exists(RESTORE_POINTS_DIR):

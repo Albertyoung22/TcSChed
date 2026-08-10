@@ -536,6 +536,17 @@
 
                 <!-- Tab 6: Restore Points Checkpoint Manager -->
                 <div id="ruleTabRestore" class="rule-tab-content" style="display: none;">
+                    <div style="display: flex; gap: 8px; align-items: center; background: rgba(255, 255, 255, 0.03); padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 12px; flex-wrap: wrap;">
+                        <span style="font-size: 0.85rem; color: #38bdf8; font-weight: 500;"><i class="fa-solid fa-cloud-arrow-down"></i> 免費免花錢・1秒匯出與匯入備份：</span>
+                        <a href="/api/export-config" download class="solver-action-btn primary-btn" style="padding: 6px 14px; font-size: 0.85rem; background: #0284c7; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+                            <i class="fa-solid fa-download"></i> 📥 匯出下載全校設定檔 (JSON)
+                        </a>
+                        <label for="importConfigFileInput" class="solver-action-btn secondary-btn" style="padding: 6px 14px; font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; background: rgba(56, 189, 248, 0.2); border-color: rgba(56, 189, 248, 0.4); color: #38bdf8;">
+                            <i class="fa-solid fa-upload"></i> 📤 匯入備份檔一鍵復原
+                        </label>
+                        <input type="file" id="importConfigFileInput" accept=".json" style="display: none;">
+                    </div>
+
                     <div style="display: flex; gap: 8px; align-items: center; background: rgba(255, 255, 255, 0.03); padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 12px;">
                         <span style="font-size: 0.85rem; color: #818cf8; font-weight: 500;"><i class="fa-solid fa-floppy-disk"></i> 建立全新系統還原點：</span>
                         <input type="text" id="restoreNoteInput" placeholder="輸入還原點備註說明 (如: 8/11 配課完成版)" style="flex: 1; padding: 6px 12px; border-radius: 6px; background: rgba(15, 23, 42, 0.8); color: #fff; border: 1px solid var(--border-color);">
