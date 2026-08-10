@@ -6,7 +6,7 @@ from dbfread import DBF
 app = Flask(__name__, static_folder="static", template_folder="templates")
 
 # Path configuration
-SEARCH_DIR = r"D:\土城高中"
+SEARCH_DIR = r"D:\??擃葉"
 
 # Global cache variables
 _cached_data = None
@@ -40,7 +40,7 @@ def load_schedule_data():
     
     dbf_dir = get_latest_dbf_dir()
     if not dbf_dir:
-        return {"error": "No SPV2000 DBF directory found in D:\\土城高中"}
+        return {"error": "No SPV2000 DBF directory found in D:\\??擃葉"}
     
     # Files we need
     files = {
@@ -308,7 +308,7 @@ def api_run_solver():
 def api_validate_solver():
     import pandas as pd
     try:
-        excel_path = r"D:\土城高中\School_Schedule_Solved.xlsx"
+        excel_path = r"D:\??擃葉\School_Schedule_Solved.xlsx"
         if not os.path.exists(excel_path):
             return jsonify({"status": "error", "message": "Solved file not found"})
         df = pd.read_excel(excel_path)
@@ -321,7 +321,7 @@ def api_validate_solver():
         
         virtual_class_codes = set()
         for r in db_class:
-            if r.get("虛擬") or "跨班" in r.get("CLASS_NAME", ""):
+            if r.get("???) or "頝函" in r.get("CLASS_NAME", ""):
                 virtual_class_codes.add(r.get("CLASS_NO", "").strip())
                 
         records = df.to_dict(orient="records")
@@ -333,18 +333,18 @@ def api_validate_solver():
         detail = []
         
         for r in records:
-            d_val = r.get("星期")
-            p_val = r.get("節次")
+            d_val = r.get("??")
+            p_val = r.get("蝭甈?)
             if pd.isna(d_val) or pd.isna(p_val):
                 continue
             d = int(d_val)
             p = int(p_val)
-            t = str(r.get("教師姓名", "")).strip() if not pd.isna(r.get("教師姓名")) else ""
+            t = str(r.get("?葦隞?Ⅳ", "")).strip() if not pd.isna(r.get("?葦隞?Ⅳ")) else ""
             c = str(r.get("班級代碼", "")).strip() if not pd.isna(r.get("班級代碼")) else ""
-            wm_val = r.get("週別設定")
+            wm_val = r.get("?勗閮剖?")
             wm = int(wm_val) if not pd.isna(wm_val) else 0
-            desc = str(r.get("備註", "")).strip()
-            if pd.isna(r.get("備註")):
+            desc = str(r.get("隤芣?", "")).strip()
+            if pd.isna(r.get("隤芣?")):
                 desc = ""
             
             if t and t != "nan":
@@ -353,9 +353,9 @@ def api_validate_solver():
                 for ext in teacher_slots[t]:
                     if ext["day"] == d and ext["period"] == p:
                         if wm == 0 or ext["week"] == 0 or wm == ext["week"]:
-                            if desc == "(虛擬班級)" and ext["desc"] == "(虛擬班級)":
+                            if desc == "(??銝玨)" and ext["desc"] == "(??銝玨)":
                                 continue
-                            detail.append(f"[Teacher Conflict]: Teacher {r.get('教師代碼')} ({t}) has overlapping classes in slot {d}-{p}!")
+                            detail.append(f"[Teacher Conflict]: Teacher {r.get('?葦憪?')} ({t}) has overlapping classes in slot {d}-{p}!")
                             conflicts += 1
                 teacher_slots[t].append({"day": d, "period": p, "week": wm, "desc": desc})
                 
@@ -365,17 +365,17 @@ def api_validate_solver():
                 for ext in class_slots[c]:
                     if ext["day"] == d and ext["period"] == p:
                         if wm == 0 or ext["week"] == 0 or wm == ext["week"]:
-                            if r.get("科目代碼") == ext["subject_code"]:
+                            if r.get("蝘隞?Ⅳ") == ext["subject_code"]:
                                 continue
-                            detail.append(f"[Class Conflict]: Class {r.get('班級代碼')} ({c}) has overlapping lessons in slot {d}-{p}! Sub: {r.get('科目名稱')} vs {ext['subject_name']}")
+                            detail.append(f"[Class Conflict]: Class {r.get('?剔??迂')} ({c}) has overlapping lessons in slot {d}-{p}! Sub: {r.get('蝘?迂')} vs {ext['subject_name']}")
                             conflicts += 1
-                class_slots[c].append({"day": d, "period": p, "week": wm, "subject_code": r.get("科目代碼"), "subject_name": r.get("科目名稱")})
+                class_slots[c].append({"day": d, "period": p, "week": wm, "subject_code": r.get("蝘隞?Ⅳ"), "subject_name": r.get("蝘?迂")})
                 
         violated_no_teach = 0
         for r in records:
-            t_code = str(r.get('教師代碼', '')).strip()
-            d_val = r.get('星期')
-            p_val = r.get('節次')
+            t_code = str(r.get('?葦隞?Ⅳ', '')).strip()
+            d_val = r.get('??')
+            p_val = r.get('蝭甈?)
             if t_code and not pd.isna(d_val) and not pd.isna(p_val):
                 d = int(d_val)
                 p = int(p_val)
@@ -387,10 +387,10 @@ def api_validate_solver():
 
         violated_no_sub = 0
         for r in records:
-            c_code = str(r.get('班級代碼', '')).strip()
-            s_code = str(r.get('科目代碼', '')).strip()
-            d_val = r.get('星期')
-            p_val = r.get('節次')
+            c_code = str(r.get('?剔?隞?Ⅳ', '')).strip()
+            s_code = str(r.get('蝘隞?Ⅳ', '')).strip()
+            d_val = r.get('??')
+            p_val = r.get('蝭甈?)
             if c_code and s_code and not pd.isna(d_val) and not pd.isna(p_val):
                 d = int(d_val)
                 p = int(p_val)
@@ -422,10 +422,10 @@ def api_debug_db():
         class_102_1_1 = []
         teach_0010_1_1 = []
         for r in claspv_base:
-            c = r.get("?剔?", "").strip()
-            t = r.get("教師", "").strip()
-            d = r.get("星期", "").strip()
-            p = r.get("節次", "").strip()
+            c = r.get("班級", "").strip()
+            t = r.get("?葦", "").strip()
+            d = r.get("??", "").strip()
+            p = r.get("蝭甈?, "").strip()
             
             # Convert values to strings for JSON serializability
             rec = {k: str(v) for k, v in r.items()}
@@ -445,7 +445,7 @@ def api_debug_db():
 @app.route("/api/debug-solved")
 def api_debug_solved():
     try:
-        excel_path = r"D:\土城高中\School_Schedule_Solved.xlsx"
+        excel_path = r"D:\??擃葉\School_Schedule_Solved.xlsx"
         if not os.path.exists(excel_path):
             return jsonify({"status": "error", "message": "Solved file not found"})
         import pandas as pd
@@ -455,9 +455,9 @@ def api_debug_solved():
         teach_0010_1_1 = []
         for idx, r in df.iterrows():
             c = str(r.get("班級代碼", "")).strip()
-            t = str(r.get("教師姓名", "")).strip()
-            d_val = r.get("星期")
-            p = str(r.get("節次", "")).strip()
+            t = str(r.get("?葦隞?Ⅳ", "")).strip()
+            d = str(r.get("??", "")).strip()
+            p = str(r.get("蝭甈?, "").strip() if isinstance(r.get("蝭甈?), str) else str(int(r.get("蝭甈?))) if not pd.isna(r.get("蝭甈?)) else "")
             
             # Convert values to strings for JSON serializability
             rec = {k: str(v) for k, v in r.items()}
@@ -488,8 +488,8 @@ def api_debug_math():
         
         math_records = []
         for r in claspv_base:
-            c = r.get("?剔?", "").strip()
-            t = str(r.get("教師姓名", "")).strip() if not pd.isna(r.get("教師姓名")) else ""
+            c = r.get("班級", "").strip()
+            s = r.get("蝘", "").strip()
             if c == '102' and s == '301':
                 math_records.append({k: str(v) for k, v in r.items()})
                 
@@ -507,104 +507,15 @@ def api_debug_teacher_slots():
         
         virtual_class_codes = set()
         for r in db_class:
-            if r.get("虛擬") or "跨班" in r.get("CLASS_NAME", ""):
+            if r.get("???) or "頝函" in r.get("CLASS_NAME", ""):
                 virtual_class_codes.add(r.get("CLASS_NO", "").strip())
                 
         # Prefilled slots for classes
         class_prefilled = {}
         for r in claspv_base:
             c = r.get("班級", "").strip()
-            d = r.get("星期", "").strip()
-            p = r.get("節次", "").strip()
-            if c and d and p:
-                if c not in class_prefilled:
-                    class_prefilled[c] = set()
-                class_prefilled[c].add((int(d), int(p)))
-                
-        # Blocked slots for teachers
-        teacher_blocked = {}
-        for rule in no_teach:
-            t = rule['TEACHER_NO'].strip()
-            if t:
-                if t not in teacher_blocked:
-                    teacher_blocked[t] = set()
-                sd = rule['START_DAY']
-                ed = rule['END_DAY']
-                ss = rule['START_SEC']
-                es = rule['END_SEC']
-                for d in range(sd, ed + 1):
-                    for p in range(ss, es + 1):
-                        teacher_blocked[t].add((d, p))
-              
-        # Group dynamic items by teacher
-        teacher_groups = {}
-        for r in claspv_base:
-            w = str(r.get("星期", "")).strip() if not pd.isna(r.get("星期")) else ""
-            s = str(r.get("節次", "")).strip() if not pd.isna(r.get("節次")) else ""
-            if not w and not s:
-                t = r.get("教師", "").strip()
-                if t:
-                    if t not in teacher_groups:
-                        teacher_groups[t] = []
-                    teacher_groups[t].append(r)
-                    
-        # Check each teacher's dynamic items
-        teacher_report = []
-        for t_code, t_items in teacher_groups.items():
-            if not t_items:
-                continue
-                
-            t_blocked = teacher_blocked.get(t_code, set())
-            unique_dynamic_needed = len(t_items)
-            
-            item_candidate_slots = []
-            for r in t_items:
-                c = r.get("班級", "").strip()
-                c_pref = class_prefilled.get(c, set()) if c not in virtual_class_codes else set()
-                
-                candidates = 0
-                for d in range(1, 6):
-                    for p in range(1, 9):
-                        if (d, p) not in t_blocked and (d, p) not in c_pref:
-                            candidates += 1
-                item_candidate_slots.append({
-                    "class": c,
-                    "subject": r.get("科目名稱", "").strip(),
-                    "candidates": candidates
-                })
-                
-            t_name = t_items[0].get("教師名稱", "").strip()
-            teacher_report.append({
-                "code": t_code,
-                "name": t_name,
-                "needed_dynamic": unique_dynamic_needed,
-                "available_slots_teacher": 40 - len(t_blocked),
-                "items": item_candidate_slots
-            })
-            
-        return jsonify(teacher_report)
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
-
-@app.route("/api/check-bottlenecks")
-def api_check_bottlenecks():
-    try:
-        dbf_dir = get_latest_dbf_dir()
-        claspv_base = list(DBF(os.path.join(dbf_dir, "claspv_base.dbf"), ignore_missing_memofile=True, encoding='cp950'))
-        no_teach = list(DBF(os.path.join(dbf_dir, "no_teach.dbf"), ignore_missing_memofile=True, encoding='cp950'))
-        db_class = list(DBF(os.path.join(dbf_dir, "class.dbf"), ignore_missing_memofile=True, encoding='cp950'))
-        
-        virtual_class_codes = set()
-        for r in db_class:
-            if r.get("虛擬") or "跨班" in r.get("CLASS_NAME", ""):
-                virtual_class_codes.add(r.get("CLASS_NO", "").strip())
-                
-        # Prefilled slots for classes
-        class_prefilled = {}
-        for r in claspv_base:
-            c = r.get("班級", "").strip()
-            d = r.get("星期", "").strip()
-            p = r.get("節次", "").strip()
+            d = r.get("??", "").strip()
+            p = r.get("蝭甈?, "").strip()
             if c and d and p:
                 if c not in class_prefilled:
                     class_prefilled[c] = set()
@@ -625,26 +536,118 @@ def api_check_bottlenecks():
                     for p in range(ss, es + 1):
                         teacher_blocked[t].add((d, p))
                         
-        teacher_groups = {}
-        for r in claspv_base:
-            w = str(r.get("星期", "")).strip() if not pd.isna(r.get("星期")) else ""
-            s = str(r.get("節次", "")).strip() if not pd.isna(r.get("節次")) else ""
-            if not w and not s:
-                t = r.get("教師", "").strip()
-                if t:
-                    if t not in teacher_groups:
-                        teacher_groups[t] = []
-                    teacher_groups[t].append(r)
-                    
-        teacher_bottlenecks = []
-        for t_code, t_items in teacher_groups.items():
+        # Check each teacher's dynamic items
+        teacher_report = []
+        for t_code in sorted(list(set(r.get("?葦", "").strip() for r in claspv_base if r.get("?葦", "").strip()))):
+            t_items = [r for r in claspv_base if r.get("?葦", "").strip() == t_code and (not r.get("??", "").strip() or not r.get("蝭甈?, "").strip())]
             if not t_items:
                 continue
                 
-            t_blocked = teacher_blocked.get(t_code, set())
-            t_name = t_items[0].get("教師名稱", "").strip()
-            unique_dynamic_needed = len(t_items)
+            # Group by sim_group or cross_class_key (representative) to get unique dynamic slots needed
+            unique_dynamic_needed = len(set(r.get("??蝢?, "").strip() if r.get("??蝢?, "").strip() else r.get("班級", "").strip() + "_" + r.get("蝘", "").strip() for r in t_items))
             
+            # Find which slots are available for the teacher
+            t_blocked = teacher_blocked.get(t_code, set())
+            
+            # Find the union of class blocked slots for the classes this teacher teaches
+            classes_taught = set(r.get("班級", "").strip() for r in t_items if r.get("班級", "").strip())
+            
+            # Find slots where at least one of the classes taught is prefilled (busy)
+            # Wait, if a teacher teaches multiple classes (not combined), then for a specific lesson, 
+            # only THAT class needs to be free.
+            # But if the teacher only has a few available slots, and those slots are busy for the classes she teaches:
+            # Let's count how many slots in the 5x8 grid are:
+            # 1. Not blocked for the teacher
+            # 2. Not prefilled for the class of the lesson
+            # For each lesson (item), count its candidate slots
+            item_candidate_slots = []
+            for r in t_items:
+                c = r.get("班級", "").strip()
+                # If virtual class, it is always free
+                c_pref = class_prefilled.get(c, set()) if c not in virtual_class_codes else set()
+                
+                candidates = 0
+                for d in range(1, 6):
+                    for p in range(1, 9):
+                        if (d, p) not in t_blocked and (d, p) not in c_pref:
+                            candidates += 1
+                item_candidate_slots.append({
+                    "sub": r.get("蝘?迂", "").strip(),
+                    "class": r.get("?剔??迂", "").strip(),
+                    "candidates": candidates
+                })
+                
+            teacher_report.append({
+                "teacher": t_items[0].get("?葦?迂", "").strip(),
+                "code": t_code,
+                "needed_dynamic": unique_dynamic_needed,
+                "available_slots_teacher": 40 - len(t_blocked),
+                "items": item_candidate_slots
+            })
+            
+        return jsonify(teacher_report)
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/check-bottlenecks")
+def api_check_bottlenecks():
+    try:
+        dbf_dir = get_latest_dbf_dir()
+        claspv_base = list(DBF(os.path.join(dbf_dir, "claspv_base.dbf"), ignore_missing_memofile=True, encoding='cp950'))
+        no_teach = list(DBF(os.path.join(dbf_dir, "no_teach.dbf"), ignore_missing_memofile=True, encoding='cp950'))
+        db_class = list(DBF(os.path.join(dbf_dir, "class.dbf"), ignore_missing_memofile=True, encoding='cp950'))
+        
+        virtual_class_codes = set()
+        for r in db_class:
+            if r.get("???) or "頝函" in r.get("CLASS_NAME", ""):
+                virtual_class_codes.add(r.get("CLASS_NO", "").strip())
+                
+        # Prefilled slots for classes
+        class_prefilled = {}
+        for r in claspv_base:
+            c = r.get("班級", "").strip()
+            d = r.get("??", "").strip()
+            p = r.get("蝭甈?, "").strip()
+            if c and d and p:
+                if c not in class_prefilled:
+                    class_prefilled[c] = set()
+                class_prefilled[c].add((int(d), int(p)))
+                
+        # Blocked slots for teachers
+        teacher_blocked = {}
+        for rule in no_teach:
+            t = rule['TEACHER_NO'].strip()
+            if t:
+                if t not in teacher_blocked:
+                    teacher_blocked[t] = set()
+                sd = rule['START_DAY']
+                ed = rule['END_DAY']
+                ss = rule['START_SEC']
+                es = rule['END_SEC']
+                for d in range(sd, ed + 1):
+                    for p in range(ss, es + 1):
+                        teacher_blocked[t].add((d, p))
+                        
+        teacher_bottlenecks = []
+        for t_code in sorted(list(set(r.get("?葦", "").strip() for r in claspv_base if r.get("?葦", "").strip()))):
+            t_items = [r for r in claspv_base if r.get("?葦", "").strip() == t_code and (not r.get("??", "").strip() or not r.get("蝭甈?, "").strip())]
+            if not t_items:
+                continue
+                
+            unique_dynamic_needed = len(set(r.get("??蝢?, "").strip() if r.get("??蝢?, "").strip() else r.get("班級", "").strip() + "_" + r.get("蝘", "").strip() for r in t_items))
+            t_blocked = teacher_blocked.get(t_code, set())
+            
+            # Find the intersection of candidate slots for all items of this teacher
+            # If a teacher has multiple dynamic items, they must be scheduled at DIFFERENT times (teacher conflicts).
+            # So the total number of unique candidate slots available for the teacher's dynamic items 
+            # must be at least the number of unique dynamic slots needed!
+            # What are the unique candidate slots for the teacher?
+            # Any slot (d, p) that is:
+            # - Not blocked for the teacher
+            # - And for AT LEAST ONE of the items of this teacher, the class is not prefilled.
+            # Wait, if a teacher teaches class C1 and C2, a slot is a candidate for C1 if C1 is free, and for C2 if C2 is free.
+            # So the slot is a candidate for the teacher if she can schedule *some* lesson there.
+            # But the total number of available slots for the teacher's lessons is the union of candidate slots across all her lessons.
             teacher_candidate_slots = set()
             for r in t_items:
                 c = r.get("班級", "").strip()
@@ -656,6 +659,8 @@ def api_check_bottlenecks():
                             
             available_slots = len(teacher_candidate_slots)
             slack = available_slots - unique_dynamic_needed
+            
+            t_name = t_items[0].get("?葦?迂", "").strip()
             
             if slack <= 2:
                 teacher_bottlenecks.append({
@@ -680,7 +685,7 @@ def api_debug_401_5_6():
         
         records = []
         for r in claspv_base:
-            c = r.get("?剔?", "").strip()
+            c = r.get("班級", "").strip()
             if c == '401':
                 records.append({k: str(v) for k, v in r.items()})
                 
@@ -701,8 +706,8 @@ def api_debug_class():
 @app.route("/api/check-file-time")
 def api_check_file_time():
     try:
-        excel_path = r"D:\土城高中\School_Schedule_Solved.xlsx"
-        if not os.path.exists(excel_path) or not os.path.exists(r"D:\土城高中"):
+        excel_path = r"D:\??擃葉\School_Schedule_Solved.xlsx"
+        if not os.path.exists(excel_path) or not os.path.exists(r"D:\??擃葉"):
             excel_path = os.path.join(os.path.dirname(__file__), "School_Schedule_Solved.xlsx")
             
         if not os.path.exists(excel_path):
@@ -722,8 +727,8 @@ def api_check_file_time():
 @app.route("/api/download-solved")
 def api_download_solved():
     try:
-        excel_path = r"D:\土城高中\School_Schedule_Solved.xlsx"
-        if not os.path.exists(excel_path) or not os.path.exists(r"D:\土城高中"):
+        excel_path = r"D:\??擃葉\School_Schedule_Solved.xlsx"
+        if not os.path.exists(excel_path) or not os.path.exists(r"D:\??擃葉"):
             excel_path = os.path.join(os.path.dirname(__file__), "School_Schedule_Solved.xlsx")
             
         if not os.path.exists(excel_path):
@@ -787,7 +792,7 @@ def api_check_swap_slots(item_id):
                 slot_key = f"{d}-{p}"
                 
                 if item["day"] == str(d) and item["period"] == str(p):
-                    slots_status[slot_key] = {"status": "current", "message": "目前時段"}
+                    slots_status[slot_key] = {"status": "current", "message": "?桀??挾"}
                     continue
                     
                 t_conflicts = []
@@ -805,9 +810,9 @@ def api_check_swap_slots(item_id):
                 if t_conflicts or c_conflicts:
                     reasons = []
                     for s in t_conflicts:
-                        reasons.append(f"教師衝堂：與 {s['class_name']} 班 {s['subject_name']} 衝堂")
+                        reasons.append(f"?葦銵?嚗? {s['class_name']} ??{s['subject_name']} 銵?")
                     for s in c_conflicts:
-                        reasons.append(f"班級衝堂：與 {s['subject_name']} ({s['teacher_name']}) 衝堂")
+                        reasons.append(f"?剔?銵?嚗? {s['subject_name']} ({s['teacher_name']}) 銵?")
                     slots_status[slot_key] = {
                         "status": "forbidden",
                         "message": " / ".join(reasons)
@@ -815,17 +820,17 @@ def api_check_swap_slots(item_id):
                 elif (d, p) in teacher_blocked:
                     slots_status[slot_key] = {
                         "status": "soft_conflict",
-                        "message": "教師不排課時段"
+                        "message": "?葦銝?隤脫?畾?
                     }
                 elif (d, p) in class_sub_blocked:
                     slots_status[slot_key] = {
                         "status": "soft_conflict",
-                        "message": "科目禁止排課時段"
+                        "message": "蝘蝳迫?玨?挾"
                     }
                 else:
                     slots_status[slot_key] = {
                         "status": "feasible",
-                        "message": "完全可行"
+                        "message": "摰?航?"
                     }
                     
         return jsonify({
@@ -846,8 +851,8 @@ def api_execute_swap():
         if target_id is not None:
             target_id = int(target_id)
             
-        solved_excel = r"D:\土城高中\School_Schedule_Solved.xlsx"
-        if not os.path.exists(solved_excel) or not os.path.exists(r"D:\土城高中"):
+        solved_excel = r"D:\??擃葉\School_Schedule_Solved.xlsx"
+        if not os.path.exists(solved_excel) or not os.path.exists(r"D:\??擃葉"):
             solved_excel = os.path.join(os.path.dirname(__file__), "School_Schedule_Solved.xlsx")
             
         if not os.path.exists(solved_excel):
@@ -859,17 +864,17 @@ def api_execute_swap():
             for s in data["schedules"]:
                 records.append({
                     "班級代碼": s["class_code"],
-                    "科目代碼": s["subject_code"],
-                    "教師代碼": s["teacher_code"],
-                    "班級名稱": s["class_name"],
-                    "科目名稱": s["subject_name"],
-                    "教師姓名": s["teacher_name"],
-                    "教室名稱": s["room_name"],
-                    "時間代碼": f"{s['day']}{s['period']}{s['week_mode']}{s['ud']}",
-                    "星期": int(s["day"]),
-                    "節次": int(s["period"]),
-                    "週別設定": s["week_mode"],
-                    "說明": ""
+                    "蝘隞?Ⅳ": s["subject_code"],
+                    "?葦隞?Ⅳ": s["teacher_code"],
+                    "?剔??迂": s["class_name"],
+                    "蝘?迂": s["subject_name"],
+                    "?葦憪?": s["teacher_name"],
+                    "?恕?迂": s["room_name"],
+                    "??隞?Ⅳ": f"{s['day']}{s['period']}{s['week_mode']}{s['ud']}",
+                    "??": int(s["day"]),
+                    "蝭甈?: int(s["period"]),
+                    "?勗閮剖?": s["week_mode"],
+                    "隤芣?": ""
                 })
             df = pd.DataFrame(records)
             df.to_excel(solved_excel, index=False)
@@ -885,30 +890,30 @@ def api_execute_swap():
             if target_id < 0 or target_id >= len(df):
                 return jsonify({"status": "error", "message": "Target item index out of bounds"}), 400
                 
-            day_a = df.loc[source_id, "星期"]
-            period_a = df.loc[source_id, "節次"]
+            day_a = df.loc[source_id, "??"]
+            period_a = df.loc[source_id, "蝭甈?]
             
-            df.loc[source_id, "星期"] = df.loc[target_id, "星期"]
-            df.loc[source_id, "節次"] = df.loc[target_id, "節次"]
-            df.loc[source_id, "時間代碼"] = f"{df.loc[target_id, '星期']}{df.loc[target_id, '節次']}{df.loc[source_id, '週別設定']}0"
-            df.loc[source_id, "說明"] = "手排課 (鎖定)"
+            df.loc[source_id, "??"] = df.loc[target_id, "??"]
+            df.loc[source_id, "蝭甈?] = df.loc[target_id, "蝭甈?]
+            df.loc[source_id, "??隞?Ⅳ"] = f"{df.loc[target_id, '??']}{df.loc[target_id, '蝭甈?]}{df.loc[source_id, '?勗閮剖?']}0"
+            df.loc[source_id, "隤芣?"] = "??隤?(??)"
             
-            df.loc[target_id, "星期"] = day_a
-            df.loc[target_id, "節次"] = period_a
-            df.loc[target_id, "時間代碼"] = f"{day_a}{period_a}{df.loc[target_id, '週別設定']}0"
-            df.loc[target_id, "說明"] = "手排課 (鎖定)"
+            df.loc[target_id, "??"] = day_a
+            df.loc[target_id, "蝭甈?] = period_a
+            df.loc[target_id, "??隞?Ⅳ"] = f"{day_a}{period_a}{df.loc[target_id, '?勗閮剖?']}0"
+            df.loc[target_id, "隤芣?"] = "??隤?(??)"
         else:
-            df.loc[source_id, "星期"] = int(target_day)
-            df.loc[source_id, "節次"] = int(target_period)
-            df.loc[source_id, "時間代碼"] = f"{target_day}{target_period}{df.loc[source_id, '週別設定']}0"
-            df.loc[source_id, "說明"] = "手排課 (鎖定)"
+            df.loc[source_id, "??"] = int(target_day)
+            df.loc[source_id, "蝭甈?] = int(target_period)
+            df.loc[source_id, "??隞?Ⅳ"] = f"{target_day}{target_period}{df.loc[source_id, '?勗閮剖?']}0"
+            df.loc[source_id, "隤芣?"] = "??隤?(??)"
             
         df.to_excel(solved_excel, index=False)
         
         global _cached_data
         _cached_data = None
         
-        return jsonify({"status": "success", "message": "課表調整完成並已自動鎖定保護！"})
+        return jsonify({"status": "success", "message": "隤脰”隤踵摰?銝血歇?芸???靽風嚗?})
     except Exception as e:
         import traceback
         traceback.print_exc()
