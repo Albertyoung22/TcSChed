@@ -157,6 +157,30 @@ def run_solver():
             "cross_class_key": (s_code, arr, sub_idx, total_hours, week_mode, teachers) if len(teachers) > 1 else (c_code, s_code, arr, sub_idx, total_hours, week_mode)
         })
 
+    # Apply custom course assignments override & deleted assignments filter
+    config_rules_file = os.path.join(os.path.dirname(__file__), "config_rules.json")
+    if os.path.exists(config_rules_file):
+        try:
+            import json
+            with open(config_rules_file, "r", encoding="utf-8") as f:
+                cf = json.load(f)
+                ca = cf.get("custom_assignments", {})
+                da = set(cf.get("deleted_assignments", []))
+                
+                filtered_items = []
+                for item in items:
+                    ckey = f"{item['class_code']}|{item['subject_code']}"
+                    if ckey in da and ckey not in ca:
+                        continue
+                    if ckey in ca:
+                        item["teacher_code"] = ca[ckey]["teacher_code"]
+                        item["teacher_name"] = ca[ckey]["teacher_name"]
+                        item["course_key"] = (item["class_code"], item["subject_code"], item["teacher_code"], item["arr"])
+                    filtered_items.append(item)
+                items = filtered_items
+        except Exception as e:
+            log(f"Warning loading custom_assignments: {e}")
+
     # Decision Variables
     x = {}
     day_vars = {}

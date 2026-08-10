@@ -229,6 +229,25 @@ def load_schedule_data():
                 
         classroom_list = [{"code": k, "name": v} for k, v in sorted(classrooms.items())]
         
+        # Apply custom assignments override & filter deleted assignments
+        cfg = load_config_rules()
+        custom_assign = cfg.get("custom_assignments", {})
+        deleted_assign = set(cfg.get("deleted_assignments", []))
+        for key in list(deleted_assign):
+            if key in custom_assign:
+                deleted_assign.remove(key)
+
+        filtered_schedules = []
+        for s in schedules:
+            ckey = f"{s['class_code']}|{s['subject_code']}"
+            if ckey in deleted_assign:
+                continue
+            if ckey in custom_assign:
+                s["teacher_code"] = custom_assign[ckey].get("teacher_code", s["teacher_code"])
+                s["teacher_name"] = custom_assign[ckey].get("teacher_name", s["teacher_name"])
+            filtered_schedules.append(s)
+        schedules = filtered_schedules
+
         _cached_data = {
             "dbf_dir": dbf_dir,
             "period_times": period_times,
@@ -1096,6 +1115,224 @@ def api_save_no_sub():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
+@app.route("/api/course-assignments", methods=["GET"])
+def api_get_course_assignments():
+    try:
+        data = load_schedule_data()
+        if "error" in data:
+            return jsonify(data), 500
+        
+        cfg = load_config_rules()
+        custom_assign = cfg.get("custom_assignments", {})
+
+        # Group by class_code
+        assignments = {}
+        for s in data["schedules"]:
+            cc = s["class_code"]
+            if not cc:
+                continue
+            if cc not in assignments:
+                assignments[cc] = {
+                    "class_code": cc,
+                    "class_name": s["class_name"],
+                    "subjects": {}
+                }
+            sc = s["subject_code"]
+            key = f"{sc}"
+            
+            override_key = f"{cc}|{sc}"
+            assigned_t_code = s["teacher_code"]
+            assigned_t_name = s["teacher_name"]
+            if override_key in custom_assign:
+                assigned_t_code = custom_assign[override_key].get("teacher_code", assigned_t_code)
+                assigned_t_name = custom_assign[override_key].get("teacher_name", assigned_t_name)
+
+            if key not in assignments[cc]["subjects"]:
+                assignments[cc]["subjects"][key] = {
+                    "subject_code": sc,
+                    "subject_name": s["subject_name"],
+                    "teacher_code": assigned_t_code,
+                    "teacher_name": assigned_t_name,
+                    "hours": 1
+                }
+            else:
+                assignments[cc]["subjects"][key]["hours"] += 1
+
+        # Apply custom hours override if specified
+        for cc, info in assignments.items():
+            for sub in info["subjects"].values():
+                okey = f"{cc}|{sub['subject_code']}"
+                if okey in custom_assign and "hours" in custom_assign[okey]:
+                    sub["hours"] = int(custom_assign[okey]["hours"])
+
+        # Convert subjects dict to list
+        res_class = []
+        for cc, info in assignments.items():
+            res_class.append({
+                "class_code": cc,
+                "class_name": info["class_name"],
+                "subjects": list(info["subjects"].values())
+            })
+            
+        # Group by teacher_code
+        t_assignments = {}
+        for s in data["schedules"]:
+            tc = s["teacher_code"]
+            if not tc:
+                continue
+            if tc not in t_assignments:
+                t_assignments[tc] = {
+                    "teacher_code": tc,
+                    "teacher_name": s["teacher_name"],
+                    "total_hours": 0,
+                    "courses": {}
+                }
+            sc = s["subject_code"]
+            cc = s["class_code"]
+            key = f"{cc}|{sc}"
+
+            h = 1
+            okey = f"{cc}|{sc}"
+            if okey in custom_assign and "hours" in custom_assign[okey]:
+                h = int(custom_assign[okey]["hours"])
+
+            if key not in t_assignments[tc]["courses"]:
+                t_assignments[tc]["courses"][key] = {
+                    "class_code": cc,
+                    "class_name": s["class_name"],
+                    "subject_code": sc,
+                    "subject_name": s["subject_name"],
+                    "hours": 1
+                }
+            else:
+                t_assignments[tc]["courses"][key]["hours"] += 1
+
+        # Recalculate teacher total hours with overrides
+        for tc, info in t_assignments.items():
+            tot = 0
+            for c in info["courses"].values():
+                okey = f"{c['class_code']}|{c['subject_code']}"
+                if okey in custom_assign and "hours" in custom_assign[okey]:
+                    c["hours"] = int(custom_assign[okey]["hours"])
+                tot += c["hours"]
+            info["total_hours"] = tot
+
+        res_teacher = []
+        for tc, info in t_assignments.items():
+            res_teacher.append({
+                "teacher_code": tc,
+                "teacher_name": info["teacher_name"],
+                "total_hours": info["total_hours"],
+                "courses": list(info["courses"].values())
+            })
+
+        return jsonify({
+            "status": "success",
+            "assignments": res_class,
+            "teacher_assignments": res_teacher
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/delete-course-assignment", methods=["POST"])
+def api_delete_course_assignment():
+    try:
+        req = request.get_json()
+        cc = req.get("class_code")
+        sc = req.get("subject_code")
+        
+        if not cc or not sc:
+            return jsonify({"status": "error", "message": "Class and Subject are required"}), 400
+            
+        cfg = load_config_rules()
+        if "custom_assignments" not in cfg:
+            cfg["custom_assignments"] = {}
+        if "deleted_assignments" not in cfg:
+            cfg["deleted_assignments"] = []
+            
+        key = f"{cc}|{sc}"
+        if key in cfg["custom_assignments"]:
+            del cfg["custom_assignments"][key]
+            
+        if key not in cfg["deleted_assignments"]:
+            cfg["deleted_assignments"].append(key)
+            
+        save_config_rules(cfg)
+        
+        # Invalidate cache
+        global _cached_data
+        _cached_data = None
+        
+        return jsonify({"status": "success", "message": f"班級 {cc} 的科目 {sc} 配課已成功移除！"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/save-course-assignment", methods=["POST"])
+def api_save_course_assignment():
+    try:
+        req = request.get_json()
+        cc = req.get("class_code")
+        sc = req.get("subject_code")
+        tc = req.get("teacher_code")
+        tn = req.get("teacher_name", "")
+        hours = req.get("hours")
+        
+        if not cc or not sc or not tc:
+            return jsonify({"status": "error", "message": "Class, Subject, and Teacher are required"}), 400
+            
+        cfg = load_config_rules()
+        if "custom_assignments" not in cfg:
+            cfg["custom_assignments"] = {}
+        
+        key = f"{cc}|{sc}"
+        entry = {
+            "teacher_code": tc,
+            "teacher_name": tn
+        }
+        if hours is not None:
+            try:
+                entry["hours"] = int(hours)
+            except ValueError:
+                pass
+
+        cfg["custom_assignments"][key] = entry
+        if "deleted_assignments" in cfg and key in cfg["deleted_assignments"]:
+            cfg["deleted_assignments"].remove(key)
+            
+        save_config_rules(cfg)
+        
+        # Invalidate cache
+        global _cached_data
+        _cached_data = None
+        
+        hours_str = f"（每週 {entry['hours']} 節）" if "hours" in entry else ""
+        return jsonify({"status": "success", "message": f"班級 {cc} 科目 {sc} 配課教師已更新為 {tn or tc}{hours_str}！"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/reset-schedule", methods=["POST"])
+def api_reset_schedule():
+    try:
+        solved_excel = r"D:\土城高中\School_Schedule_Solved.xlsx"
+        if os.path.exists(solved_excel):
+            try:
+                os.remove(solved_excel)
+            except Exception:
+                pass
+        local_excel = os.path.join(os.path.dirname(__file__), "School_Schedule_Solved.xlsx")
+        if os.path.exists(local_excel):
+            try:
+                os.remove(local_excel)
+            except Exception:
+                pass
+        
+        global _cached_data
+        _cached_data = None
+        
+        return jsonify({"status": "success", "message": "全校課表已成功清零！已回復至初始排課需求狀態，即刻可啟動全新 AI 排課。"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 @app.route("/api/config-rules/save-weights", methods=["POST"])
 def api_save_weights():
     try:
@@ -1109,6 +1346,350 @@ def api_save_weights():
         }
         save_config_rules(cfg)
         return jsonify({"status": "success", "message": "AI 排課權重與偏好參數已成功儲存！"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+def extract_dbf_subject_catalog():
+    data = load_schedule_data()
+    schedules = data.get("schedules", [])
+    
+    subjects_map = {}
+    grade_map = {}
+
+    category_keywords = [
+        ("國文", "語文領域"), ("英文", "外語領域"), ("數學", "數理領域"),
+        ("物理", "自然科學"), ("化學", "自然科學"), ("生物", "自然科學"), ("地科", "自然科學"),
+        ("歷史", "社會領域"), ("地理", "社會領域"), ("公民", "社會領域"),
+        ("體育", "健體領域"), ("音樂", "藝術領域"), ("美術", "藝術領域"), ("家政", "綜合領域"),
+        ("資訊", "科技領域"), ("生活科技", "科技領域"), ("彈性", "綜合領域"), ("本土", "語文領域")
+    ]
+
+    for s in schedules:
+        sc = s["subject_code"]
+        sn = s["subject_name"]
+        cc = s["class_code"]
+        cn = s["class_name"]
+        if not sc or not sn:
+            continue
+
+        if sc not in subjects_map:
+            cat = "一般領域"
+            for kw, domain in category_keywords:
+                if kw in sn:
+                    cat = domain
+                    break
+            subjects_map[sc] = {
+                "code": sc,
+                "name": sn,
+                "category": cat,
+                "hours_counts": {}
+            }
+        subjects_map[sc]["hours_counts"][cc] = subjects_map[sc]["hours_counts"].get(cc, 0) + 1
+
+        # Extract Grade
+        grade = "7"
+        if cn and cn.isdigit():
+            c_num = int(cn)
+            if 701 <= c_num <= 799: grade = "7"
+            elif 801 <= c_num <= 899: grade = "8"
+            elif 901 <= c_num <= 999: grade = "9"
+            elif 101 <= c_num <= 199 or 401 <= c_num <= 499: grade = "10"
+            elif 201 <= c_num <= 299 or 501 <= c_num <= 599: grade = "11"
+            elif 301 <= c_num <= 399 or 601 <= c_num <= 699: grade = "12"
+        else:
+            if cc.startswith("7"): grade = "7"
+            elif cc.startswith("8"): grade = "8"
+            elif cc.startswith("9"): grade = "9"
+            elif cc.startswith("1") or cc.startswith("4"): grade = "10"
+            elif cc.startswith("2") or cc.startswith("5"): grade = "11"
+            elif cc.startswith("3") or cc.startswith("6"): grade = "12"
+
+        if grade not in grade_map:
+            grade_map[grade] = {}
+        if sc not in grade_map[grade]:
+            grade_map[grade][sc] = {
+                "subject_code": sc,
+                "subject_name": sn,
+                "hours_counts": {}
+            }
+        grade_map[grade][sc]["hours_counts"][cc] = grade_map[grade][sc]["hours_counts"].get(cc, 0) + 1
+
+    catalog = []
+    for sc, info in subjects_map.items():
+        counts = info["hours_counts"]
+        most_freq = max(counts, key=counts.get) if counts else None
+        avg_h = counts[most_freq] if most_freq else 4
+        catalog.append({
+            "code": sc,
+            "name": info["name"],
+            "category": info["category"],
+            "default_hours": avg_h
+        })
+
+    curriculum = {}
+    for g, subs in grade_map.items():
+        curriculum[g] = []
+        for sc, info in subs.items():
+            counts = info["hours_counts"]
+            most_freq = max(counts, key=counts.get) if counts else None
+            avg_h = counts[most_freq] if most_freq else 4
+            curriculum[g].append({
+                "subject_code": sc,
+                "subject_name": info["subject_name"],
+                "hours": avg_h
+            })
+
+    return catalog, curriculum
+
+@app.route("/api/subject-catalog", methods=["GET"])
+def api_get_subject_catalog():
+    try:
+        cfg = load_config_rules()
+        dbf_catalog, dbf_curriculum = extract_dbf_subject_catalog()
+        
+        custom_catalog = cfg.get("subject_catalog", [])
+        # Merge custom with DBF catalog
+        catalog_map = {s["code"]: s for s in dbf_catalog}
+        for s in custom_catalog:
+            catalog_map[s["code"]] = s
+        merged_catalog = list(catalog_map.values())
+            
+        custom_curriculum = cfg.get("grade_curriculum", {})
+        # Merge custom curriculum with DBF curriculum
+        merged_curriculum = dict(dbf_curriculum)
+        for g, subs in custom_curriculum.items():
+            if g not in merged_curriculum:
+                merged_curriculum[g] = subs
+            else:
+                g_map = {item["subject_code"]: item for item in merged_curriculum[g]}
+                for item in subs:
+                    g_map[item["subject_code"]] = item
+                merged_curriculum[g] = list(g_map.values())
+
+        return jsonify({
+            "status": "success",
+            "subject_catalog": merged_catalog,
+            "grade_curriculum": merged_curriculum
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/save-subject-catalog", methods=["POST"])
+def api_save_subject_catalog():
+    try:
+        req = request.get_json()
+        code = req.get("code")
+        name = req.get("name")
+        category = req.get("category", "一般")
+        hours = req.get("default_hours", 4)
+        is_delete = req.get("delete", False)
+        
+        if not code:
+            return jsonify({"status": "error", "message": "Subject code is required"}), 400
+            
+        cfg = load_config_rules()
+        catalog = cfg.get("subject_catalog")
+        if not catalog:
+            catalog = list(DEFAULT_SUBJECT_CATALOG)
+            
+        if is_delete:
+            catalog = [s for s in catalog if s["code"] != code]
+            msg = f"已刪除學科 {code}！"
+        else:
+            existing = False
+            for s in catalog:
+                if s["code"] == code:
+                    s["name"] = name
+                    s["category"] = category
+                    s["default_hours"] = int(hours)
+                    existing = True
+                    break
+            if not existing:
+                catalog.append({
+                    "code": code,
+                    "name": name,
+                    "category": category,
+                    "default_hours": int(hours)
+                })
+            msg = f"學科 {name} ({code}) 已儲存更新！"
+            
+        cfg["subject_catalog"] = catalog
+        save_config_rules(cfg)
+        return jsonify({"status": "success", "message": msg, "subject_catalog": catalog})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/save-grade-curriculum", methods=["POST"])
+def api_save_grade_curriculum():
+    try:
+        req = request.get_json()
+        grade = req.get("grade")
+        sc = req.get("subject_code")
+        sn = req.get("subject_name")
+        hours = req.get("hours", 4)
+        is_delete = req.get("delete", False)
+        
+        if not grade or not sc:
+            return jsonify({"status": "error", "message": "Grade and Subject code are required"}), 400
+            
+        cfg = load_config_rules()
+        if "grade_curriculum" not in cfg:
+            cfg["grade_curriculum"] = {}
+            
+        if grade not in cfg["grade_curriculum"]:
+            cfg["grade_curriculum"][grade] = []
+            
+        cur_list = cfg["grade_curriculum"][grade]
+        if is_delete:
+            cfg["grade_curriculum"][grade] = [item for item in cur_list if item["subject_code"] != sc]
+            msg = f"年級 {grade} 已移除科目 {sc}！"
+        else:
+            found = False
+            for item in cur_list:
+                if item["subject_code"] == sc:
+                    item["hours"] = int(hours)
+                    item["subject_name"] = sn or item.get("subject_name", sc)
+                    found = True
+                    break
+            if not found:
+                cur_list.append({
+                    "subject_code": sc,
+                    "subject_name": sn or sc,
+                    "hours": int(hours)
+                })
+            msg = f"年級 {grade} 科目 {sn or sc} 設定已更新（每週 {hours} 節）！"
+            
+        save_config_rules(cfg)
+        return jsonify({"status": "success", "message": msg, "grade_curriculum": cfg["grade_curriculum"]})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+RESTORE_POINTS_DIR = os.path.join(os.path.dirname(__file__), "restore_points")
+
+def get_restore_points_manifest():
+    if not os.path.exists(RESTORE_POINTS_DIR):
+        os.makedirs(RESTORE_POINTS_DIR, exist_ok=True)
+    manifest_file = os.path.join(RESTORE_POINTS_DIR, "manifest.json")
+    if os.path.exists(manifest_file):
+        try:
+            with open(manifest_file, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return []
+
+def save_restore_points_manifest(points):
+    if not os.path.exists(RESTORE_POINTS_DIR):
+        os.makedirs(RESTORE_POINTS_DIR, exist_ok=True)
+    manifest_file = os.path.join(RESTORE_POINTS_DIR, "manifest.json")
+    with open(manifest_file, "w", encoding="utf-8") as f:
+        json.dump(points, f, ensure_ascii=False, indent=2)
+
+@app.route("/api/restore-points", methods=["GET"])
+def api_get_restore_points():
+    try:
+        points = get_restore_points_manifest()
+        return jsonify({"status": "success", "restore_points": points})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/create-restore-point", methods=["POST"])
+def api_create_restore_point():
+    try:
+        req = request.get_json() or {}
+        note = req.get("note", "").strip() or "全校設定與課表快照"
+        
+        import datetime
+        now = datetime.datetime.now()
+        rp_id = now.strftime("%Y%m%d_%H%M%S")
+        timestamp_str = now.strftime("%Y-%m-%d %H:%M:%S")
+        
+        point_dir = os.path.join(RESTORE_POINTS_DIR, rp_id)
+        os.makedirs(point_dir, exist_ok=True)
+        
+        # Backup config_rules.json
+        cfg = load_config_rules()
+        with open(os.path.join(point_dir, "config_rules.json"), "w", encoding="utf-8") as f:
+            json.dump(cfg, f, ensure_ascii=False, indent=2)
+            
+        # Backup solved Excel if exists
+        excel_path = os.path.join(os.path.dirname(__file__), "School_Schedule_Solved.xlsx")
+        has_excel = False
+        if os.path.exists(excel_path):
+            import shutil
+            shutil.copy2(excel_path, os.path.join(point_dir, "School_Schedule_Solved.xlsx"))
+            has_excel = True
+
+        points = get_restore_points_manifest()
+        new_entry = {
+            "id": rp_id,
+            "timestamp": timestamp_str,
+            "note": note,
+            "has_excel": has_excel
+        }
+        points.insert(0, new_entry)
+        save_restore_points_manifest(points)
+        
+        return jsonify({"status": "success", "message": f"還原點「{note}」已成功建立！", "restore_points": points})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/restore-checkpoint", methods=["POST"])
+def api_restore_checkpoint():
+    try:
+        req = request.get_json() or {}
+        rp_id = req.get("id")
+        if not rp_id:
+            return jsonify({"status": "error", "message": "Restore point ID is required"}), 400
+            
+        point_dir = os.path.join(RESTORE_POINTS_DIR, rp_id)
+        if not os.path.exists(point_dir):
+            return jsonify({"status": "error", "message": "Restore point not found"}), 404
+            
+        # Restore config_rules.json
+        cfg_backup = os.path.join(point_dir, "config_rules.json")
+        if os.path.exists(cfg_backup):
+            import shutil
+            shutil.copy2(cfg_backup, CONFIG_RULES_FILE)
+            
+        # Restore Excel if present
+        excel_backup = os.path.join(point_dir, "School_Schedule_Solved.xlsx")
+        target_excel = os.path.join(os.path.dirname(__file__), "School_Schedule_Solved.xlsx")
+        if os.path.exists(excel_backup):
+            import shutil
+            shutil.copy2(excel_backup, target_excel)
+        elif os.path.exists(target_excel):
+            try:
+                os.remove(target_excel)
+            except Exception:
+                pass
+                
+        # Invalidate cache
+        global _cached_data
+        _cached_data = None
+        
+        return jsonify({"status": "success", "message": f"全校系統與課表已成功還原至快照 {rp_id}！"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/delete-restore-point", methods=["POST"])
+def api_delete_restore_point():
+    try:
+        req = request.get_json() or {}
+        rp_id = req.get("id")
+        if not rp_id:
+            return jsonify({"status": "error", "message": "Restore point ID is required"}), 400
+            
+        point_dir = os.path.join(RESTORE_POINTS_DIR, rp_id)
+        if os.path.exists(point_dir):
+            import shutil
+            shutil.rmtree(point_dir, ignore_errors=True)
+            
+        points = get_restore_points_manifest()
+        points = [p for p in points if p["id"] != rp_id]
+        save_restore_points_manifest(points)
+        
+        return jsonify({"status": "success", "message": f"還原點 {rp_id} 已刪除！", "restore_points": points})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 

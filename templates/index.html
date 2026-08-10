@@ -197,6 +197,9 @@
                 </div>
                 
                 <div class="solver-actions">
+                    <button id="resetScheduleBtn" class="solver-action-btn secondary-btn" style="background: rgba(239, 68, 68, 0.15); border-color: rgba(239, 68, 68, 0.3); color: #f87171;" title="清空歷史課表與手調鎖定紀錄，回復初始狀態">
+                        <i class="fa-solid fa-trash-can"></i> 重置清零舊課表
+                    </button>
                     <button id="runSolverBtn" class="solver-action-btn primary-btn">
                         <i class="fa-solid fa-play"></i> 執行 AI 自動排課
                     </button>
@@ -223,13 +226,13 @@
 
     <!-- Settings & Rules Management Modal -->
     <div id="settingsModal" class="modal-overlay no-print" style="display: none;">
-        <div class="modal-content glass" style="max-width: 850px;">
+        <div class="modal-content glass">
             <div class="modal-header">
                 <div class="modal-title">
                     <i class="fa-solid fa-sliders modal-icon" style="color: #818cf8;"></i>
                     <div>
                         <h2>排課規則與參數管理控制台</h2>
-                        <p class="sub-text">自訂教師不排課時段、科目限制時段及 AI 排課偏好權重</p>
+                        <p class="sub-text">自訂教師不排課時段、科目限制時段、全校班級/教師配課及 AI 偏好權重</p>
                     </div>
                 </div>
                 <button id="closeSettingsBtn" class="close-modal-btn">
@@ -247,6 +250,15 @@
                     </button>
                     <button id="tabRuleWeightsBtn" class="rule-tab-btn" data-ruletab="weights" style="padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border-color); background: transparent; color: var(--text-secondary); cursor: pointer;">
                         <i class="fa-solid fa-scale-balanced"></i> AI 權重與偏好
+                    </button>
+                    <button id="tabRuleAssignBtn" class="rule-tab-btn" data-ruletab="assign" style="padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border-color); background: transparent; color: var(--text-secondary); cursor: pointer;">
+                        <i class="fa-solid fa-list-check"></i> 全校配課管理 (班級/教師)
+                    </button>
+                    <button id="tabRuleCatalogBtn" class="rule-tab-btn" data-ruletab="catalog" style="padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border-color); background: transparent; color: var(--text-secondary); cursor: pointer;">
+                        <i class="fa-solid fa-book-bookmark"></i> 學科種類與年級課程規劃
+                    </button>
+                    <button id="tabRuleRestoreBtn" class="rule-tab-btn" data-ruletab="restore" style="padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border-color); background: transparent; color: var(--text-secondary); cursor: pointer;">
+                        <i class="fa-solid fa-clock-rotate-left"></i> 歷史還原點管理
                     </button>
                 </div>
 
@@ -351,6 +363,186 @@
                                 <i class="fa-solid fa-floppy-disk"></i> 儲存 AI 演算法權重
                             </button>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Tab 4: Course Assignments Management -->
+                <div id="ruleTabAssign" class="rule-tab-content" style="display: none;">
+                    <div style="display: flex; gap: 12px; margin-bottom: 12px; border-bottom: 1px dashed var(--border-color); padding-bottom: 8px;">
+                        <button id="assignModeClassBtn" class="solver-action-btn primary-btn" style="padding: 4px 12px; font-size: 0.85rem; background: #6366f1;">
+                            <i class="fa-solid fa-graduation-cap"></i> 按班級配課檢視
+                        </button>
+                        <button id="assignModeTeacherBtn" class="solver-action-btn secondary-btn" style="padding: 4px 12px; font-size: 0.85rem;">
+                            <i class="fa-solid fa-chalkboard-user"></i> 按教師配課檢視
+                        </button>
+                    </div>
+
+                    <!-- Class Mode Selector -->
+                    <div id="assignClassModeWrapper" style="display: flex; gap: 12px; align-items: center; margin-bottom: 12px;">
+                        <label style="font-weight: 500; min-width: 80px;">選擇班級：</label>
+                        <select id="assignClassSelect" style="padding: 6px 12px; border-radius: 6px; background: rgba(15, 23, 42, 0.6); color: #fff; border: 1px solid var(--border-color); flex: 1;">
+                            <option value="">-- 請選擇班級檢視/調整配課 --</option>
+                        </select>
+                    </div>
+
+                    <!-- Teacher Mode Selector & Assignment Form -->
+                    <div id="assignTeacherModeWrapper" style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 12px; display: none;">
+                        <div style="display: flex; gap: 12px; align-items: center;">
+                            <label style="font-weight: 500; min-width: 80px;">選擇教師：</label>
+                            <select id="assignTeacherSelect" style="padding: 6px 12px; border-radius: 6px; background: rgba(15, 23, 42, 0.6); color: #fff; border: 1px solid var(--border-color); flex: 1;">
+                                <option value="">-- 請選擇教師檢視與設定配課 --</option>
+                            </select>
+                            <div id="teacherTotalHoursBadge" style="padding: 4px 12px; border-radius: 6px; background: rgba(56, 189, 248, 0.15); color: #38bdf8; font-weight: bold; border: 1px solid rgba(56, 189, 248, 0.3);">
+                                總節數：0 節
+                            </div>
+                        </div>
+
+                        <!-- Direct Teacher Assignment Form -->
+                        <div id="addTeacherAssignBox" style="display: flex; gap: 8px; align-items: center; background: rgba(255, 255, 255, 0.03); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-color);">
+                            <span style="font-size: 0.85rem; color: #818cf8; font-weight: 500;"><i class="fa-solid fa-plus-circle"></i> 指派配課給此教師：</span>
+                            <select id="assignAddClassSelect" style="padding: 4px 8px; border-radius: 4px; background: rgba(15, 23, 42, 0.8); color: #fff; border: 1px solid var(--border-color); flex: 1;">
+                                <option value="">-- 選擇授課班級 --</option>
+                            </select>
+                            <select id="assignAddSubSelect" style="padding: 4px 8px; border-radius: 4px; background: rgba(15, 23, 42, 0.8); color: #fff; border: 1px solid var(--border-color); flex: 1;">
+                                <option value="">-- 選擇科目 --</option>
+                            </select>
+                            <span style="font-size: 0.85rem; color: var(--text-secondary);">節數：</span>
+                            <input type="number" id="assignAddHoursInput" min="1" max="10" value="4" style="width: 65px; padding: 4px 8px; border-radius: 4px; background: rgba(15, 23, 42, 0.8); color: #fff; border: 1px solid var(--border-color);" title="設定每週上課總節數">
+                            <button id="addTeacherAssignBtn" class="solver-action-btn primary-btn" style="padding: 4px 12px; font-size: 0.8rem; background: #6366f1;">
+                                儲存指派
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="assignTableContainer" class="table-responsive glass" style="margin-bottom: 12px; display: none;">
+                        <table class="schedule-table" style="font-size: 0.85rem;">
+                            <thead id="assignTableHead">
+                                <tr>
+                                    <th>科目名稱 (代碼)</th>
+                                    <th>每週總節數</th>
+                                    <th>目前授課教師</th>
+                                    <th>變更配課教師</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="assignTableBody">
+                                <!-- Generated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Tab 5: Master Subject Catalog & Grade Curriculum Plan -->
+                <div id="ruleTabCatalog" class="rule-tab-content" style="display: none;">
+                    <div style="display: flex; gap: 12px; margin-bottom: 12px; border-bottom: 1px dashed var(--border-color); padding-bottom: 8px;">
+                        <button id="catalogModeMasterBtn" class="solver-action-btn primary-btn" style="padding: 4px 12px; font-size: 0.85rem; background: #6366f1;">
+                            <i class="fa-solid fa-book"></i> 全校學科總目錄
+                        </button>
+                        <button id="catalogModeGradeBtn" class="solver-action-btn secondary-btn" style="padding: 4px 12px; font-size: 0.85rem;">
+                            <i class="fa-solid fa-layer-group"></i> 各年級應修課程規劃
+                        </button>
+                    </div>
+
+                    <!-- Master Subject Catalog Section -->
+                    <div id="catalogMasterWrapper">
+                        <div style="display: flex; gap: 8px; align-items: center; background: rgba(255, 255, 255, 0.03); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 12px;">
+                            <span style="font-size: 0.85rem; color: #818cf8; font-weight: 500;"><i class="fa-solid fa-plus-circle"></i> 新增全校學科種類：</span>
+                            <input type="text" id="catNewCodeInput" placeholder="代碼 (如 110)" style="width: 100px; padding: 4px 8px; border-radius: 4px; background: rgba(15, 23, 42, 0.8); color: #fff; border: 1px solid var(--border-color);">
+                            <input type="text" id="catNewNameInput" placeholder="學科名稱 (如 程式設計)" style="flex: 1; padding: 4px 8px; border-radius: 4px; background: rgba(15, 23, 42, 0.8); color: #fff; border: 1px solid var(--border-color);">
+                            <input type="text" id="catNewCategoryInput" placeholder="領域類別 (如 科技領域)" style="flex: 1; padding: 4px 8px; border-radius: 4px; background: rgba(15, 23, 42, 0.8); color: #fff; border: 1px solid var(--border-color);">
+                            <input type="number" id="catNewHoursInput" min="1" max="10" value="2" style="width: 65px; padding: 4px 8px; border-radius: 4px; background: rgba(15, 23, 42, 0.8); color: #fff; border: 1px solid var(--border-color);" title="預設每週節數">
+                            <button id="saveNewMasterSubBtn" class="solver-action-btn primary-btn" style="padding: 4px 12px; font-size: 0.8rem; background: #6366f1;">
+                                建立學科
+                            </button>
+                        </div>
+
+                        <div class="table-responsive glass" style="max-height: 350px; overflow-y: auto;">
+                            <table class="schedule-table" style="font-size: 0.85rem;">
+                                <thead>
+                                    <tr>
+                                        <th>學科代碼</th>
+                                        <th>學科名稱</th>
+                                        <th>領域類別</th>
+                                        <th>預設每週節數</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="masterSubjectTableBody">
+                                    <!-- JS Generated -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Grade Curriculum Plan Section -->
+                    <div id="catalogGradeWrapper" style="display: none;">
+                        <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 12px;">
+                            <label style="font-weight: 500; min-width: 80px;">選擇年級：</label>
+                            <select id="curriculumGradeSelect" style="padding: 6px 12px; border-radius: 6px; background: rgba(15, 23, 42, 0.6); color: #fff; border: 1px solid var(--border-color); flex: 1;">
+                                <option value="7">國一 (7年級)</option>
+                                <option value="8">國二 (8年級)</option>
+                                <option value="9">國三 (9年級)</option>
+                                <option value="10">高一 (10年級)</option>
+                                <option value="11">高二 (11年級)</option>
+                                <option value="12">高三 (12年級)</option>
+                            </select>
+                        </div>
+
+                        <div style="display: flex; gap: 8px; align-items: center; background: rgba(255, 255, 255, 0.03); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 12px;">
+                            <span style="font-size: 0.85rem; color: #818cf8; font-weight: 500;"><i class="fa-solid fa-plus-circle"></i> 指派年級應修科目：</span>
+                            <select id="curriculumSubSelect" style="padding: 4px 8px; border-radius: 4px; background: rgba(15, 23, 42, 0.8); color: #fff; border: 1px solid var(--border-color); flex: 1;">
+                                <option value="">-- 選擇學科 --</option>
+                            </select>
+                            <span style="font-size: 0.85rem; color: var(--text-secondary);">每週節數：</span>
+                            <input type="number" id="curriculumHoursInput" min="1" max="10" value="4" style="width: 65px; padding: 4px 8px; border-radius: 4px; background: rgba(15, 23, 42, 0.8); color: #fff; border: 1px solid var(--border-color);">
+                            <button id="addGradeCurriculumBtn" class="solver-action-btn primary-btn" style="padding: 4px 12px; font-size: 0.8rem; background: #6366f1;">
+                                加入年級課程
+                            </button>
+                        </div>
+
+                        <div class="table-responsive glass" style="max-height: 350px; overflow-y: auto;">
+                            <table class="schedule-table" style="font-size: 0.85rem;">
+                                <thead>
+                                    <tr>
+                                        <th>科目代碼</th>
+                                        <th>科目名稱</th>
+                                        <th>每週標準授課節數</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="gradeCurriculumTableBody">
+                                    <!-- JS Generated -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 6: Restore Points Checkpoint Manager -->
+                <div id="ruleTabRestore" class="rule-tab-content" style="display: none;">
+                    <div style="display: flex; gap: 8px; align-items: center; background: rgba(255, 255, 255, 0.03); padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 12px;">
+                        <span style="font-size: 0.85rem; color: #818cf8; font-weight: 500;"><i class="fa-solid fa-floppy-disk"></i> 建立全新系統還原點：</span>
+                        <input type="text" id="restoreNoteInput" placeholder="輸入還原點備註說明 (如: 8/11 配課完成版)" style="flex: 1; padding: 6px 12px; border-radius: 6px; background: rgba(15, 23, 42, 0.8); color: #fff; border: 1px solid var(--border-color);">
+                        <button id="createNewRestorePointBtn" class="solver-action-btn primary-btn" style="padding: 6px 16px; font-size: 0.85rem; background: #6366f1;">
+                            <i class="fa-solid fa-camera"></i> 拍攝全校設定與課表快照
+                        </button>
+                    </div>
+
+                    <div class="table-responsive glass" style="max-height: 380px; overflow-y: auto;">
+                        <table class="schedule-table" style="font-size: 0.85rem;">
+                            <thead>
+                                <tr>
+                                    <th>還原點編號</th>
+                                    <th>建立時間</th>
+                                    <th>備註說明</th>
+                                    <th>備份內容</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="restorePointsTableBody">
+                                <!-- JS Generated -->
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
