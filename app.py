@@ -102,12 +102,19 @@ def load_schedule_data():
         # 3. Parse teacher.dbf
         db_teacher = DBF(resolved_paths["teacher"], ignore_missing_memofile=True)
         teachers = []
+        # Build code normalization map: short code (e.g. '28') -> full padded code (e.g. '0028')
+        teacher_code_map = {}
         for r in db_teacher:
             t_name = r.get("TEACH_NAME", "").strip()
+            full_code = r.get("TEACHER_NO", "").strip()
+            if full_code:
+                # Map both the stripped integer form and the full padded form to the canonical full_code
+                teacher_code_map[str(int(full_code))] = full_code
+                teacher_code_map[full_code] = full_code
             # Filter out backup or empty teachers
             if t_name and not t_name.startswith("備用"):
                 teachers.append({
-                    "code": r.get("TEACHER_NO", "").strip(),
+                    "code": full_code,
                     "name": t_name,
                     "role": r.get("TEACH_KINA", "").strip() if r.get("TEACH_KINA") else ""
                 })
@@ -134,6 +141,9 @@ def load_schedule_data():
                 teacher_code = str(r.get("教師代碼", "")).strip().split(".")[0]
                 if teacher_code.replace(".0", "") == "nan" or teacher_code.lower() == "nan":
                     teacher_code = ""
+                # Normalize teacher code to padded format matching teacher.dbf
+                if teacher_code:
+                    teacher_code = teacher_code_map.get(teacher_code, teacher_code)
                 teacher_name = str(r.get("教師姓名", "")).strip()
                 if teacher_name.lower() == "nan":
                     teacher_name = ""
@@ -182,6 +192,9 @@ def load_schedule_data():
                 subject_code = r.get("科目", "").strip()
                 subject_name = r.get("科目名稱", "").strip()
                 teacher_code = r.get("教師", "").strip()
+                # Normalize to padded format matching teacher.dbf codes
+                if teacher_code:
+                    teacher_code = teacher_code_map.get(teacher_code, teacher_code)
                 teacher_name = r.get("教師名稱", "").strip()
                 room_code = r.get("教室", "").strip()
                 room_name = r.get("教室名稱", "").strip()
