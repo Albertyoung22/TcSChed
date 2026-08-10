@@ -46,7 +46,6 @@ def load_schedule_data():
     files = {
         "class": "class.dbf",
         "teacher": "teacher.dbf",
-        "subject": "subject.dbf",
         "claspv": "claspv.dbf",
         "clatime": "clatime.dbf"
     }
