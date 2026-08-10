@@ -353,7 +353,24 @@ def run_solver():
             class_sub_items[key] = []
         class_sub_items[key].append(item)
 
-    # SOFT Constraint: Class/Subject Blocked Times (no_sub.dbf)
+    # Load dynamic config rules if present
+    config_rules_file = os.path.join(os.path.dirname(__file__), "config_rules.json")
+    custom_rules = {}
+    if os.path.exists(config_rules_file):
+        try:
+            import json
+            with open(config_rules_file, "r", encoding="utf-8") as f:
+                custom_rules = json.load(f)
+        except Exception as e:
+            log(f"Warning: Failed to read config_rules.json: {e}")
+
+    weights = custom_rules.get("weights", {})
+    w_spreading = int(weights.get("spreading_weight", 10))
+    w_consecutive = int(weights.get("consecutive_weight", 500))
+    w_no_teach = int(weights.get("no_teach_penalty", 200))
+    w_no_sub = int(weights.get("no_sub_penalty", 200))
+
+    # SOFT Constraint: Class/Subject Blocked Times (no_sub.dbf + custom)
     no_sub_violations = []
     for rule in db_no_sub:
         c_code = rule.get("CLASS_NO", "").strip()
@@ -371,7 +388,24 @@ def run_solver():
                         if d in days and p in periods:
                             no_sub_violations.append(x[item["idx"], d, p])
 
-    # SOFT Constraint: Teacher Unavailability
+    custom_no_sub = custom_rules.get("custom_no_sub", {})
+    for key_str, slots in custom_no_sub.items():
+        parts = key_str.split("|")
+        if len(parts) == 2:
+            c_code, s_code = parts[0], parts[1]
+            key = (c_code, s_code)
+            if key in class_sub_items:
+                for item in class_sub_items[key]:
+                    for slot in slots:
+                        try:
+                            d_str, p_str = slot.split("-")
+                            d, p = int(d_str), int(p_str)
+                            if d in days and p in periods:
+                                no_sub_violations.append(x[item["idx"], d, p])
+                        except ValueError:
+                            pass
+
+    # SOFT Constraint: Teacher Unavailability (no_teach.dbf + custom)
     no_teach_violations = []
     for rule in db_no_teach:
         t_code = rule.get("TEACHER_NO", "").strip()
@@ -386,6 +420,19 @@ def run_solver():
                     for p in range(ss, es + 1):
                         if d in days and p in periods:
                             no_teach_violations.append(x[item["idx"], d, p])
+
+    custom_no_teach = custom_rules.get("custom_no_teach", {})
+    for t_code, slots in custom_no_teach.items():
+        if t_code in teacher_items_map:
+            for item in teacher_items_map[t_code]:
+                for slot in slots:
+                    try:
+                        d_str, p_str = slot.split("-")
+                        d, p = int(d_str), int(p_str)
+                        if d in days and p in periods:
+                            no_teach_violations.append(x[item["idx"], d, p])
+                    except ValueError:
+                        pass
 
     # SOFT Constraint: Double Periods
     course_items_map = {}
@@ -436,10 +483,10 @@ def run_solver():
     # Multi-Objective Function
     # Maximize: Spreading & Double consecutiveness, Penalize teacher & sub block violations
     model.Maximize(
-        10 * sum(active_vars) +
-        500 * sum(consecutive_vars) -
-        200 * sum(no_teach_violations) -
-        200 * sum(no_sub_violations)
+        w_spreading * sum(active_vars) +
+        w_consecutive * sum(consecutive_vars) -
+        w_no_teach * sum(no_teach_violations) -
+        w_no_sub * sum(no_sub_violations)
     )
 
     # Run Solver

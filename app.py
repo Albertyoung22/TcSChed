@@ -1,5 +1,6 @@
 import os
 import sys
+import json
 from flask import Flask, jsonify, render_template, send_from_directory, send_file, request
 from dbfread import DBF
 
@@ -750,77 +751,120 @@ def api_check_swap_slots(item_id):
         if not item:
             return jsonify({"status": "error", "message": "Course item not found"}), 404
             
+        source_d = int(item["day"])
+        source_p = int(item["period"])
+        t_code = item["teacher_code"]
+        c_code = item["class_code"]
+        s_code = item["subject_code"]
+        
+        # Check if source_item is part of a consecutive period on the same day
+        is_consecutive = False
+        consecutive_period = None
+        for s in schedules:
+            if s["id"] != item_id and s["class_code"] == c_code and s["subject_code"] == s_code and s["day"] == str(source_d):
+                p_diff = abs(int(s["period"]) - source_p)
+                if p_diff == 1:
+                    is_consecutive = True
+                    consecutive_period = int(s["period"])
+                    break
+        if is_consecutive:
+            item["consecutive_hint"] = f"提示：此課與第 {consecutive_period} 節為連堂課程"
+
         dbf_dir = get_latest_dbf_dir()
         db_no_teach = list(DBF(os.path.join(dbf_dir, "no_teach.dbf"), ignore_missing_memofile=True, encoding='cp950'))
         db_no_sub = list(DBF(os.path.join(dbf_dir, "no_sub.dbf"), ignore_missing_memofile=True, encoding='cp950'))
         
-        teacher_blocked = set()
-        t_code = item["teacher_code"]
-        if t_code:
-            for rule in db_no_teach:
-                if rule.get("TEACHER_NO", "").strip() == t_code:
-                    sd = rule.get("START_DAY", 1)
-                    ed = rule.get("END_DAY", 1)
-                    ss = rule.get("START_SEC", 1)
-                    es = rule.get("END_SEC", 1)
-                    for d in range(sd, ed + 1):
-                        for p in range(ss, es + 1):
-                            teacher_blocked.add((d, p))
-                            
-        class_sub_blocked = set()
-        c_code = item["class_code"]
-        s_code = item["subject_code"]
-        if c_code and s_code:
-            for rule in db_no_sub:
-                if rule.get("CLASS_NO", "").strip() == c_code and rule.get("SUBJECT_NO", "").strip() == s_code:
-                    sd = rule.get("START_DAY", 1)
-                    ed = rule.get("END_DAY", 1)
-                    ss = rule.get("START_SEC", 1)
-                    es = rule.get("END_SEC", 1)
-                    for d in range(sd, ed + 1):
-                        for p in range(ss, es + 1):
-                            class_sub_blocked.add((d, p))
-                            
+        # Build lookup maps for no_teach and no_sub
+        no_teach_map = {} # teacher_code -> set of (d, p)
+        for rule in db_no_teach:
+            tc = rule.get("TEACHER_NO", "").strip()
+            if tc:
+                if tc not in no_teach_map:
+                    no_teach_map[tc] = set()
+                sd = rule.get("START_DAY", 1)
+                ed = rule.get("END_DAY", 1)
+                ss = rule.get("START_SEC", 1)
+                es = rule.get("END_SEC", 1)
+                for d in range(sd, ed + 1):
+                    for p in range(ss, es + 1):
+                        no_teach_map[tc].add((d, p))
+
+        no_sub_map = {} # (class_code, subject_code) -> set of (d, p)
+        for rule in db_no_sub:
+            cc = rule.get("CLASS_NO", "").strip()
+            sc = rule.get("SUBJECT_NO", "").strip()
+            if cc and sc:
+                key = (cc, sc)
+                if key not in no_sub_map:
+                    no_sub_map[key] = set()
+                sd = rule.get("START_DAY", 1)
+                ed = rule.get("END_DAY", 1)
+                ss = rule.get("START_SEC", 1)
+                es = rule.get("END_SEC", 1)
+                for d in range(sd, ed + 1):
+                    for p in range(ss, es + 1):
+                        no_sub_map[key].add((d, p))
+
+        teacher_blocked = no_teach_map.get(t_code, set())
+        class_sub_blocked = no_sub_map.get((c_code, s_code), set())
+
         slots_status = {}
         for d in range(1, 6):
             for p in range(1, 9):
                 slot_key = f"{d}-{p}"
                 
-                if item["day"] == str(d) and item["period"] == str(p):
+                if source_d == d and source_p == p:
                     slots_status[slot_key] = {"status": "current", "message": "目前時段"}
                     continue
-                    
-                t_conflicts = []
+                
+                forbidden_reasons = []
+                soft_reasons = []
+                
+                # 1. Check Source Item going to (d, p)
                 if t_code:
                     for s in schedules:
                         if s["id"] != item_id and s["teacher_code"] == t_code and s["day"] == str(d) and s["period"] == str(p):
-                            t_conflicts.append(s)
-                            
-                c_conflicts = []
+                            forbidden_reasons.append(f"教師衝堂：與 {s['class_name']} 班 {s['subject_name']} 衝堂")
                 if c_code:
                     for s in schedules:
                         if s["id"] != item_id and s["class_code"] == c_code and s["day"] == str(d) and s["period"] == str(p):
-                            c_conflicts.append(s)
-                            
-                if t_conflicts or c_conflicts:
-                    reasons = []
-                    for s in t_conflicts:
-                        reasons.append(f"教師衝堂：與 {s['class_name']} 班 {s['subject_name']} 衝堂")
-                    for s in c_conflicts:
-                        reasons.append(f"班級衝堂：與 {s['subject_name']} ({s['teacher_name']}) 衝堂")
+                            forbidden_reasons.append(f"班級衝堂：與 {s['subject_name']} ({s['teacher_name']}) 衝堂")
+                
+                if (d, p) in teacher_blocked:
+                    soft_reasons.append("本課教師在該時段不排課")
+                if (d, p) in class_sub_blocked:
+                    soft_reasons.append("本班級科目在該時段禁止排課")
+                
+                # 2. Two-way Swap Check: Target Item(s) at (d, p) moving back to (source_d, source_p)
+                target_items = [s for s in schedules if s["id"] != item_id and s["day"] == str(d) and s["period"] == str(p) and (s["class_code"] == c_code or s["teacher_code"] == t_code)]
+                for tgt in target_items:
+                    tgt_t = tgt["teacher_code"]
+                    tgt_c = tgt["class_code"]
+                    tgt_s = tgt["subject_code"]
+                    
+                    if tgt_t:
+                        for s in schedules:
+                            if s["id"] != tgt["id"] and s["id"] != item_id and s["teacher_code"] == tgt_t and s["day"] == str(source_d) and s["period"] == str(source_p):
+                                forbidden_reasons.append(f"對調衝堂：對調老師({tgt['teacher_name']})移至原時段與 {s['class_name']}衝堂")
+                    if tgt_c and tgt_c != c_code:
+                        for s in schedules:
+                            if s["id"] != tgt["id"] and s["id"] != item_id and s["class_code"] == tgt_c and s["day"] == str(source_d) and s["period"] == str(source_p):
+                                forbidden_reasons.append(f"對調衝堂：對調班級({tgt['class_name']})移至原時段衝堂")
+                                
+                    if (source_d, source_p) in no_teach_map.get(tgt_t, set()):
+                        soft_reasons.append(f"對調警示：對調老師({tgt['teacher_name']})在原時段不排課")
+                    if (source_d, source_p) in no_sub_map.get((tgt_c, tgt_s), set()):
+                        soft_reasons.append(f"對調警示：對調科目({tgt['subject_name']})在原時段禁止排課")
+                
+                if forbidden_reasons:
                     slots_status[slot_key] = {
                         "status": "forbidden",
-                        "message": " / ".join(reasons)
+                        "message": " / ".join(forbidden_reasons)
                     }
-                elif (d, p) in teacher_blocked:
+                elif soft_reasons:
                     slots_status[slot_key] = {
                         "status": "soft_conflict",
-                        "message": "教師不排課時段"
-                    }
-                elif (d, p) in class_sub_blocked:
-                    slots_status[slot_key] = {
-                        "status": "soft_conflict",
-                        "message": "科目禁止排課時段"
+                        "message": " / ".join(soft_reasons)
                     }
                 else:
                     slots_status[slot_key] = {
@@ -914,7 +958,162 @@ def api_execute_swap():
         traceback.print_exc()
         return jsonify({"status": "error", "message": str(e)}), 500
 
+CONFIG_RULES_FILE = os.path.join(os.path.dirname(__file__), "config_rules.json")
+
+def load_config_rules():
+    if os.path.exists(CONFIG_RULES_FILE):
+        try:
+            with open(CONFIG_RULES_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {
+        "custom_no_teach": {}, # teacher_code -> list of "d-p"
+        "custom_no_sub": {},   # "class_code|subject_code" -> list of "d-p"
+        "weights": {
+            "consecutive_weight": 500,
+            "no_teach_penalty": 200,
+            "no_sub_penalty": 200,
+            "spreading_weight": 10
+        }
+    }
+
+def save_config_rules(data):
+    with open(CONFIG_RULES_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+@app.route("/api/config-rules", methods=["GET"])
+def api_get_config_rules():
+    try:
+        cfg = load_config_rules()
+        dbf_dir = get_latest_dbf_dir()
+        
+        db_no_teach = list(DBF(os.path.join(dbf_dir, "no_teach.dbf"), ignore_missing_memofile=True, encoding='cp950'))
+        db_no_sub = list(DBF(os.path.join(dbf_dir, "no_sub.dbf"), ignore_missing_memofile=True, encoding='cp950'))
+        
+        # Build teacher blocked map from DBF
+        dbf_no_teach = {}
+        for rule in db_no_teach:
+            tc = rule.get("TEACHER_NO", "").strip()
+            if tc:
+                if tc not in dbf_no_teach:
+                    dbf_no_teach[tc] = []
+                sd = rule.get("START_DAY", 1)
+                ed = rule.get("END_DAY", 1)
+                ss = rule.get("START_SEC", 1)
+                es = rule.get("END_SEC", 1)
+                for d in range(sd, ed + 1):
+                    for p in range(ss, es + 1):
+                        slot_str = f"{d}-{p}"
+                        if slot_str not in dbf_no_teach[tc]:
+                            dbf_no_teach[tc].append(slot_str)
+                            
+        # Build class-subject blocked map from DBF
+        dbf_no_sub = {}
+        for rule in db_no_sub:
+            cc = rule.get("CLASS_NO", "").strip()
+            sc = rule.get("SUBJECT_NO", "").strip()
+            if cc and sc:
+                key = f"{cc}|{sc}"
+                if key not in dbf_no_sub:
+                    dbf_no_sub[key] = []
+                sd = rule.get("START_DAY", 1)
+                ed = rule.get("END_DAY", 1)
+                ss = rule.get("START_SEC", 1)
+                es = rule.get("END_SEC", 1)
+                for d in range(sd, ed + 1):
+                    for p in range(ss, es + 1):
+                        slot_str = f"{d}-{p}"
+                        if slot_str not in dbf_no_sub[key]:
+                            dbf_no_sub[key].append(slot_str)
+
+        # Merge DBF with custom rules
+        merged_no_teach = dict(dbf_no_teach)
+        for tc, slots in cfg.get("custom_no_teach", {}).items():
+            if tc not in merged_no_teach:
+                merged_no_teach[tc] = []
+            for s in slots:
+                if s not in merged_no_teach[tc]:
+                    merged_no_teach[tc].append(s)
+
+        merged_no_sub = dict(dbf_no_sub)
+        for key, slots in cfg.get("custom_no_sub", {}).items():
+            if key not in merged_no_sub:
+                merged_no_sub[key] = []
+            for s in slots:
+                if s not in merged_no_sub[key]:
+                    merged_no_sub[key].append(s)
+
+        return jsonify({
+            "status": "success",
+            "no_teach": merged_no_teach,
+            "no_sub": merged_no_sub,
+            "weights": cfg.get("weights", {
+                "consecutive_weight": 500,
+                "no_teach_penalty": 200,
+                "no_sub_penalty": 200,
+                "spreading_weight": 10
+            })
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/config-rules/save-no-teach", methods=["POST"])
+def api_save_no_teach():
+    try:
+        req = request.get_json()
+        tc = req.get("teacher_code")
+        slots = req.get("slots", []) # list of "d-p"
+        if not tc:
+            return jsonify({"status": "error", "message": "Teacher code is required"}), 400
+            
+        cfg = load_config_rules()
+        if "custom_no_teach" not in cfg:
+            cfg["custom_no_teach"] = {}
+        cfg["custom_no_teach"][tc] = slots
+        save_config_rules(cfg)
+        return jsonify({"status": "success", "message": f"教師 {tc} 不排課設定已儲存！"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/config-rules/save-no-sub", methods=["POST"])
+def api_save_no_sub():
+    try:
+        req = request.get_json()
+        cc = req.get("class_code")
+        sc = req.get("subject_code")
+        slots = req.get("slots", []) # list of "d-p"
+        if not cc or not sc:
+            return jsonify({"status": "error", "message": "Class and Subject code are required"}), 400
+            
+        key = f"{cc}|{sc}"
+        cfg = load_config_rules()
+        if "custom_no_sub" not in cfg:
+            cfg["custom_no_sub"] = {}
+        cfg["custom_no_sub"][key] = slots
+        save_config_rules(cfg)
+        return jsonify({"status": "success", "message": f"班級 {cc} 科目 {sc} 限制時段已儲存！"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/config-rules/save-weights", methods=["POST"])
+def api_save_weights():
+    try:
+        req = request.get_json()
+        cfg = load_config_rules()
+        cfg["weights"] = {
+            "consecutive_weight": int(req.get("consecutive_weight", 500)),
+            "no_teach_penalty": int(req.get("no_teach_penalty", 200)),
+            "no_sub_penalty": int(req.get("no_sub_penalty", 200)),
+            "spreading_weight": int(req.get("spreading_weight", 10))
+        }
+        save_config_rules(cfg)
+        return jsonify({"status": "success", "message": "AI 排課權重與偏好參數已成功儲存！"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 if __name__ == "__main__":
     load_schedule_data()
     app.run(host="127.0.0.1", port=5000, debug=True)
+
 

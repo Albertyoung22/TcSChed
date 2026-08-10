@@ -36,6 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
     handleHashChange();
     setupSolverPanel();
+    setupSettingsPanel();
 });
 
 // Event Listeners Setup
@@ -693,6 +694,10 @@ async function highlightSlots(itemId) {
             return;
         }
         
+        if (data.item && data.item.consecutive_hint) {
+            showToast(data.item.consecutive_hint);
+        }
+        
         const slots = data.slots;
         for (const slotKey in slots) {
             const parts = slotKey.split('-');
@@ -765,3 +770,351 @@ async function executeSwap(sourceId, targetDay, targetPeriod, targetId) {
         showToast("伺服器連線異常，調課失敗。");
     }
 }
+
+// Settings and Rules Panel Logic
+let configRulesData = {
+    no_teach: {},
+    no_sub: {},
+    weights: {}
+};
+
+function setupSettingsPanel() {
+    const settingsModalBtn = document.getElementById('settingsModalBtn');
+    const settingsModal = document.getElementById('settingsModal');
+    const closeSettingsBtn = document.getElementById('closeSettingsBtn');
+
+    if (!settingsModalBtn || !settingsModal) return;
+
+    settingsModalBtn.addEventListener('click', () => {
+        settingsModal.style.display = 'flex';
+        initSettingsModal();
+    });
+
+    closeSettingsBtn.addEventListener('click', () => {
+        settingsModal.style.display = 'none';
+    });
+
+    settingsModal.addEventListener('click', (e) => {
+        if (e.target === settingsModal) {
+            settingsModal.style.display = 'none';
+        }
+    });
+
+    // Rule Tabs
+    const tabRuleTeacherBtn = document.getElementById('tabRuleTeacherBtn');
+    const tabRuleSubBtn = document.getElementById('tabRuleSubBtn');
+    const tabRuleWeightsBtn = document.getElementById('tabRuleWeightsBtn');
+    const ruleTabTeacher = document.getElementById('ruleTabTeacher');
+    const ruleTabSub = document.getElementById('ruleTabSub');
+    const ruleTabWeights = document.getElementById('ruleTabWeights');
+
+    function switchRuleTab(tabName) {
+        [tabRuleTeacherBtn, tabRuleSubBtn, tabRuleWeightsBtn].forEach(b => {
+            b.classList.remove('active');
+            b.style.background = 'transparent';
+            b.style.color = 'var(--text-secondary)';
+        });
+        [ruleTabTeacher, ruleTabSub, ruleTabWeights].forEach(c => c.style.display = 'none');
+
+        if (tabName === 'teacher') {
+            tabRuleTeacherBtn.classList.add('active');
+            tabRuleTeacherBtn.style.background = 'rgba(99, 102, 241, 0.2)';
+            tabRuleTeacherBtn.style.color = '#818cf8';
+            ruleTabTeacher.style.display = 'block';
+        } else if (tabName === 'sub') {
+            tabRuleSubBtn.classList.add('active');
+            tabRuleSubBtn.style.background = 'rgba(99, 102, 241, 0.2)';
+            tabRuleSubBtn.style.color = '#818cf8';
+            ruleTabSub.style.display = 'block';
+        } else if (tabName === 'weights') {
+            tabRuleWeightsBtn.classList.add('active');
+            tabRuleWeightsBtn.style.background = 'rgba(99, 102, 241, 0.2)';
+            tabRuleWeightsBtn.style.color = '#818cf8';
+            ruleTabWeights.style.display = 'block';
+        }
+    }
+
+    if (tabRuleTeacherBtn) tabRuleTeacherBtn.addEventListener('click', () => switchRuleTab('teacher'));
+    if (tabRuleSubBtn) tabRuleSubBtn.addEventListener('click', () => switchRuleTab('sub'));
+    if (tabRuleWeightsBtn) tabRuleWeightsBtn.addEventListener('click', () => switchRuleTab('weights'));
+
+    // Range Sliders
+    const weightConsecutive = document.getElementById('weightConsecutive');
+    const weightNoTeach = document.getElementById('weightNoTeach');
+    const weightNoSub = document.getElementById('weightNoSub');
+    const weightSpreading = document.getElementById('weightSpreading');
+
+    if (weightConsecutive) weightConsecutive.addEventListener('input', (e) => document.getElementById('weightConsecutiveVal').textContent = e.target.value);
+    if (weightNoTeach) weightNoTeach.addEventListener('input', (e) => document.getElementById('weightNoTeachVal').textContent = e.target.value);
+    if (weightNoSub) weightNoSub.addEventListener('input', (e) => document.getElementById('weightNoSubVal').textContent = e.target.value);
+    if (weightSpreading) weightSpreading.addEventListener('input', (e) => document.getElementById('weightSpreadingVal').textContent = e.target.value);
+
+    // Render 5x8 Grid Tables
+    renderRuleGrid('teacherRuleGridBody');
+    renderRuleGrid('subRuleGridBody');
+
+    // Teacher select change
+    const teacherSelectRule = document.getElementById('teacherSelectRule');
+    if (teacherSelectRule) {
+        teacherSelectRule.addEventListener('change', () => {
+            const tc = teacherSelectRule.value;
+            const blockedSlots = configRulesData.no_teach[tc] || [];
+            updateGridSlots('teacherRuleGridBody', blockedSlots);
+        });
+    }
+
+    // Save Teacher Rule
+    const saveTeacherRuleBtn = document.getElementById('saveTeacherRuleBtn');
+    if (saveTeacherRuleBtn) {
+        saveTeacherRuleBtn.addEventListener('click', async () => {
+            const tc = teacherSelectRule.value;
+            if (!tc) {
+                showToast("請先選擇教師！");
+                return;
+            }
+            const activeSlots = getGridActiveSlots('teacherRuleGridBody');
+            try {
+                const resp = await fetch('/api/config-rules/save-no-teach', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ teacher_code: tc, slots: activeSlots })
+                });
+                const res = await resp.json();
+                if (res.status === 'success') {
+                    configRulesData.no_teach[tc] = activeSlots;
+                    showToast("教師不排課時段已成功儲存！");
+                } else {
+                    showToast("儲存失敗：" + res.message);
+                }
+            } catch (e) {
+                showToast("伺服器連線異常。");
+            }
+        });
+    }
+
+    // Clear Teacher Rule
+    const clearTeacherRuleBtn = document.getElementById('clearTeacherRuleBtn');
+    if (clearTeacherRuleBtn) {
+        clearTeacherRuleBtn.addEventListener('click', () => {
+            updateGridSlots('teacherRuleGridBody', []);
+        });
+    }
+
+    // Sub select change
+    const classSelectRule = document.getElementById('classSelectRule');
+    const subSelectRule = document.getElementById('subSelectRule');
+    function updateSubGrid() {
+        if (!classSelectRule || !subSelectRule) return;
+        const cc = classSelectRule.value;
+        const sc = subSelectRule.value;
+        if (cc && sc) {
+            const key = `${cc}|${sc}`;
+            const blockedSlots = configRulesData.no_sub[key] || [];
+            updateGridSlots('subRuleGridBody', blockedSlots);
+        }
+    }
+    if (classSelectRule) classSelectRule.addEventListener('change', updateSubGrid);
+    if (subSelectRule) subSelectRule.addEventListener('change', updateSubGrid);
+
+    // Save Sub Rule
+    const saveSubRuleBtn = document.getElementById('saveSubRuleBtn');
+    if (saveSubRuleBtn) {
+        saveSubRuleBtn.addEventListener('click', async () => {
+            const cc = classSelectRule.value;
+            const sc = subSelectRule.value;
+            if (!cc || !sc) {
+                showToast("請選擇班級與科目！");
+                return;
+            }
+            const activeSlots = getGridActiveSlots('subRuleGridBody');
+            try {
+                const resp = await fetch('/api/config-rules/save-no-sub', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ class_code: cc, subject_code: sc, slots: activeSlots })
+                });
+                const res = await resp.json();
+                if (res.status === 'success') {
+                    const key = `${cc}|${sc}`;
+                    configRulesData.no_sub[key] = activeSlots;
+                    showToast("科目限制時段已成功儲存！");
+                } else {
+                    showToast("儲存失敗：" + res.message);
+                }
+            } catch (e) {
+                showToast("伺服器連線異常。");
+            }
+        });
+    }
+
+    // Save Weights
+    const saveWeightsBtn = document.getElementById('saveWeightsBtn');
+    if (saveWeightsBtn) {
+        saveWeightsBtn.addEventListener('click', async () => {
+            try {
+                const resp = await fetch('/api/config-rules/save-weights', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        consecutive_weight: weightConsecutive.value,
+                        no_teach_penalty: weightNoTeach.value,
+                        no_sub_penalty: weightNoSub.value,
+                        spreading_weight: weightSpreading.value
+                    })
+                });
+                const res = await resp.json();
+                if (res.status === 'success') {
+                    showToast(res.message);
+                } else {
+                    showToast("儲存失敗：" + res.message);
+                }
+            } catch (e) {
+                showToast("伺服器連線異常。");
+            }
+        });
+    }
+}
+
+function renderRuleGrid(tbodyId) {
+    const tbody = document.getElementById(tbodyId);
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    for (let p = 1; p <= 8; p++) {
+        const tr = document.createElement('tr');
+        const tdLabel = document.createElement('td');
+        tdLabel.style.fontWeight = 'bold';
+        tdLabel.style.background = 'rgba(255,255,255,0.03)';
+        tdLabel.textContent = `第 ${p} 節`;
+        tr.appendChild(tdLabel);
+
+        for (let d = 1; d <= 5; d++) {
+            const td = document.createElement('td');
+            td.dataset.slot = `${d}-${p}`;
+            td.style.cursor = 'pointer';
+            td.style.userSelect = 'none';
+            td.textContent = '可排';
+
+            td.addEventListener('click', () => {
+                if (td.classList.contains('slot-forbidden')) {
+                    td.classList.remove('slot-forbidden');
+                    td.style.background = '';
+                    td.style.color = '';
+                    td.textContent = '可排';
+                } else {
+                    td.classList.add('slot-forbidden');
+                    td.style.background = 'rgba(239, 68, 68, 0.3)';
+                    td.style.color = '#f87171';
+                    td.textContent = '禁止';
+                }
+            });
+
+            tr.appendChild(td);
+        }
+        tbody.appendChild(tr);
+    }
+}
+
+function updateGridSlots(tbodyId, activeSlots) {
+    const slotSet = new Set(activeSlots);
+    const tbody = document.getElementById(tbodyId);
+    if (!tbody) return;
+    const cells = tbody.querySelectorAll('td[data-slot]');
+    cells.forEach(cell => {
+        const slot = cell.dataset.slot;
+        if (slotSet.has(slot)) {
+            cell.classList.add('slot-forbidden');
+            cell.style.background = 'rgba(239, 68, 68, 0.3)';
+            cell.style.color = '#f87171';
+            cell.textContent = '禁止';
+        } else {
+            cell.classList.remove('slot-forbidden');
+            cell.style.background = '';
+            cell.style.color = '';
+            cell.textContent = '可排';
+        }
+    });
+}
+
+function getGridActiveSlots(tbodyId) {
+    const tbody = document.getElementById(tbodyId);
+    if (!tbody) return [];
+    const active = [];
+    const cells = tbody.querySelectorAll('td.slot-forbidden');
+    cells.forEach(cell => {
+        if (cell.dataset.slot) {
+            active.push(cell.dataset.slot);
+        }
+    });
+    return active;
+}
+
+async function initSettingsModal() {
+    const teacherSelectRule = document.getElementById('teacherSelectRule');
+    const classSelectRule = document.getElementById('classSelectRule');
+    const subSelectRule = document.getElementById('subSelectRule');
+
+    if (metadata.teachers && teacherSelectRule && teacherSelectRule.options.length <= 1) {
+        metadata.teachers.forEach(t => {
+            const opt = document.createElement('option');
+            opt.value = t.code;
+            opt.textContent = `${t.name} (${t.code})`;
+            teacherSelectRule.appendChild(opt);
+        });
+    }
+
+    if (metadata.classes && classSelectRule && classSelectRule.options.length <= 1) {
+        metadata.classes.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c.code;
+            opt.textContent = `${c.name} (${c.code})`;
+            classSelectRule.appendChild(opt);
+        });
+    }
+
+    if (subSelectRule && subSelectRule.options.length <= 1) {
+        const defaultSubjects = [
+            {code: "901", name: "體育"},
+            {code: "101", name: "國文"},
+            {code: "102", name: "英文"},
+            {code: "103", name: "數學"},
+            {code: "104", name: "物理"},
+            {code: "105", name: "化學"},
+            {code: "106", name: "生物"},
+            {code: "107", name: "歷史"},
+            {code: "108", name: "地理"},
+            {code: "109", name: "公民"}
+        ];
+        defaultSubjects.forEach(s => {
+            const opt = document.createElement('option');
+            opt.value = s.code;
+            opt.textContent = `${s.name} (${s.code})`;
+            subSelectRule.appendChild(opt);
+        });
+    }
+
+    try {
+        const resp = await fetch('/api/config-rules');
+        const data = await resp.json();
+        if (data.status === 'success') {
+            configRulesData = data;
+            const w = data.weights || {};
+            if (document.getElementById('weightConsecutive')) {
+                document.getElementById('weightConsecutive').value = w.consecutive_weight || 500;
+                document.getElementById('weightConsecutiveVal').textContent = w.consecutive_weight || 500;
+                
+                document.getElementById('weightNoTeach').value = w.no_teach_penalty || 200;
+                document.getElementById('weightNoTeachVal').textContent = w.no_teach_penalty || 200;
+
+                document.getElementById('weightNoSub').value = w.no_sub_penalty || 200;
+                document.getElementById('weightNoSubVal').textContent = w.no_sub_penalty || 200;
+
+                document.getElementById('weightSpreading').value = w.spreading_weight || 10;
+                document.getElementById('weightSpreadingVal').textContent = w.spreading_weight || 10;
+            }
+        }
+    } catch (e) {
+        console.error("Init settings modal config rules fetch error:", e);
+    }
+}
+

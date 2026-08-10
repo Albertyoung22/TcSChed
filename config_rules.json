@@ -1,0 +1,15 @@
+{
+  "custom_no_teach": {
+    "0028": [
+      "1-1",
+      "1-2"
+    ]
+  },
+  "custom_no_sub": {},
+  "weights": {
+    "consecutive_weight": 600,
+    "no_teach_penalty": 300,
+    "no_sub_penalty": 300,
+    "spreading_weight": 15
+  }
+}
