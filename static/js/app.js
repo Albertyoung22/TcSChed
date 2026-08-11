@@ -861,17 +861,21 @@ function setupSettingsPanel() {
     const ruleTabWeights = document.getElementById('ruleTabWeights');
     const ruleTabAssign = document.getElementById('ruleTabAssign');
     const ruleTabCatalog = document.getElementById('ruleTabCatalog');
+    const tabRuleVenuesBtn = document.getElementById('tabRuleVenuesBtn');
+    const ruleTabVenues = document.getElementById('ruleTabVenues');
+    const tabRuleSimBtn = document.getElementById('tabRuleSimBtn');
+    const ruleTabSim = document.getElementById('ruleTabSim');
     const ruleTabRestore = document.getElementById('ruleTabRestore');
 
     function switchRuleTab(tabName) {
-        [tabRuleTeacherBtn, tabRuleSubBtn, tabRuleWeightsBtn, tabRuleAssignBtn, tabRuleCatalogBtn, tabRuleRestoreBtn].forEach(b => {
+        [tabRuleTeacherBtn, tabRuleSubBtn, tabRuleWeightsBtn, tabRuleAssignBtn, tabRuleCatalogBtn, tabRuleVenuesBtn, tabRuleSimBtn, tabRuleRestoreBtn].forEach(b => {
             if (b) {
                 b.classList.remove('active');
                 b.style.background = 'transparent';
                 b.style.color = 'var(--text-secondary)';
             }
         });
-        [ruleTabTeacher, ruleTabSub, ruleTabWeights, ruleTabAssign, ruleTabCatalog, ruleTabRestore].forEach(c => {
+        [ruleTabTeacher, ruleTabSub, ruleTabWeights, ruleTabAssign, ruleTabCatalog, ruleTabVenues, ruleTabSim, ruleTabRestore].forEach(c => {
             if (c) c.style.display = 'none';
         });
 
@@ -902,6 +906,18 @@ function setupSettingsPanel() {
             tabRuleCatalogBtn.style.color = '#818cf8';
             ruleTabCatalog.style.display = 'block';
             loadSubjectCatalog();
+        } else if (tabName === 'venues') {
+            tabRuleVenuesBtn.classList.add('active');
+            tabRuleVenuesBtn.style.background = 'rgba(99, 102, 241, 0.2)';
+            tabRuleVenuesBtn.style.color = '#818cf8';
+            ruleTabVenues.style.display = 'block';
+            loadVenueCapacities();
+        } else if (tabName === 'sim') {
+            tabRuleSimBtn.classList.add('active');
+            tabRuleSimBtn.style.background = 'rgba(99, 102, 241, 0.2)';
+            tabRuleSimBtn.style.color = '#818cf8';
+            ruleTabSim.style.display = 'block';
+            loadSimultaneousGroups();
         } else if (tabName === 'restore') {
             tabRuleRestoreBtn.classList.add('active');
             tabRuleRestoreBtn.style.background = 'rgba(99, 102, 241, 0.2)';
@@ -916,6 +932,8 @@ function setupSettingsPanel() {
     if (tabRuleWeightsBtn) tabRuleWeightsBtn.addEventListener('click', () => switchRuleTab('weights'));
     if (tabRuleAssignBtn) tabRuleAssignBtn.addEventListener('click', () => switchRuleTab('assign'));
     if (tabRuleCatalogBtn) tabRuleCatalogBtn.addEventListener('click', () => switchRuleTab('catalog'));
+    if (tabRuleVenuesBtn) tabRuleVenuesBtn.addEventListener('click', () => switchRuleTab('venues'));
+    if (tabRuleSimBtn) tabRuleSimBtn.addEventListener('click', () => switchRuleTab('sim'));
     if (tabRuleRestoreBtn) tabRuleRestoreBtn.addEventListener('click', () => switchRuleTab('restore'));
 
     // Range Sliders
@@ -2130,6 +2148,348 @@ function renderRestorePointsTable() {
     });
 }
 
+async function loadVenueCapacities() {
+    const saveVenueCapacitiesBtn = document.getElementById('saveVenueCapacitiesBtn');
+    if (saveVenueCapacitiesBtn && saveVenueCapacitiesBtn.dataset.listener !== 'true') {
+        saveVenueCapacitiesBtn.dataset.listener = 'true';
+        saveVenueCapacitiesBtn.addEventListener('click', async () => {
+            const caps = {
+                "電腦教室": parseInt(document.getElementById('capComputerRoom').value || 2),
+                "理化實驗室": parseInt(document.getElementById('capScienceLab').value || 1),
+                "音樂教室": parseInt(document.getElementById('capMusicRoom').value || 1),
+                "體育場/館": parseInt(document.getElementById('capGym').value || 3)
+            };
+
+            const checkedBoxes = document.querySelectorAll('#consecutiveSubjectsCheckboxes input[type="checkbox"]:checked');
+            const consec = Array.from(checkedBoxes).map(cb => cb.value);
+
+            try {
+                const resp = await fetch('/api/save-venue-capacities', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        venue_capacities: caps,
+                        consecutive_subjects: consec
+                    })
+                });
+                const res = await resp.json();
+                if (res.status === 'success') {
+                    showToast(res.message);
+                } else {
+                    showToast("儲存失敗：" + res.message);
+                }
+            } catch (e) {
+                showToast("伺服器連線異常。");
+            }
+        });
+    }
+
+    try {
+        const resp = await fetch('/api/get-venue-capacities');
+        const data = await resp.json();
+        if (data.status === 'success') {
+            const caps = data.venue_capacities || {};
+            if (caps["電腦教室"] !== undefined) document.getElementById('capComputerRoom').value = caps["電腦教室"];
+            if (caps["理化實驗室"] !== undefined) document.getElementById('capScienceLab').value = caps["理化實驗室"];
+            if (caps["音樂教室"] !== undefined) document.getElementById('capMusicRoom').value = caps["音樂教室"];
+            if (caps["體育場/館"] !== undefined || caps["體育場/馆"] !== undefined) {
+                document.getElementById('capGym').value = caps["體育場/館"] || caps["體育場/馆"] || 3;
+            }
+
+            const container = document.getElementById('consecutiveSubjectsCheckboxes');
+            if (container) {
+                container.innerHTML = '';
+                const activeConsec = new Set(data.consecutive_subjects || ["104", "105", "110"]);
+                if (metadata.subjects && metadata.subjects.length > 0) {
+                    metadata.subjects.forEach(s => {
+                        const isChecked = activeConsec.has(s.code) ? 'checked' : '';
+                        const lbl = document.createElement('label');
+                        lbl.style.fontSize = '0.85rem';
+                        lbl.style.cursor = 'pointer';
+                        lbl.style.marginRight = '14px';
+                        lbl.style.marginBottom = '6px';
+                        lbl.style.display = 'inline-flex';
+                        lbl.style.alignItems = 'center';
+                        lbl.style.gap = '4px';
+                        lbl.innerHTML = `<input type="checkbox" value="${s.code}" ${isChecked}> ${s.name} (${s.code})`;
+                        container.appendChild(lbl);
+                    });
+                } else {
+                    ["104|物理", "105|化學", "110|程式設計", "101|國文", "102|英文", "103|數學"].forEach(str => {
+                        const [code, name] = str.split('|');
+                        const isChecked = activeConsec.has(code) ? 'checked' : '';
+                        const lbl = document.createElement('label');
+                        lbl.style.fontSize = '0.85rem';
+                        lbl.style.cursor = 'pointer';
+                        lbl.style.marginRight = '14px';
+                        lbl.style.marginBottom = '6px';
+                        lbl.style.display = 'inline-flex';
+                        lbl.style.alignItems = 'center';
+                        lbl.style.gap = '4px';
+                        lbl.innerHTML = `<input type="checkbox" value="${code}" ${isChecked}> ${name} (${code})`;
+                        container.appendChild(lbl);
+                    });
+                }
+            }
+        }
+    } catch (e) {
+        console.error("Load venue capacities failed:", e);
+    }
+}
+
+let currentSimGroupsData = [];
+
+function createSimMemberRow(index) {
+    const row = document.createElement('div');
+    row.className = 'sim-member-row';
+    row.style.display = 'flex';
+    row.style.gap = '8px';
+    row.style.alignItems = 'center';
+    row.style.background = 'rgba(255, 255, 255, 0.03)';
+    row.style.padding = '6px 10px';
+    row.style.borderRadius = '6px';
+    row.style.border = '1px solid var(--border-color)';
+
+    const label = document.createElement('span');
+    label.style.fontSize = '0.82rem';
+    label.style.color = '#818cf8';
+    label.style.fontWeight = 'bold';
+    label.style.minWidth = '65px';
+    label.textContent = `成員 #${index + 1}：`;
+    row.appendChild(label);
+
+    // Class Select
+    const classSel = document.createElement('select');
+    classSel.className = 'sim-class-select';
+    classSel.style.flex = '1';
+    classSel.style.padding = '4px 8px';
+    classSel.style.borderRadius = '4px';
+    classSel.style.background = 'rgba(15, 23, 42, 0.8)';
+    classSel.style.color = '#fff';
+    classSel.style.border = '1px solid var(--border-color)';
+    classSel.style.fontSize = '0.82rem';
+    classSel.innerHTML = '<option value="">-- 選擇班級 --</option>';
+    if (metadata.classes) {
+        metadata.classes.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c.code;
+            opt.textContent = `${c.name} (${c.code})`;
+            classSel.appendChild(opt);
+        });
+    }
+    row.appendChild(classSel);
+
+    // Subject Select
+    const subSel = document.createElement('select');
+    subSel.className = 'sim-sub-select';
+    subSel.style.flex = '1';
+    subSel.style.padding = '4px 8px';
+    subSel.style.borderRadius = '4px';
+    subSel.style.background = 'rgba(15, 23, 42, 0.8)';
+    subSel.style.color = '#fff';
+    subSel.style.border = '1px solid var(--border-color)';
+    subSel.style.fontSize = '0.82rem';
+    subSel.innerHTML = '<option value="">-- 選擇科目 --</option>';
+    if (metadata.subjects) {
+        metadata.subjects.forEach(s => {
+            const opt = document.createElement('option');
+            opt.value = s.code;
+            opt.textContent = `${s.name} (${s.code})`;
+            subSel.appendChild(opt);
+        });
+    }
+    row.appendChild(subSel);
+
+    // Remove Row Button
+    const delBtn = document.createElement('button');
+    delBtn.className = 'solver-action-btn secondary-btn';
+    delBtn.style.padding = '2px 8px';
+    delBtn.style.fontSize = '0.78rem';
+    delBtn.style.color = '#ef4444';
+    delBtn.style.background = 'rgba(239, 68, 68, 0.15)';
+    delBtn.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+    delBtn.addEventListener('click', () => {
+        const container = document.getElementById('simMembersContainer');
+        if (container && container.children.length > 2) {
+            row.remove();
+        } else {
+            showToast("每個同時排課群組至少需要 2 個班級科目成員！");
+        }
+    });
+    row.appendChild(delBtn);
+
+    return row;
+}
+
+function initSimMemberRows() {
+    const container = document.getElementById('simMembersContainer');
+    if (!container) return;
+    container.innerHTML = '';
+    container.appendChild(createSimMemberRow(0));
+    container.appendChild(createSimMemberRow(1));
+}
+
+async function loadSimultaneousGroups() {
+    initSimMemberRows();
+
+    const addBtn = document.getElementById('addSimMemberRowBtn');
+    if (addBtn && addBtn.dataset.listener !== 'true') {
+        addBtn.dataset.listener = 'true';
+        addBtn.addEventListener('click', () => {
+            const container = document.getElementById('simMembersContainer');
+            if (container) {
+                const count = container.children.length;
+                container.appendChild(createSimMemberRow(count));
+            }
+        });
+    }
+
+    const saveBtn = document.getElementById('saveSimGroupBtn');
+    if (saveBtn && saveBtn.dataset.listener !== 'true') {
+        saveBtn.dataset.listener = 'true';
+        saveBtn.addEventListener('click', async () => {
+            const nameInput = document.getElementById('simGroupNameInput');
+            const name = nameInput ? nameInput.value.trim() : '';
+            if (!name) {
+                showToast("請輸入同時排課群組名稱！");
+                return;
+            }
+
+            const rows = document.querySelectorAll('.sim-member-row');
+            const members = [];
+            let valid = true;
+
+            rows.forEach(row => {
+                const cSel = row.querySelector('.sim-class-select');
+                const sSel = row.querySelector('.sim-sub-select');
+                const cc = cSel ? cSel.value : '';
+                const sc = sSel ? sSel.value : '';
+                const cn = cSel && cSel.options[cSel.selectedIndex] ? cSel.options[cSel.selectedIndex].text.split(' ')[0] : cc;
+                const sn = sSel && sSel.options[sSel.selectedIndex] ? sSel.options[sSel.selectedIndex].text.split(' ')[0] : sc;
+
+                if (!cc || !sc) {
+                    valid = false;
+                } else {
+                    members.push({
+                        class_code: cc,
+                        class_name: cn,
+                        subject_code: sc,
+                        subject_name: sn
+                    });
+                }
+            });
+
+            if (!valid || members.length < 2) {
+                showToast("請為每個成員完整選擇「班級」與「科目」，且至少需 2 個成員！");
+                return;
+            }
+
+            try {
+                const resp = await fetch('/api/save-simultaneous-group', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ name, members })
+                });
+                const res = await resp.json();
+                if (res.status === 'success') {
+                    showToast(res.message);
+                    if (nameInput) nameInput.value = '';
+                    currentSimGroupsData = res.simultaneous_groups || [];
+                    renderSimGroupsTable();
+                    initSimMemberRows();
+                } else {
+                    showToast("建立失敗：" + res.message);
+                }
+            } catch (e) {
+                showToast("伺服器連線異常。");
+            }
+        });
+    }
+
+    try {
+        const resp = await fetch('/api/simultaneous-groups');
+        const data = await resp.json();
+        if (data.status === 'success') {
+            currentSimGroupsData = data.simultaneous_groups || [];
+            renderSimGroupsTable();
+        }
+    } catch (e) {
+        console.error("Load simultaneous groups failed:", e);
+    }
+}
+
+function renderSimGroupsTable() {
+    const tbody = document.getElementById('simGroupsTableBody');
+    if (!tbody) return;
+
+    tbody.innerHTML = '';
+    if (!currentSimGroupsData || currentSimGroupsData.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 16px;">尚未建立自訂同時排課群組。輸入名稱並挑選班級科目即可建立！</td></tr>';
+        return;
+    }
+
+    currentSimGroupsData.forEach(grp => {
+        if (!grp || typeof grp !== 'object') return;
+        const tr = document.createElement('tr');
+
+        // Group Name
+        const tdName = document.createElement('td');
+        tdName.style.fontWeight = 'bold';
+        tdName.style.color = '#38bdf8';
+        tdName.textContent = grp.name || '未命名群組';
+        tr.appendChild(tdName);
+
+        // Members Details
+        const tdMembers = document.createElement('td');
+        const membersList = (grp.members || []).map(m => `<span style="color:#fbbf24; font-weight:bold;">${m.class_name || m.class_code}</span> (${m.subject_name || m.subject_code})`);
+        tdMembers.innerHTML = membersList.join(' <i class="fa-solid fa-link" style="color:#818cf8; font-size:0.8rem;"></i> ');
+        tr.appendChild(tdMembers);
+
+        // Status
+        const tdStatus = document.createElement('td');
+        tdStatus.style.textAlign = 'center';
+        tdStatus.innerHTML = '<span style="color:#34d399; font-size:0.8rem; font-weight:bold;"><i class="fa-solid fa-lock"></i> 同日同節束縛</span>';
+        tr.appendChild(tdStatus);
+
+        // Action Delete
+        const tdAct = document.createElement('td');
+        tdAct.style.textAlign = 'center';
+        const delBtn = document.createElement('button');
+        delBtn.className = 'solver-action-btn secondary-btn';
+        delBtn.style.padding = '3px 8px';
+        delBtn.style.fontSize = '0.78rem';
+        delBtn.style.background = 'rgba(239, 68, 68, 0.2)';
+        delBtn.style.borderColor = 'rgba(239, 68, 68, 0.4)';
+        delBtn.style.color = '#ef4444';
+        delBtn.innerHTML = '<i class="fa-solid fa-trash"></i> 刪除';
+
+        delBtn.addEventListener('click', async () => {
+            if (!confirm(`確定要刪除同時排課群組「${grp.name}」嗎？`)) return;
+            try {
+                const resp = await fetch('/api/delete-simultaneous-group', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ name: grp.name })
+                });
+                const res = await resp.json();
+                if (res.status === 'success') {
+                    showToast(res.message);
+                    await loadSimultaneousGroups();
+                } else {
+                    showToast("刪除失敗：" + res.message);
+                }
+            } catch (e) {
+                showToast("伺服器連線異常。");
+            }
+        });
+
+        tdAct.appendChild(delBtn);
+        tr.appendChild(tdAct);
+
+        tbody.appendChild(tr);
+    });
+}
+
 // --- SHIN-HER FRONTEND JS EXTENSIONS ---
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -2141,7 +2501,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function setupSubstituteHandlers() {
     const substituteModalBtn = document.getElementById('substituteModalBtn');
-    const substituteModal = document.getElementById('substituteModal');
+    const substituteDrawer = document.getElementById('substituteDrawer');
+    const substituteBackdrop = document.getElementById('substituteBackdrop');
     const closeSubstituteModalBtn = document.getElementById('closeSubstituteModalBtn');
     const subAbsentTeacherSelect = document.getElementById('subAbsentTeacherSelect');
     const findSubCandidatesBtn = document.getElementById('findSubCandidatesBtn');
@@ -2149,27 +2510,43 @@ function setupSubstituteHandlers() {
     const subCourseHintText = document.getElementById('subCourseHintText');
     const subCandidatesTableBody = document.getElementById('subCandidatesTableBody');
 
-    if (!substituteModalBtn || !substituteModal) return;
-
-    substituteModalBtn.addEventListener('click', async () => {
-        substituteModal.style.display = 'flex';
-        // Populate teacher select
-        if (metadata.teachers && subAbsentTeacherSelect) {
-            subAbsentTeacherSelect.innerHTML = '<option value="">-- 選擇請假教師 --</option>';
-            metadata.teachers.forEach(t => {
-                const opt = document.createElement('option');
-                opt.value = t.code;
-                opt.textContent = `${t.name} (${t.code})`;
-                subAbsentTeacherSelect.appendChild(opt);
-            });
+    function openSubstituteDrawer() {
+        if (substituteDrawer) substituteDrawer.style.transform = 'translateX(0)';
+        if (substituteBackdrop) {
+            substituteBackdrop.style.opacity = '1';
+            substituteBackdrop.style.pointerEvents = 'auto';
         }
-        await loadSubstituteHistory();
-    });
+    }
+
+    function closeSubstituteDrawer() {
+        if (substituteDrawer) substituteDrawer.style.transform = 'translateX(100%)';
+        if (substituteBackdrop) {
+            substituteBackdrop.style.opacity = '0';
+            substituteBackdrop.style.pointerEvents = 'none';
+        }
+    }
+
+    if (substituteModalBtn) {
+        substituteModalBtn.addEventListener('click', async () => {
+            openSubstituteDrawer();
+            if (metadata.teachers && subAbsentTeacherSelect) {
+                subAbsentTeacherSelect.innerHTML = '<option value="">-- 選擇請假教師 --</option>';
+                metadata.teachers.forEach(t => {
+                    const opt = document.createElement('option');
+                    opt.value = t.code;
+                    opt.textContent = `${t.name} (${t.code})`;
+                    subAbsentTeacherSelect.appendChild(opt);
+                });
+            }
+            await loadSubstituteHistory();
+        });
+    }
 
     if (closeSubstituteModalBtn) {
-        closeSubstituteModalBtn.addEventListener('click', () => {
-            substituteModal.style.display = 'none';
-        });
+        closeSubstituteModalBtn.addEventListener('click', closeSubstituteDrawer);
+    }
+    if (substituteBackdrop) {
+        substituteBackdrop.addEventListener('click', closeSubstituteDrawer);
     }
 
     if (findSubCandidatesBtn) {
@@ -2199,16 +2576,16 @@ function setupSubstituteHandlers() {
                     const classesEl = document.getElementById('subTeacherClassesText');
 
                     if (info && titleEl) {
-                        titleEl.innerHTML = `<i class="fa-solid fa-user-circle"></i> 請假教師：${info.name} (${info.code}) <span style="font-size:0.8rem; background:rgba(99,102,241,0.2); padding:2px 8px; border-radius:4px; margin-left:6px; color:#818cf8;">${info.role}</span>`;
+                        titleEl.innerHTML = `<i class="fa-solid fa-id-card" style="color:#818cf8;"></i> 請假教師：${info.name} (${info.code}) <span style="font-size:0.8rem; background:rgba(99,102,241,0.25); border:1px solid rgba(99,102,241,0.4); padding:2px 8px; border-radius:4px; margin-left:6px; color:#a5b4fc;">身份別：${info.role}</span>`;
                     }
                     if (info && classesEl) {
-                        classesEl.innerHTML = `<i class="fa-solid fa-graduation-cap"></i> 本學期任教班級：${info.assigned_classes_str}`;
+                        classesEl.innerHTML = `<i class="fa-solid fa-graduation-cap" style="color:#38bdf8;"></i> 本學期任教班級：<span style="color:#fff;">${info.assigned_classes_str}</span>`;
                     }
 
                     if (c) {
-                        subCourseHintText.textContent = `🎯 請假排代時段：星期${day} 第${period}節 【${c.class_name}】 ${c.subject_name}`;
+                        subCourseHintText.innerHTML = `<i class="fa-solid fa-chalkboard-user" style="color:#fbbf24;"></i> 📌 該節原定課程：<span style="color:#fbbf24; font-weight:bold; font-size:0.95rem;">【${c.class_name}】 ${c.subject_name}</span> <span style="font-size:0.8rem; color:var(--text-secondary); margin-left:6px;">(教室: ${c.room_name || "一般教室"})</span>`;
                     } else {
-                        subCourseHintText.textContent = `🎯 該教師於星期${day} 第${period}節 暫無原定授課紀錄`;
+                        subCourseHintText.innerHTML = `<i class="fa-solid fa-circle-info" style="color:#34d399;"></i> 💡 該節次請假教師原定無排課 (空堂無課程)`;
                     }
 
                     subCandidatesTableBody.innerHTML = '';
@@ -2303,17 +2680,20 @@ async function loadSubstituteHistory() {
     }
 }
 
+let currentExamPlanData = [];
+
 function setupExamInvigilationHandlers() {
     const examInvigilationBtn = document.getElementById('examInvigilationBtn');
     const examInvigilationModal = document.getElementById('examInvigilationModal');
     const closeExamModalBtn = document.getElementById('closeExamModalBtn');
     const runExamSolverBtn = document.getElementById('runExamSolverBtn');
-    const examTableBody = document.getElementById('examTableBody');
+    const saveExamPlanBtn = document.getElementById('saveExamPlanBtn');
 
     if (!examInvigilationBtn || !examInvigilationModal) return;
 
-    examInvigilationBtn.addEventListener('click', () => {
+    examInvigilationBtn.addEventListener('click', async () => {
         examInvigilationModal.style.display = 'flex';
+        await loadExistingExamPlan();
     });
 
     if (closeExamModalBtn) {
@@ -2337,17 +2717,8 @@ function setupExamInvigilationHandlers() {
                 const res = await resp.json();
                 if (res.status === 'success') {
                     showToast(res.message);
-                    examTableBody.innerHTML = '';
-                    res.plan.forEach(item => {
-                        const tr = document.createElement('tr');
-                        tr.innerHTML = `
-                            <td style="font-weight:bold; color:#818cf8;">第 ${item.day} 天</td>
-                            <td>第 ${item.period} 節</td>
-                            <td>${item.class_name} (${item.class_code})</td>
-                            <td style="color:#fbbf24; font-weight:bold;"><i class="fa-solid fa-user-shield"></i> ${item.invigilator_name}</td>
-                        `;
-                        examTableBody.appendChild(tr);
-                    });
+                    currentExamPlanData = res.plan || [];
+                    renderExamPlanTable();
                 } else {
                     showToast("生成監考表失敗：" + res.message);
                 }
@@ -2356,6 +2727,266 @@ function setupExamInvigilationHandlers() {
             }
         });
     }
+
+    if (saveExamPlanBtn) {
+        saveExamPlanBtn.addEventListener('click', async () => {
+            const selects = document.querySelectorAll('select.exam-teacher-select');
+            const newPlan = [];
+            selects.forEach(select => {
+                const day = parseInt(select.getAttribute('data-day'));
+                const period = parseInt(select.getAttribute('data-period'));
+                const classCode = select.getAttribute('data-class-code');
+                const className = select.getAttribute('data-class-name');
+                const selectedCode = select.value;
+                const tObj = metadata.teachers ? metadata.teachers.find(t => t.code === selectedCode) : null;
+                const selectedName = tObj ? tObj.name : selectedCode;
+
+                newPlan.push({
+                    day, period,
+                    class_code: classCode,
+                    class_name: className,
+                    invigilator_code: selectedCode,
+                    invigilator_name: selectedName
+                });
+            });
+
+            const daysVal = parseInt(document.getElementById('examDaysInput').value || 2);
+            const periodsVal = parseInt(document.getElementById('examPeriodsInput').value || 4);
+
+            try {
+                const resp = await fetch('/api/exam-invigilation/save-plan', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ days: daysVal, periods: periodsVal, plan: newPlan })
+                });
+                const res = await resp.json();
+                if (res.status === 'success') {
+                    showToast(res.message);
+                    currentExamPlanData = newPlan;
+                } else {
+                    showToast("儲存失敗：" + res.message);
+                }
+            } catch (e) {
+                showToast("伺服器連線異常。");
+            }
+        });
+    }
+}
+
+async function loadExistingExamPlan() {
+    try {
+        const resp = await fetch('/api/exam-invigilation/get-plan');
+        const data = await resp.json();
+        if (data.status === 'success' && data.exam_data) {
+            const ed = data.exam_data;
+            if (ed.plan && ed.plan.length > 0) {
+                currentExamPlanData = ed.plan;
+                const computedDays = Math.max(...currentExamPlanData.map(item => parseInt(item.day || 1)));
+                const computedPeriods = Math.max(...currentExamPlanData.map(item => parseInt(item.period || 1)));
+
+                const daysInput = document.getElementById('examDaysInput');
+                if (daysInput) daysInput.value = ed.days || computedDays;
+
+                const periodsInput = document.getElementById('examPeriodsInput');
+                if (periodsInput) periodsInput.value = ed.periods || computedPeriods;
+
+                renderExamPlanTable();
+            }
+        }
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+let activeExamDayTab = '1';
+
+function renderExamPlanTable() {
+    const examTableHeaderRow = document.getElementById('examTableHeaderRow');
+    const examTableBody = document.getElementById('examTableBody');
+    const examDayTabsContainer = document.getElementById('examDayTabsContainer');
+    if (!examTableBody || !examTableHeaderRow) return;
+
+    examTableBody.innerHTML = '';
+    examTableHeaderRow.innerHTML = '<th style="width: 130px; min-width: 130px; text-align: center; background: rgba(15,23,42,0.95); white-space: nowrap; padding: 10px 12px; font-size: 0.88rem; color: #818cf8;">試場 / 班級</th>';
+
+    if (!currentExamPlanData || currentExamPlanData.length === 0) {
+        if (examDayTabsContainer) examDayTabsContainer.innerHTML = '';
+        examTableBody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 20px;">尚未生成監考課表。請點擊上方「啟動 AI 監考自動排程」按鈕！</td></tr>';
+        return;
+    }
+
+    // 1. Get distinct days & slots
+    const daysSet = new Set();
+    const slotsMap = {};
+    currentExamPlanData.forEach(item => {
+        daysSet.add(item.day);
+        const key = `${item.day}-${item.period}`;
+        if (!slotsMap[key]) {
+            slotsMap[key] = { day: item.day, period: item.period };
+        }
+    });
+
+    const uniqueDays = Array.from(daysSet).sort((a, b) => a - b);
+
+    // If activeExamDayTab is not valid, reset to 1
+    if (activeExamDayTab !== 'all' && !uniqueDays.includes(parseInt(activeExamDayTab))) {
+        activeExamDayTab = uniqueDays[0] ? String(uniqueDays[0]) : '1';
+    }
+
+    // Render Day Tabs Bar
+    if (examDayTabsContainer) {
+        examDayTabsContainer.innerHTML = '';
+
+        // Individual Day Tabs
+        uniqueDays.forEach(d => {
+            const btn = document.createElement('button');
+            btn.className = 'solver-action-btn';
+            btn.style.fontSize = '0.85rem';
+            btn.style.padding = '6px 16px';
+            btn.style.borderRadius = '6px';
+            if (activeExamDayTab == d) {
+                btn.style.background = '#f59e0b';
+                btn.style.color = '#fff';
+                btn.style.fontWeight = 'bold';
+                btn.style.boxShadow = '0 0 10px rgba(245,158,11,0.4)';
+            } else {
+                btn.style.background = 'rgba(255,255,255,0.05)';
+                btn.style.color = 'var(--text-secondary)';
+                btn.style.border = '1px solid var(--border-color)';
+            }
+            btn.innerHTML = `<i class="fa-solid fa-calendar-day"></i> 第 ${d} 天`;
+            btn.addEventListener('click', () => {
+                activeExamDayTab = String(d);
+                renderExamPlanTable();
+            });
+            examDayTabsContainer.appendChild(btn);
+        });
+
+        // All Days Tab (at the end)
+        const btnAll = document.createElement('button');
+        btnAll.className = 'solver-action-btn';
+        btnAll.style.fontSize = '0.85rem';
+        btnAll.style.padding = '6px 16px';
+        btnAll.style.borderRadius = '6px';
+        if (activeExamDayTab === 'all') {
+            btnAll.style.background = '#f59e0b';
+            btnAll.style.color = '#fff';
+            btnAll.style.fontWeight = 'bold';
+            btnAll.style.boxShadow = '0 0 10px rgba(245,158,11,0.4)';
+        } else {
+            btnAll.style.background = 'rgba(255,255,255,0.05)';
+            btnAll.style.color = 'var(--text-secondary)';
+            btnAll.style.border = '1px solid var(--border-color)';
+        }
+        btnAll.innerHTML = '<i class="fa-solid fa-layer-group"></i> 全日程總表 (寬網格)';
+        btnAll.addEventListener('click', () => {
+            activeExamDayTab = 'all';
+            renderExamPlanTable();
+        });
+        examDayTabsContainer.appendChild(btnAll);
+    }
+
+    let sortedSlots = Object.values(slotsMap).sort((a, b) => {
+        if (a.day !== b.day) return a.day - b.day;
+        return a.period - b.period;
+    });
+
+    // Filter by activeExamDayTab
+    if (activeExamDayTab !== 'all') {
+        sortedSlots = sortedSlots.filter(s => s.day == activeExamDayTab);
+    }
+
+    // Render Table Header Columns
+    sortedSlots.forEach(slot => {
+        const th = document.createElement('th');
+        th.style.textAlign = 'center';
+        th.style.minWidth = '180px';
+        th.style.whiteSpace = 'nowrap';
+        th.style.padding = '10px 14px';
+        th.style.background = 'rgba(15,23,42,0.95)';
+        th.style.color = '#fbbf24';
+        th.style.fontSize = '0.88rem';
+        th.innerHTML = `<i class="fa-solid fa-clock"></i> 第 ${slot.day} 天・第 ${slot.period} 節`;
+        examTableHeaderRow.appendChild(th);
+    });
+
+    // 2. Group by class_code
+    const classMap = {};
+    currentExamPlanData.forEach(item => {
+        const cc = item.class_code;
+        if (!classMap[cc]) {
+            classMap[cc] = { class_name: item.class_name, slots: {} };
+        }
+        classMap[cc].slots[`${item.day}-${item.period}`] = item;
+    });
+
+    // 3. Render Table Rows for each Class
+    Object.keys(classMap).sort().forEach(cc => {
+        const cInfo = classMap[cc];
+        const tr = document.createElement('tr');
+
+        // Class Name Cell
+        const tdClass = document.createElement('td');
+        tdClass.style.fontWeight = 'bold';
+        tdClass.style.color = '#38bdf8';
+        tdClass.style.textAlign = 'center';
+        tdClass.style.background = 'rgba(15,23,42,0.6)';
+        tdClass.style.whiteSpace = 'nowrap';
+        tdClass.style.padding = '8px 12px';
+        tdClass.textContent = cInfo.class_name;
+        tr.appendChild(tdClass);
+
+        // Slot Cells
+        sortedSlots.forEach(slot => {
+            const td = document.createElement('td');
+            td.style.textAlign = 'center';
+            td.style.padding = '6px 8px';
+
+            const item = cInfo.slots[`${slot.day}-${slot.period}`];
+            if (item) {
+                let selectHtml = `<select class="exam-teacher-select" data-day="${slot.day}" data-period="${slot.period}" data-class-code="${cc}" data-class-name="${cInfo.class_name}" style="width:100%; min-width:160px; padding: 6px 10px; border-radius: 6px; background: rgba(15,23,42,0.9); color: #fbbf24; border: 1px solid var(--border-color); font-weight: bold; font-size:0.85rem; cursor:pointer;">`;
+                
+                const simCodes = item.sim_teachers ? item.sim_teachers.map(st => st.code) : [];
+                if (simCodes.length > 0) {
+                    selectHtml += `<optgroup label="⭐ 當節同時排課/任課教師">`;
+                    item.sim_teachers.forEach(st => {
+                        const selected = st.code === item.invigilator_code ? 'selected' : '';
+                        selectHtml += `<option value="${st.code}" ${selected}>⭐ ${st.name} [${st.subject || '任課'}] (${st.code})</option>`;
+                    });
+                    selectHtml += `</optgroup>`;
+                    selectHtml += `<optgroup label="全校其他教師">`;
+                }
+
+                if (metadata.teachers) {
+                    metadata.teachers.forEach(t => {
+                        if (!simCodes.includes(t.code)) {
+                            const selected = t.code === item.invigilator_code ? 'selected' : '';
+                            selectHtml += `<option value="${t.code}" ${selected}>${t.name} (${t.code})</option>`;
+                        }
+                    });
+                }
+                if (simCodes.length > 0) {
+                    selectHtml += `</optgroup>`;
+                }
+                selectHtml += `</select>`;
+
+                let simBadge = '';
+                if (item.is_simultaneous && item.sim_teachers) {
+                    const names = item.sim_teachers.map(st => st.name).join(', ');
+                    simBadge = `<div style="font-size:0.75rem; color:#34d399; margin-top:3px;"><i class="fa-solid fa-users"></i> 同時排課: ${names}</div>`;
+                } else if (item.orig_subject) {
+                    simBadge = `<div style="font-size:0.75rem; color:var(--text-secondary); margin-top:3px;"><i class="fa-solid fa-book-bookmark" style="color:#818cf8;"></i> 原課表: ${item.orig_subject}</div>`;
+                }
+
+                td.innerHTML = selectHtml + simBadge;
+            } else {
+                td.innerHTML = '<span style="color:var(--text-muted); font-size:0.8rem;">-</span>';
+            }
+            tr.appendChild(td);
+        });
+
+        examTableBody.appendChild(tr);
+    });
 }
 
 function setupVenueCapacitiesHandlers() {

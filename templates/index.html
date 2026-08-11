@@ -285,6 +285,9 @@
                     <button id="tabRuleVenuesBtn" class="rule-tab-btn" data-ruletab="venues" style="padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border-color); background: transparent; color: var(--text-secondary); cursor: pointer;">
                         <i class="fa-solid fa-building-user"></i> 專用教室與連堂約束
                     </button>
+                    <button id="tabRuleSimBtn" class="rule-tab-btn" data-ruletab="sim" style="padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border-color); background: transparent; color: var(--text-secondary); cursor: pointer;">
+                        <i class="fa-solid fa-link"></i> 同時排課 / 跨班分組設定
+                    </button>
                     <button id="tabRuleRestoreBtn" class="rule-tab-btn" data-ruletab="restore" style="padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border-color); background: transparent; color: var(--text-secondary); cursor: pointer;">
                         <i class="fa-solid fa-clock-rotate-left"></i> 歷史還原點管理
                     </button>
@@ -585,6 +588,50 @@
                     </button>
                 </div>
 
+                <!-- Tab 7: Simultaneous Groups Manager -->
+                <div id="ruleTabSim" class="rule-tab-content" style="display: none;">
+                    <div style="background: rgba(255, 255, 255, 0.03); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 16px;">
+                        <h4 style="font-size: 0.9rem; color: #38bdf8; margin-bottom: 8px;"><i class="fa-solid fa-link"></i> 建立同時排課 / 跨班分組群組 (強制同日同節)</h4>
+                        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px;">此功能用於設定如體育男女分組、跨班選修、合班等課程。加入的成員將在 AI 自動排課時強制安排在同一時間！</p>
+                        
+                        <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 12px;">
+                            <label style="font-size: 0.85rem; min-width: 80px;">群組名稱：</label>
+                            <input type="text" id="simGroupNameInput" placeholder="例如：七年級體育男女分組A / 高一多元選修群" style="flex: 1; padding: 6px 10px; border-radius: 6px; background: rgba(15,23,42,0.8); color: #fff; border: 1px solid var(--border-color); font-size: 0.85rem;">
+                        </div>
+
+                        <!-- Dynamic Member Pair Inputs -->
+                        <div id="simMembersContainer" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;">
+                            <!-- JS Populated Member Rows -->
+                        </div>
+
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <button id="addSimMemberRowBtn" class="solver-action-btn secondary-btn" style="padding: 4px 12px; font-size: 0.8rem;">
+                                <i class="fa-solid fa-plus"></i> 增加成員 (班級 + 科目)
+                            </button>
+                            <button id="saveSimGroupBtn" class="solver-action-btn primary-btn" style="margin-left: auto; background: #6366f1; padding: 6px 18px; font-size: 0.85rem;">
+                                <i class="fa-solid fa-floppy-disk"></i> 建立同時排課群組
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Table of Existing Simultaneous Groups -->
+                    <div class="table-responsive glass" style="max-height: 300px; overflow-y: auto;">
+                        <table class="schedule-table" style="font-size: 0.85rem;">
+                            <thead>
+                                <tr>
+                                    <th style="width: 160px;">群組名稱</th>
+                                    <th>同時排課成員明細 (班級 🔗 科目)</th>
+                                    <th style="width: 120px; text-align: center;">約束狀態</th>
+                                    <th style="width: 90px; text-align: center;">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="simGroupsTableBody">
+                                <!-- JS Populated -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
                 <!-- Tab 6: Restore Points Checkpoint Manager -->
                 <div id="ruleTabRestore" class="rule-tab-content" style="display: none;">
                     <div style="display: flex; gap: 8px; align-items: center; background: rgba(255, 255, 255, 0.03); padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 12px; flex-wrap: wrap;">
@@ -631,14 +678,14 @@
         </div>
     </div>
 
-    <!-- Substitute & Cover Management Modal -->
-    <div id="substituteModal" class="modal-overlay" style="display: none;">
-        <div class="modal-content glass" style="max-width: 750px;">
-            <div class="modal-header">
-                <h3><i class="fa-solid fa-user-clock" style="color: #34d399;"></i> 智慧調代課登記與媒合系統</h3>
-                <button class="close-modal-btn" id="closeSubstituteModalBtn">&times;</button>
-            </div>
-            <div class="modal-body" style="padding: 16px;">
+    <!-- Substitute & Cover Management Right-Side Drawer -->
+    <div id="substituteBackdrop" style="position: fixed; inset: 0; background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(2px); opacity: 0; pointer-events: none; transition: opacity 0.3s ease; z-index: 1040;"></div>
+    <div id="substituteDrawer" class="glass" style="position: fixed; top: 0; right: 0; bottom: 0; width: 520px; max-width: 90vw; background: rgba(15, 23, 42, 0.96); border-left: 1px solid var(--border-color); box-shadow: -10px 0 35px rgba(0,0,0,0.6); transform: translateX(100%); transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1); z-index: 1050; display: flex; flex-direction: column;">
+        <div class="modal-header" style="padding: 16px 20px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; background: rgba(30, 41, 59, 0.8);">
+            <h3 style="font-size: 1.05rem; margin: 0; display: flex; align-items: center; gap: 8px;"><i class="fa-solid fa-user-clock" style="color: #34d399;"></i> 智慧調代課登記與媒合 (Side Drawer)</h3>
+            <button class="close-modal-btn" id="closeSubstituteModalBtn" style="background: none; border: none; color: #fff; font-size: 1.5rem; cursor: pointer;">&times;</button>
+        </div>
+        <div class="modal-body" style="padding: 18px; overflow-y: auto; flex: 1;">
                 <div style="display: flex; gap: 12px; margin-bottom: 16px; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); flex-wrap: wrap;">
                     <div style="display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 140px;">
                         <label style="font-size: 0.8rem; color: var(--text-secondary);">請假教師：</label>
@@ -717,13 +764,13 @@
 
     <!-- Exam Invigilation Modal -->
     <div id="examInvigilationModal" class="modal-overlay" style="display: none;">
-        <div class="modal-content glass" style="max-width: 700px;">
+        <div class="modal-content glass" style="max-width: 1100px; width: 95vw;">
             <div class="modal-header">
-                <h3><i class="fa-solid fa-clipboard-user" style="color: #fbbf24;"></i> 定期考查 (段考) 監考表自動生成器</h3>
+                <h3><i class="fa-solid fa-clipboard-user" style="color: #fbbf24;"></i> 全校段考監考課表矩陣 (定期考查監考排程)</h3>
                 <button class="close-modal-btn" id="closeExamModalBtn">&times;</button>
             </div>
             <div class="modal-body" style="padding: 16px;">
-                <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 16px; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color);">
+                <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 16px; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); flex-wrap: wrap;">
                     <label style="font-size: 0.85rem;">考試天數：</label>
                     <input type="number" id="examDaysInput" min="1" max="5" value="2" style="width: 60px; padding: 4px 8px; border-radius: 4px; background: rgba(15,23,42,0.8); color: #fff; border: 1px solid var(--border-color);">
                     <label style="font-size: 0.85rem; margin-left: 12px;">每日考科節數：</label>
@@ -731,20 +778,26 @@
                     <button id="runExamSolverBtn" class="solver-action-btn primary-btn" style="margin-left: auto; background: #f59e0b;">
                         <i class="fa-solid fa-wand-magic-sparkles"></i> 啟動 AI 監考自動排程
                     </button>
+                    <button id="saveExamPlanBtn" class="solver-action-btn primary-btn" style="background: #10b981;">
+                        <i class="fa-solid fa-floppy-disk"></i> 儲存微調監考表
+                    </button>
                 </div>
 
-                <div class="table-responsive glass" style="max-height: 380px; overflow-y: auto;">
-                    <table class="schedule-table" style="font-size: 0.85rem;">
+                <!-- Exam Day Tabs Bar -->
+                <div id="examDayTabsContainer" style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
+                    <!-- JS Generated Day Tabs -->
+                </div>
+
+                <div class="table-responsive glass" style="max-height: 440px; overflow: auto;">
+                    <table class="schedule-table" style="font-size: 0.85rem; min-width: 800px;">
                         <thead>
-                            <tr>
-                                <th>考試日程</th>
-                                <th>節次</th>
-                                <th>試場 / 班級</th>
-                                <th>監考教師</th>
+                            <tr id="examTableHeaderRow">
+                                <th style="width: 140px; text-align: center;">試場 / 班級</th>
+                                <!-- JS Generated Exam Slot Columns -->
                             </tr>
                         </thead>
                         <tbody id="examTableBody">
-                            <tr><td colspan="4" style="text-align: center; color: var(--text-muted);">尚未生成監考表。請點擊上方按鈕啟動自動排程！</td></tr>
+                            <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">尚未生成監考課表。請點擊上方按鈕啟動自動排程！</td></tr>
                         </tbody>
                     </table>
                 </div>

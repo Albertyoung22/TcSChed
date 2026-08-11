@@ -239,6 +239,22 @@ def run_solver():
                 model.Add(day_vars[first_item["idx"]] == day_vars[other_item["idx"]])
                 model.Add(period_vars[first_item["idx"]] == period_vars[other_item["idx"]])
 
+    # 2.5 Custom Simultaneous Groups (自訂同時上課/分組教學/跨班排課)
+    custom_sim_groups = custom_rules.get("custom_simultaneous_groups", [])
+    for grp in custom_sim_groups:
+        matched_idxs = []
+        for target in grp:
+            t_cc = str(target.get("class_code", "")).strip()
+            t_sc = str(target.get("subject_code", "")).strip()
+            for item in items:
+                if item["class_code"] == t_cc and item["subject_code"] == t_sc:
+                    matched_idxs.append(item["idx"])
+        if len(matched_idxs) > 1:
+            first_idx = matched_idxs[0]
+            for other_idx in matched_idxs[1:]:
+                model.Add(day_vars[first_idx] == day_vars[other_idx])
+                model.Add(period_vars[first_idx] == period_vars[other_idx])
+
     # 3. Class Conflicts (班級不衝堂)
     class_items_map = {}
     for item in items:

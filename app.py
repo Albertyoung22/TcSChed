@@ -1,6 +1,7 @@
 import os
 import sys
 import json
+import datetime
 from flask import Flask, jsonify, render_template, send_from_directory, send_file, request
 from dbfread import DBF
 
@@ -103,24 +104,37 @@ def load_schedule_data():
             })
         classes.sort(key=lambda x: x["code"])
 
+        # Map class tutor
+        tutor_map = {}
+        for c in classes:
+            if c["tutor"]:
+                tutor_map[c["tutor"]] = c["name"]
+
         # 3. Parse teacher.dbf
         db_teacher = DBF(resolved_paths["teacher"], ignore_missing_memofile=True, encoding='cp950')
         teachers = []
-        # Build code normalization map: short code (e.g. '28') -> full padded code (e.g. '0028')
         teacher_code_map = {}
         for r in db_teacher:
             t_name = r.get("TEACH_NAME", "").strip()
             full_code = r.get("TEACHER_NO", "").strip()
             if full_code:
-                # Map both the stripped integer form and the full padded form to the canonical full_code
                 teacher_code_map[str(int(full_code))] = full_code
                 teacher_code_map[full_code] = full_code
-            # Filter out backup or empty teachers
             if t_name and not t_name.startswith("備用"):
+                role_raw = r.get("TEACH_KINA", "").strip() or r.get("TEACH_KINB", "").strip() or ""
+                if t_name in tutor_map:
+                    identity = f"{tutor_map[t_name]} 導師"
+                    if role_raw and "導師" not in role_raw:
+                        identity += f" ({role_raw})"
+                elif role_raw:
+                    identity = role_raw
+                else:
+                    identity = "專任教師"
+
                 teachers.append({
                     "code": full_code,
                     "name": t_name,
-                    "role": r.get("TEACH_KINA", "").strip() if r.get("TEACH_KINA") else ""
+                    "role": identity
                 })
         teachers.sort(key=lambda x: x["name"])
 
@@ -1956,6 +1970,7 @@ def api_delete_restore_point():
 # --- SHIN-HER INTEGRATED EXTENSIONS ---
 
 @app.route("/api/venue-capacities", methods=["GET"])
+@app.route("/api/get-venue-capacities", methods=["GET"])
 def api_get_venue_capacities():
     try:
         cfg = load_config_rules()
@@ -1982,6 +1997,52 @@ def api_save_venue_capacities():
         cfg["consecutive_subjects"] = consec_subs
         save_config_rules(cfg)
         return jsonify({"status": "success", "message": "專用教室容納上限與強制連堂規則已成功儲存！"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/simultaneous-groups", methods=["GET"])
+def api_get_simultaneous_groups():
+    try:
+        cfg = load_config_rules()
+        sim_groups = cfg.get("custom_simultaneous_groups", [])
+        return jsonify({"status": "success", "simultaneous_groups": sim_groups})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/save-simultaneous-group", methods=["POST"])
+def api_save_simultaneous_group():
+    try:
+        req = request.get_json() or {}
+        name = req.get("name", "").strip()
+        members = req.get("members", [])
+        
+        if not name or len(members) < 2:
+            return jsonify({"status": "error", "message": "請提供群組名稱並至少選擇 2 個班級科目成員！"}), 400
+
+        cfg = load_config_rules()
+        if "custom_simultaneous_groups" not in cfg:
+            cfg["custom_simultaneous_groups"] = []
+
+        cfg["custom_simultaneous_groups"] = [g for g in cfg["custom_simultaneous_groups"] if isinstance(g, dict) and g.get("name") != name]
+        cfg["custom_simultaneous_groups"].append({
+            "name": name,
+            "members": members
+        })
+        save_config_rules(cfg)
+        return jsonify({"status": "success", "message": f"同時排課群組「{name}」已成功建立並鎖定同日同節！", "simultaneous_groups": cfg["custom_simultaneous_groups"]})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/delete-simultaneous-group", methods=["POST"])
+def api_delete_simultaneous_group():
+    try:
+        req = request.get_json() or {}
+        name = req.get("name", "").strip()
+        cfg = load_config_rules()
+        if "custom_simultaneous_groups" in cfg:
+            cfg["custom_simultaneous_groups"] = [g for g in cfg["custom_simultaneous_groups"] if isinstance(g, dict) and g.get("name") != name]
+            save_config_rules(cfg)
+        return jsonify({"status": "success", "message": f"同時排課群組「{name}」已成功刪除！"})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
@@ -2141,27 +2202,85 @@ def api_exam_invigilation_solve():
         if not classes or not teachers:
             return jsonify({"status": "error", "message": "No classes or teachers available for exam invigilation"}), 400
 
-        # Run simple balanced assignment
+        # Build original schedule lookup map with lists for simultaneous classes: (class_code, str(day), str(period)) -> list of schedule_items
+        schedules = data.get("schedules", [])
+        schedule_map = {}
+        for s in schedules:
+            cc = s.get("class_code")
+            d = str(s.get("day"))
+            p = str(s.get("period"))
+            if cc and d and p:
+                key = (cc, d, p)
+                if key not in schedule_map:
+                    schedule_map[key] = []
+                schedule_map[key].append(s)
+
+        # Track assigned invigilators per exam slot (d, p) to prevent invigilator conflicts
+        assigned_invigilators_by_slot = {}
         invigilation_plan = []
         t_idx = 0
         
         for d in range(1, days_count + 1):
             for p in range(1, periods_per_day + 1):
+                slot_key = (d, p)
+                if slot_key not in assigned_invigilators_by_slot:
+                    assigned_invigilators_by_slot[slot_key] = set()
+
                 for c in classes:
-                    t = teachers[t_idx % len(teachers)]
-                    t_idx += 1
+                    orig_items = schedule_map.get((c["code"], str(d), str(p)), [])
+                    
+                    # Extract simultaneous teachers & subjects
+                    sim_teachers = []
+                    orig_subj_list = []
+                    for item in orig_items:
+                        tc = item.get("teacher_code")
+                        tn = item.get("teacher_name")
+                        sn = item.get("subject_name", "")
+                        if tc and tn and tc not in [st["code"] for st in sim_teachers]:
+                            sim_teachers.append({"code": tc, "name": tn, "subject": sn})
+                        if sn and sn not in orig_subj_list:
+                            orig_subj_list.append(sn)
+
+                    chosen_code = ""
+                    chosen_name = ""
+
+                    # Priority 1: Pick a simultaneous teacher who is NOT busy in this exam slot
+                    for st in sim_teachers:
+                        if st["code"] not in assigned_invigilators_by_slot[slot_key]:
+                            chosen_code = st["code"]
+                            chosen_name = st["name"]
+                            break
+
+                    # Priority 2: Fallback to next available teacher
+                    if not chosen_code:
+                        for _ in range(len(teachers)):
+                            t = teachers[t_idx % len(teachers)]
+                            t_idx += 1
+                            if t["code"] not in assigned_invigilators_by_slot[slot_key]:
+                                chosen_code = t["code"]
+                                chosen_name = t["name"]
+                                break
+
+                    if chosen_code:
+                        assigned_invigilators_by_slot[slot_key].add(chosen_code)
+
                     invigilation_plan.append({
                         "day": d,
                         "period": p,
                         "class_code": c["code"],
                         "class_name": c["name"],
-                        "invigilator_code": t["code"],
-                        "invigilator_name": t["name"]
+                        "invigilator_code": chosen_code,
+                        "invigilator_name": chosen_name,
+                        "orig_subject": " / ".join(orig_subj_list),
+                        "is_simultaneous": len(sim_teachers) > 1,
+                        "sim_teachers": sim_teachers
                     })
 
         cfg = load_config_rules()
         cfg["exam_invigilations"] = {
             "generated_at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "days": days_count,
+            "periods": periods_per_day,
             "plan": invigilation_plan
         }
         save_config_rules(cfg)
@@ -2169,8 +2288,46 @@ def api_exam_invigilation_solve():
         return jsonify({
             "status": "success",
             "message": "定期考查 (段考) 監考表已成功自動生成！",
+            "days": days_count,
+            "periods": periods_per_day,
             "plan": invigilation_plan
         })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/exam-invigilation/get-plan", methods=["GET"])
+def api_exam_invigilation_get_plan():
+    try:
+        cfg = load_config_rules()
+        exam_data = cfg.get("exam_invigilations", {})
+        plan = exam_data.get("plan", [])
+        if plan:
+            max_day = max(int(item.get("day", 1)) for item in plan)
+            max_period = max(int(item.get("period", 1)) for item in plan)
+            exam_data["days"] = max_day
+            exam_data["periods"] = max_period
+        return jsonify({"status": "success", "exam_data": exam_data})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/exam-invigilation/save-plan", methods=["POST"])
+def api_exam_invigilation_save_plan():
+    try:
+        req = request.get_json() or {}
+        plan = req.get("plan", [])
+        days_count = req.get("days")
+        periods_per_day = req.get("periods")
+        
+        cfg = load_config_rules()
+        existing = cfg.get("exam_invigilations", {})
+        cfg["exam_invigilations"] = {
+            "generated_at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "days": days_count or existing.get("days", 2),
+            "periods": periods_per_day or existing.get("periods", 4),
+            "plan": plan
+        }
+        save_config_rules(cfg)
+        return jsonify({"status": "success", "message": "監考表手動調整變更已成功儲存！"})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
