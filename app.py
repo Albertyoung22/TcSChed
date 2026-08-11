@@ -2000,6 +2000,31 @@ def api_substitute_recommend():
         schedules = data.get("schedules", [])
         teachers = data.get("teachers", [])
 
+        # Build teacher assigned classes map
+        teacher_classes_map = {}
+        for s in schedules:
+            tc = s.get("teacher_code")
+            cn = s.get("class_name")
+            if tc and cn:
+                if tc not in teacher_classes_map:
+                    teacher_classes_map[tc] = set()
+                teacher_classes_map[tc].add(cn)
+
+        # Absent teacher details
+        absent_teacher_info = None
+        for t in teachers:
+            if t["code"] == absent_tcode:
+                c_list = sorted(list(teacher_classes_map.get(absent_tcode, [])))
+                c_str = ", ".join(c_list) if c_list else "專任課程"
+                absent_teacher_info = {
+                    "code": absent_tcode,
+                    "name": t["name"],
+                    "role": t.get("role", "") or "專任教師",
+                    "assigned_classes_str": c_str,
+                    "assigned_classes": c_list
+                }
+                break
+
         # Find who is currently occupied in slot (day, period)
         busy_teachers = set()
         absent_course = None
@@ -2016,15 +2041,12 @@ def api_substitute_recommend():
         no_teach_map = cfg.get("custom_no_teach", {})
 
         candidates = []
+        target_class = absent_course.get("class_name", "") if absent_course else ""
         target_subject = absent_course.get("subject_name", "") if absent_course else ""
 
         for t in teachers:
             t_code = t["code"]
-            if t_code == absent_tcode:
-                continue
-                
-            # Check if teacher is busy
-            if t_code in busy_teachers:
+            if t_code == absent_tcode or t_code in busy_teachers:
                 continue
                 
             # Check if slot is blocked in no_teach
@@ -2032,24 +2054,35 @@ def api_substitute_recommend():
             if f"{day}-{period}" in blocked_slots:
                 continue
 
-            # Check matching department/subject score
+            # Priority 1: Same class teacher
+            t_classes = teacher_classes_map.get(t_code, set())
+            is_same_class = (target_class in t_classes) if target_class else False
+            
+            # Priority 2: Same subject/domain teacher
             same_subject_bonus = False
             for s in schedules:
                 if s["teacher_code"] == t_code and target_subject and target_subject in s.get("subject_name", ""):
                     same_subject_bonus = True
                     break
 
+            c_list = sorted(list(t_classes))
+            c_str = ", ".join(c_list) if c_list else "無"
+
             candidates.append({
                 "teacher_code": t_code,
                 "teacher_name": t["name"],
-                "role": t.get("role", ""),
+                "role": t.get("role", "") or "專任教師",
+                "assigned_classes_str": c_str,
+                "is_same_class": is_same_class,
                 "is_same_domain": same_subject_bonus
             })
 
-        candidates.sort(key=lambda x: (not x["is_same_domain"], x["teacher_name"]))
+        # Sort: Same class teacher FIRST, then same domain, then name
+        candidates.sort(key=lambda x: (not x["is_same_class"], not x["is_same_domain"], x["teacher_name"]))
 
         return jsonify({
             "status": "success",
+            "absent_teacher_info": absent_teacher_info,
             "absent_course": absent_course,
             "candidates": candidates
         })

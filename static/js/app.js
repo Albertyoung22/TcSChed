@@ -2193,8 +2193,20 @@ function setupSubstituteHandlers() {
                 if (res.status === 'success') {
                     subSearchResultCard.style.display = 'block';
                     const c = res.absent_course;
+                    const info = res.absent_teacher_info;
+
+                    const titleEl = document.getElementById('subTeacherNameTitle');
+                    const classesEl = document.getElementById('subTeacherClassesText');
+
+                    if (info && titleEl) {
+                        titleEl.innerHTML = `<i class="fa-solid fa-user-circle"></i> 請假教師：${info.name} (${info.code}) <span style="font-size:0.8rem; background:rgba(99,102,241,0.2); padding:2px 8px; border-radius:4px; margin-left:6px; color:#818cf8;">${info.role}</span>`;
+                    }
+                    if (info && classesEl) {
+                        classesEl.innerHTML = `<i class="fa-solid fa-graduation-cap"></i> 本學期任教班級：${info.assigned_classes_str}`;
+                    }
+
                     if (c) {
-                        subCourseHintText.textContent = `🎯 受影響課程：星期${day} 第${period}節 【${c.class_name}】 ${c.subject_name}`;
+                        subCourseHintText.textContent = `🎯 請假排代時段：星期${day} 第${period}節 【${c.class_name}】 ${c.subject_name}`;
                     } else {
                         subCourseHintText.textContent = `🎯 該教師於星期${day} 第${period}節 暫無原定授課紀錄`;
                     }
@@ -2207,10 +2219,17 @@ function setupSubstituteHandlers() {
 
                     res.candidates.forEach(cand => {
                         const tr = document.createElement('tr');
+                        let priorityBadge = '<span style="color:#38bdf8;"><i class="fa-solid fa-circle-check"></i> 空閒可用</span>';
+                        if (cand.is_same_class) {
+                            priorityBadge = `<span style="color:#fbbf24; font-weight:bold;"><i class="fa-solid fa-star"></i> ⭐ 最優先：同班任課教師</span>`;
+                        } else if (cand.is_same_domain) {
+                            priorityBadge = `<span style="color:#34d399; font-weight:bold;"><i class="fa-solid fa-check-double"></i> 次優先：同學科專長</span>`;
+                        }
+
                         tr.innerHTML = `
                             <td style="font-weight:bold; color:#38bdf8;">${cand.teacher_name} (${cand.teacher_code})</td>
-                            <td>${cand.is_same_domain ? '<span style="color:#34d399;"><i class="fa-solid fa-check"></i> 同學科專長</span>' : '<span style="color:var(--text-muted)">跨領域代課</span>'}</td>
-                            <td><span style="color:#34d399;"><i class="fa-solid fa-circle-check"></i> 空閒可代課</span></td>
+                            <td><span style="color:#818cf8; font-size:0.8rem;">[${cand.role}]</span> ${cand.assigned_classes_str}</td>
+                            <td>${priorityBadge}</td>
                             <td>
                                 <button class="solver-action-btn primary-btn" style="padding:4px 10px; font-size:0.8rem; background:#10b981;" onclick="assignSubstitute('${absentTeacher}', '${cand.teacher_code}', '${cand.teacher_name}', '${day}', '${period}', '${c ? c.class_name : ''}', '${c ? c.subject_name : ''}')">
                                     <i class="fa-solid fa-user-check"></i> 指派代課
