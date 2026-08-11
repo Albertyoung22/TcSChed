@@ -36,25 +36,6 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
     handleHashChange();
 
-    // Global ESC key to close any open modal
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            document.querySelectorAll('.modal-overlay').forEach(m => {
-                if (m.style.display !== 'none') {
-                    m.style.display = 'none';
-                }
-            });
-        }
-    });
-
-    // Close modal when clicking on backdrop overlay outside modal content
-    document.querySelectorAll('.modal-overlay').forEach(modal => {
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                modal.style.display = 'none';
-            }
-        });
-    });
 });
 
 // Event Listeners Setup
@@ -841,12 +822,6 @@ function setupSettingsPanel() {
 
     closeSettingsBtn.addEventListener('click', () => {
         settingsModal.style.display = 'none';
-    });
-
-    settingsModal.addEventListener('click', (e) => {
-        if (e.target === settingsModal) {
-            settingsModal.style.display = 'none';
-        }
     });
 
     // Rule Tabs
@@ -2544,9 +2519,6 @@ function setupSubstituteHandlers() {
 
     if (closeSubstituteModalBtn) {
         closeSubstituteModalBtn.addEventListener('click', closeSubstituteDrawer);
-    }
-    if (substituteBackdrop) {
-        substituteBackdrop.addEventListener('click', closeSubstituteDrawer);
     }
 
     if (findSubCandidatesBtn) {
