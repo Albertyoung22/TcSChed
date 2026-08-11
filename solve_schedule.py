@@ -21,6 +21,9 @@ def find_latest_dbf_dir():
             if os.path.isdir(dbf_path):
                 candidates.append((path, dbf_path))
     if not candidates:
+        local_dbf = os.path.join(os.path.dirname(__file__), "dbf_data")
+        if os.path.isdir(local_dbf):
+            return local_dbf
         return None
     candidates.sort(key=lambda x: os.path.basename(x[0]), reverse=True)
     return candidates[0][1]
@@ -377,22 +380,54 @@ def run_solver():
             class_sub_items[key] = []
         class_sub_items[key].append(item)
 
-    # Load dynamic config rules if present
-    config_rules_file = os.path.join(os.path.dirname(__file__), "config_rules.json")
-    custom_rules = {}
-    if os.path.exists(config_rules_file):
-        try:
-            import json
-            with open(config_rules_file, "r", encoding="utf-8") as f:
-                custom_rules = json.load(f)
-        except Exception as e:
-            log(f"Warning: Failed to read config_rules.json: {e}")
+    # 4. Venue Capacity Constraints (專用教室容納上限)
+    venue_capacities = custom_rules.get("venue_capacities", {})
+    if venue_capacities:
+        room_items_map = {}
+        for item in items:
+            rm = item.get("room_name", "").strip() or item.get("room_code", "").strip()
+            if rm:
+                if rm not in room_items_map:
+                    room_items_map[rm] = []
+                room_items_map[rm].append(item)
+                
+        for room_name, r_items in room_items_map.items():
+            cap = venue_capacities.get(room_name)
+            if cap and cap > 0:
+                for d in days:
+                    for p in periods:
+                        model.Add(sum(x[item["idx"], d, p] for item in r_items) <= cap)
 
+    # Load dynamic config rules if present
     weights = custom_rules.get("weights", {})
-    w_spreading = int(weights.get("spreading_weight", 10))
-    w_consecutive = int(weights.get("consecutive_weight", 500))
-    w_no_teach = int(weights.get("no_teach_penalty", 200))
-    w_no_sub = int(weights.get("no_sub_penalty", 200))
+    w_spreading = int(weights.get("spreading_weight", 15))
+    w_consecutive = int(weights.get("consecutive_weight", 600))
+    w_no_teach = int(weights.get("no_teach_penalty", 300))
+    w_no_sub = int(weights.get("no_sub_penalty", 300))
+    w_morning_pref = int(weights.get("morning_pref_weight", 50))
+    w_pe_noon = int(weights.get("pe_noon_penalty_weight", 100))
+
+    # SOFT Constraint: Morning Preference for Core Subjects (國文/英文/數學/物理/化學)
+    core_subject_codes = {"101", "102", "103", "104", "105"}
+    afternoon_penalties = []
+    pe_noon_penalties = []
+    
+    for item in items:
+        sc = item.get("subject_code", "").strip()
+        sn = item.get("subject_name", "").strip()
+        idx = item["idx"]
+        
+        # Morning Preference
+        if sc in core_subject_codes or any(kw in sn for kw in ["國文", "英文", "數學", "物理", "化學"]):
+            for d in days:
+                for p in [5, 6, 7, 8]:
+                    afternoon_penalties.append(x[idx, d, p])
+                    
+        # PE Noon Avoidance
+        if sc == "901" or "體育" in sn:
+            for d in days:
+                for p in [4, 5]:
+                    pe_noon_penalties.append(x[idx, d, p])
 
     # SOFT Constraint: Class/Subject Blocked Times (no_sub.dbf + custom)
     no_sub_violations = []
@@ -458,7 +493,31 @@ def run_solver():
                     except ValueError:
                         pass
 
+    # HARD Constraint: Teacher Max Consecutive Hours (欣河 排課條件2: 5.最多連堂數設定)
+    max_consec_h = int(weights.get("max_consecutive_hours", 3))
+    if max_consec_h > 0 and max_consec_h < 8:
+        for t_code, t_items in teacher_items_map.items():
+            if not t_code:
+                continue
+            for d in days:
+                for start_p in range(1, 8 - max_consec_h + 1):
+                    # Block start_p to start_p + max_consec_h (length max_consec_h + 1)
+                    consec_block = range(start_p, start_p + max_consec_h + 1)
+                    model.Add(sum(x[item["idx"], d, p] for item in t_items for p in consec_block if p in periods) <= max_consec_h)
+
+    # HARD Constraint: Teacher Only-Teach Slots (欣河 排課條件1: 3.教師僅能排課時段)
+    only_teach_map = custom_rules.get("only_teach_slots", {})
+    for t_code, allowed_slots in only_teach_map.items():
+        if t_code in teacher_items_map and allowed_slots:
+            allowed_set = set(allowed_slots)
+            for item in teacher_items_map[t_code]:
+                for d in days:
+                    for p in periods:
+                        if f"{d}-{p}" not in allowed_set:
+                            model.Add(x[item["idx"], d, p] == 0)
+
     # SOFT Constraint: Double Periods
+    consecutive_subjects = set(custom_rules.get("consecutive_subjects", ["104", "105", "110"]))
     course_items_map = {}
     for item in items:
         key = item["course_key"]
@@ -491,6 +550,11 @@ def run_solver():
                     slot_pair_vars.append(pair2)
             
             model.Add(is_consec == sum(slot_pair_vars))
+            
+            # If subject code is explicitly marked in consecutive_subjects, enforce mandatory double period constraint
+            sub_code = c_list[0].get("subject_code", "")
+            if sub_code in consecutive_subjects:
+                model.Add(is_consec == 1)
 
     # SOFT Constraint: Spreading objective
     active_vars = []
@@ -505,12 +569,14 @@ def run_solver():
                     model.Add(active >= sum(x[i, d, p] for p in periods))
 
     # Multi-Objective Function
-    # Maximize: Spreading & Double consecutiveness, Penalize teacher & sub block violations
+    # Maximize: Spreading & Double consecutiveness, Penalize teacher, sub block & afternoon core / PE noon violations
     model.Maximize(
         w_spreading * sum(active_vars) +
         w_consecutive * sum(consecutive_vars) -
         w_no_teach * sum(no_teach_violations) -
-        w_no_sub * sum(no_sub_violations)
+        w_no_sub * sum(no_sub_violations) -
+        w_morning_pref * sum(afternoon_penalties) -
+        w_pe_noon * sum(pe_noon_penalties)
     )
 
     # Run Solver

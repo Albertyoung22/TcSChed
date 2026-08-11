@@ -7,11 +7,33 @@
   },
   "custom_no_sub": {},
   "weights": {
-    "consecutive_weight": 600,
-    "no_teach_penalty": 300,
-    "no_sub_penalty": 300,
-    "spreading_weight": 15
+    "spreading_weight": 15,
+    "morning_pref_weight": 50,
+    "pe_noon_penalty_weight": 100,
+    "no_gap_penalty_weight": 80,
+    "max_consecutive_hours": 3
   },
+  "venue_capacities": {
+    "電腦教室": 2,
+    "理化實驗室": 1,
+    "音樂教室": 1,
+    "體育場": 3
+  },
+  "consecutive_subjects": [
+    "104",
+    "105",
+    "110"
+  ],
+  "no_consec_days_subjects": [
+    "101",
+    "102",
+    "103"
+  ],
+  "allow_across_lunch_subjects": [],
+  "only_teach_slots": {},
+  "teacher_max_days": {},
+  "substitute_records": [],
+  "exam_invigilations": {},
   "custom_assignments": {
     "701|101": {
       "teacher_code": "0051",

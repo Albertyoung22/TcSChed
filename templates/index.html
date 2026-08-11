@@ -36,6 +36,15 @@
                 <button id="settingsModalBtn" class="solver-panel-btn" style="background: rgba(99, 102, 241, 0.15); border-color: rgba(99, 102, 241, 0.3); color: #818cf8;" title="開啟排課規則與限制條件設定">
                     <i class="fa-solid fa-sliders"></i> 規則與參數設定
                 </button>
+                <button id="substituteModalBtn" class="solver-panel-btn" style="background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.3); color: #34d399;" title="辦理教師調代課登記與智慧推薦">
+                    <i class="fa-solid fa-user-clock"></i> 調代課管理
+                </button>
+                <button id="examInvigilationBtn" class="solver-panel-btn" style="background: rgba(245, 158, 11, 0.15); border-color: rgba(245, 158, 11, 0.3); color: #fbbf24;" title="自動生成定期考查監考表">
+                    <i class="fa-solid fa-clipboard-user"></i> 段考監考排程
+                </button>
+                <button id="dataDebugBtn" class="solver-panel-btn" style="background: rgba(236, 72, 153, 0.15); border-color: rgba(236, 72, 153, 0.3); color: #f472b6;" title="執行欣河式 9大排課資料邏輯除錯稽核">
+                    <i class="fa-solid fa-bug"></i> 資料邏輯除錯
+                </button>
                 <div class="db-badge" id="dbBadge" title="自動偵測自最新排課系統資料庫">
                     <i class="fa-solid fa-database"></i> <span id="dbPathText">載入中...</span>
                 </div>
@@ -272,6 +281,9 @@
                     </button>
                     <button id="tabRuleCatalogBtn" class="rule-tab-btn" data-ruletab="catalog" style="padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border-color); background: transparent; color: var(--text-secondary); cursor: pointer;">
                         <i class="fa-solid fa-book-bookmark"></i> 學科種類與年級課程規劃
+                    </button>
+                    <button id="tabRuleVenuesBtn" class="rule-tab-btn" data-ruletab="venues" style="padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border-color); background: transparent; color: var(--text-secondary); cursor: pointer;">
+                        <i class="fa-solid fa-building-user"></i> 專用教室與連堂約束
                     </button>
                     <button id="tabRuleRestoreBtn" class="rule-tab-btn" data-ruletab="restore" style="padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border-color); background: transparent; color: var(--text-secondary); cursor: pointer;">
                         <i class="fa-solid fa-clock-rotate-left"></i> 歷史還原點管理
@@ -534,12 +546,54 @@
                     </div>
                 </div>
 
+                <!-- Tab 5: Venue Capacity & Consecutive Subjects -->
+                <div id="ruleTabVenues" class="rule-tab-content" style="display: none;">
+                    <div style="background: rgba(255, 255, 255, 0.03); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 16px;">
+                        <h4 style="font-size: 0.9rem; color: #38bdf8; margin-bottom: 8px;"><i class="fa-solid fa-building-user"></i> 專用教室 / 場地同一時段容納上限 (容量限制)</h4>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <label style="font-size: 0.85rem; min-width: 90px;">💻 電腦教室：</label>
+                                <input type="number" id="capComputerRoom" min="1" max="10" value="2" style="width: 60px; padding: 4px; border-radius: 4px; background: rgba(15,23,42,0.8); color: #fff; border: 1px solid var(--border-color);"> 班
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <label style="font-size: 0.85rem; min-width: 90px;">🧪 理化實驗室：</label>
+                                <input type="number" id="capScienceLab" min="1" max="10" value="1" style="width: 60px; padding: 4px; border-radius: 4px; background: rgba(15,23,42,0.8); color: #fff; border: 1px solid var(--border-color);"> 班
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <label style="font-size: 0.85rem; min-width: 90px;">🎵 音樂教室：</label>
+                                <input type="number" id="capMusicRoom" min="1" max="10" value="1" style="width: 60px; padding: 4px; border-radius: 4px; background: rgba(15,23,42,0.8); color: #fff; border: 1px solid var(--border-color);"> 班
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <label style="font-size: 0.85rem; min-width: 90px;">🏀 體育場/館：</label>
+                                <input type="number" id="capGym" min="1" max="10" value="3" style="width: 60px; padding: 4px; border-radius: 4px; background: rgba(15,23,42,0.8); color: #fff; border: 1px solid var(--border-color);"> 班
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="background: rgba(255, 255, 255, 0.03); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 16px;">
+                        <h4 style="font-size: 0.9rem; color: #818cf8; margin-bottom: 8px;"><i class="fa-solid fa-link"></i> 強制 2 節連堂科目設定 (如實驗、實作課)</h4>
+                        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px;">勾選的科目在 AI 自動排課時將強制排在連續 2 節 (如 1-2, 3-4, 5-6, 7-8 節)：</p>
+                        <div style="display: flex; gap: 16px; flex-wrap: wrap;" id="consecutiveSubjectsCheckboxes">
+                            <label style="font-size: 0.85rem; cursor: pointer;"><input type="checkbox" value="104" checked> 物理 (104)</label>
+                            <label style="font-size: 0.85rem; cursor: pointer;"><input type="checkbox" value="105" checked> 化學 (105)</label>
+                            <label style="font-size: 0.85rem; cursor: pointer;"><input type="checkbox" value="110" checked> 程式設計 (110)</label>
+                        </div>
+                    </div>
+
+                    <button id="saveVenueCapacitiesBtn" class="solver-action-btn primary-btn" style="background: #6366f1; font-size: 0.85rem; padding: 8px 20px;">
+                        <i class="fa-solid fa-floppy-disk"></i> 儲存場地容納與連堂設定
+                    </button>
+                </div>
+
                 <!-- Tab 6: Restore Points Checkpoint Manager -->
                 <div id="ruleTabRestore" class="rule-tab-content" style="display: none;">
                     <div style="display: flex; gap: 8px; align-items: center; background: rgba(255, 255, 255, 0.03); padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 12px; flex-wrap: wrap;">
                         <span style="font-size: 0.85rem; color: #38bdf8; font-weight: 500;"><i class="fa-solid fa-cloud-arrow-down"></i> 免費免花錢・1秒匯出與匯入備份：</span>
+                        <a href="/api/backup/download-zip" download class="solver-action-btn primary-btn" style="padding: 6px 14px; font-size: 0.85rem; background: #10b981; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+                            <i class="fa-solid fa-file-zipper"></i> 📦 下載全校完整備份包 (ZIP)
+                        </a>
                         <a href="/api/export-config" download class="solver-action-btn primary-btn" style="padding: 6px 14px; font-size: 0.85rem; background: #0284c7; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
-                            <i class="fa-solid fa-download"></i> 📥 匯出下載全校設定檔 (JSON)
+                            <i class="fa-solid fa-download"></i> 📥 匯出規則檔 (JSON)
                         </a>
                         <label for="importConfigFileInput" class="solver-action-btn secondary-btn" style="padding: 6px 14px; font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; background: rgba(56, 189, 248, 0.2); border-color: rgba(56, 189, 248, 0.4); color: #38bdf8;">
                             <i class="fa-solid fa-upload"></i> 📤 匯入備份檔一鍵復原
@@ -573,6 +627,170 @@
                     </div>
                 </div>
 
+            </div>
+        </div>
+    </div>
+
+    <!-- Substitute & Cover Management Modal -->
+    <div id="substituteModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content glass" style="max-width: 750px;">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-user-clock" style="color: #34d399;"></i> 智慧調代課登記與媒合系統</h3>
+                <button class="close-modal-btn" id="closeSubstituteModalBtn">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 16px;">
+                <div style="display: flex; gap: 12px; margin-bottom: 16px; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); flex-wrap: wrap;">
+                    <div style="display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 140px;">
+                        <label style="font-size: 0.8rem; color: var(--text-secondary);">請假教師：</label>
+                        <select id="subAbsentTeacherSelect" style="padding: 6px; border-radius: 4px; background: rgba(15,23,42,0.8); color: #fff; border: 1px solid var(--border-color);"></select>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 4px; width: 90px;">
+                        <label style="font-size: 0.8rem; color: var(--text-secondary);">星期：</label>
+                        <select id="subDaySelect" style="padding: 6px; border-radius: 4px; background: rgba(15,23,42,0.8); color: #fff; border: 1px solid var(--border-color);">
+                            <option value="1">星期一</option>
+                            <option value="2">星期二</option>
+                            <option value="3">星期三</option>
+                            <option value="4">星期四</option>
+                            <option value="5">星期五</option>
+                        </select>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 4px; width: 90px;">
+                        <label style="font-size: 0.8rem; color: var(--text-secondary);">節次：</label>
+                        <select id="subPeriodSelect" style="padding: 6px; border-radius: 4px; background: rgba(15,23,42,0.8); color: #fff; border: 1px solid var(--border-color);">
+                            <option value="1">第 1 節</option>
+                            <option value="2">第 2 節</option>
+                            <option value="3">第 3 節</option>
+                            <option value="4">第 4 節</option>
+                            <option value="5">第 5 節</option>
+                            <option value="6">第 6 節</option>
+                            <option value="7">第 7 節</option>
+                            <option value="8">第 8 節</option>
+                        </select>
+                    </div>
+                    <div style="display: flex; align-items: flex-end;">
+                        <button id="findSubCandidatesBtn" class="solver-action-btn primary-btn" style="padding: 6px 14px; background: #10b981;">
+                            <i class="fa-solid fa-magnifying-glass"></i> 搜尋可用代課教師
+                        </button>
+                    </div>
+                </div>
+
+                <div id="subSearchResultCard" style="display: none; margin-bottom: 16px;">
+                    <h4 style="font-size: 0.9rem; margin-bottom: 8px; color: #38bdf8;" id="subCourseHintText"></h4>
+                    <div class="table-responsive glass" style="max-height: 200px; overflow-y: auto;">
+                        <table class="schedule-table" style="font-size: 0.85rem;">
+                            <thead>
+                                <tr>
+                                    <th>推薦教師 (代碼)</th>
+                                    <th>專長/領域相符</th>
+                                    <th>無課無避排</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="subCandidatesTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <h4 style="font-size: 0.9rem; margin-bottom: 8px; color: #34d399;"><i class="fa-solid fa-list-check"></i> 近期調代課歷史紀錄</h4>
+                <div class="table-responsive glass" style="max-height: 220px; overflow-y: auto;">
+                    <table class="schedule-table" style="font-size: 0.85rem;">
+                        <thead>
+                            <tr>
+                                <th>登記時間</th>
+                                <th>星期/節次</th>
+                                <th>受影響班級與科目</th>
+                                <th>原任課教師</th>
+                                <th>指定代課教師</th>
+                            </tr>
+                        </thead>
+                        <tbody id="subHistoryTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Exam Invigilation Modal -->
+    <div id="examInvigilationModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content glass" style="max-width: 700px;">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-clipboard-user" style="color: #fbbf24;"></i> 定期考查 (段考) 監考表自動生成器</h3>
+                <button class="close-modal-btn" id="closeExamModalBtn">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 16px;">
+                <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 16px; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color);">
+                    <label style="font-size: 0.85rem;">考試天數：</label>
+                    <input type="number" id="examDaysInput" min="1" max="5" value="2" style="width: 60px; padding: 4px 8px; border-radius: 4px; background: rgba(15,23,42,0.8); color: #fff; border: 1px solid var(--border-color);">
+                    <label style="font-size: 0.85rem; margin-left: 12px;">每日考科節數：</label>
+                    <input type="number" id="examPeriodsInput" min="1" max="8" value="4" style="width: 60px; padding: 4px 8px; border-radius: 4px; background: rgba(15,23,42,0.8); color: #fff; border: 1px solid var(--border-color);">
+                    <button id="runExamSolverBtn" class="solver-action-btn primary-btn" style="margin-left: auto; background: #f59e0b;">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> 啟動 AI 監考自動排程
+                    </button>
+                </div>
+
+                <div class="table-responsive glass" style="max-height: 380px; overflow-y: auto;">
+                    <table class="schedule-table" style="font-size: 0.85rem;">
+                        <thead>
+                            <tr>
+                                <th>考試日程</th>
+                                <th>節次</th>
+                                <th>試場 / 班級</th>
+                                <th>監考教師</th>
+                            </tr>
+                        </thead>
+                        <tbody id="examTableBody">
+                            <tr><td colspan="4" style="text-align: center; color: var(--text-muted);">尚未生成監考表。請點擊上方按鈕啟動自動排程！</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Debugging Audit Modal -->
+    <div id="dataDebugModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content glass" style="max-width: 800px;">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-bug" style="color: #f472b6;"></i> 欣河式 全校排課資料邏輯除錯稽核</h3>
+                <button class="close-modal-btn" id="closeDebugModalBtn">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 16px;">
+                <div style="display: flex; gap: 12px; margin-bottom: 16px; align-items: center;">
+                    <span style="font-size: 0.85rem; color: var(--text-secondary);">檢測範圍：全校班級、教師、未指派科目、硬衝堂與手排鎖定邏輯。</span>
+                    <button id="refreshDebugReportBtn" class="solver-action-btn primary-btn" style="margin-left: auto; background: #ec4899; padding: 6px 14px;">
+                        <i class="fa-solid fa-rotate"></i> 重新執行邏輯診斷
+                    </button>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 16px;">
+                    <div style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color);">
+                        <h4 style="font-size: 0.85rem; color: #f472b6;">8. 邏輯錯誤 (硬衝堂)</h4>
+                        <div id="auditLogicErrorsCount" style="font-size: 1.4rem; font-weight: bold; color: #34d399; margin-top: 4px;">0 項</div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color);">
+                        <h4 style="font-size: 0.85rem; color: #fbbf24;">4. 未指派授課教師科目</h4>
+                        <div id="auditUnassignedCount" style="font-size: 1.4rem; font-weight: bold; color: #fbbf24; margin-top: 4px;">0 項</div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color);">
+                        <h4 style="font-size: 0.85rem; color: #38bdf8;">5. 多任課教師協同科目</h4>
+                        <div id="auditMultiTeacherCount" style="font-size: 1.4rem; font-weight: bold; color: #38bdf8; margin-top: 4px;">0 項</div>
+                    </div>
+                </div>
+
+                <div class="table-responsive glass" style="max-height: 320px; overflow-y: auto;">
+                    <table class="schedule-table" style="font-size: 0.85rem;">
+                        <thead>
+                            <tr>
+                                <th>除錯檢測項目</th>
+                                <th>狀態</th>
+                                <th>詳細數據與診斷訊息</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dataDebugTableBody">
+                            <tr><td colspan="3" style="text-align: center; color: var(--text-muted);">正在載入診斷報告...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>

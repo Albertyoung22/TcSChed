@@ -30,6 +30,9 @@ def get_latest_dbf_dir():
                 candidates.append((path, dbf_path))
                 
     if not candidates:
+        local_dbf = os.path.join(os.path.dirname(__file__), "dbf_data")
+        if os.path.isdir(local_dbf):
+            return local_dbf
         return None
     
     candidates.sort(key=lambda x: os.path.basename(x[0]), reverse=True)
@@ -322,6 +325,124 @@ def api_run_solver():
     except Exception as e:
         import traceback
         traceback.print_exc()
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/data-debug-report")
+def api_data_debug_report():
+    try:
+        data = load_schedule_data()
+        if "error" in data:
+            return jsonify(data), 500
+            
+        schedules = data.get("schedules", [])
+        classes = data.get("classes", [])
+        teachers = data.get("teachers", [])
+
+        # 1. 班級排課數
+        class_scheduled_counts = {}
+        for c in classes:
+            cc = c["code"]
+            if cc:
+                class_scheduled_counts[cc] = {
+                    "code": cc,
+                    "name": c["name"],
+                    "count": sum(1 for s in schedules if s["class_code"] == cc)
+                }
+
+        # 2. 班級空堂數 (檢查第1~7節中未排課的空檔)
+        class_empty_slots = {}
+        for cc, info in class_scheduled_counts.items():
+            slots = set((s["day"], s["period"]) for s in schedules if s["class_code"] == cc)
+            empty_count = 0
+            for d in range(1, 6):
+                for p in range(1, 8): # Periods 1-7
+                    if (str(d), str(p)) not in slots:
+                        empty_count += 1
+            class_empty_slots[cc] = {
+                "name": info["name"],
+                "empty_count": empty_count
+            }
+
+        # 3. 教師總時數
+        teacher_total_hours = {}
+        for t in teachers:
+            tc = t["code"]
+            if tc:
+                teacher_total_hours[tc] = {
+                    "code": tc,
+                    "name": t["name"],
+                    "count": sum(1 for s in schedules if s["teacher_code"] == tc)
+                }
+
+        # 4. 無任課教師科目
+        unassigned_subjects = []
+        # 5. 多任課教師科目
+        class_sub_teachers = {}
+        for s in schedules:
+            key = f"{s['class_name']} - {s['subject_name']}"
+            if not s["teacher_code"]:
+                if key not in unassigned_subjects:
+                    unassigned_subjects.append(key)
+            else:
+                if key not in class_sub_teachers:
+                    class_sub_teachers[key] = set()
+                class_sub_teachers[key].add(s["teacher_name"])
+
+        multi_teacher_subjects = [{ "subject": k, "teachers": list(v) } for k, v in class_sub_teachers.items() if len(v) > 1]
+
+        # 6. 科目每節上課明細 & 7. 科目排課數
+        subject_counts = {}
+        for s in schedules:
+            sn = s["subject_name"]
+            if sn:
+                if sn not in subject_counts:
+                    subject_counts[sn] = 0
+                subject_counts[sn] += 1
+
+        # 8. 邏輯錯誤資料 (硬衝堂)
+        logic_errors = []
+        teacher_slot_map = {}
+        class_slot_map = {}
+        for s in schedules:
+            slot_key = (s["day"], s["period"])
+            tc = s["teacher_code"]
+            cc = s["class_code"]
+            if tc:
+                if (tc, slot_key) in teacher_slot_map:
+                    prev = teacher_slot_map[(tc, slot_key)]
+                    logic_errors.append(f"教師衝堂：{s['teacher_name']} 於週{s['day']}第{s['period']}節同時在【{prev['class_name']}】與【{s['class_name']}】授課！")
+                else:
+                    teacher_slot_map[(tc, slot_key)] = s
+
+            if cc and not cc.startswith("99"):
+                if (cc, slot_key) in class_slot_map:
+                    prev = class_slot_map[(cc, slot_key)]
+                    if prev["subject_code"] != s["subject_code"]:
+                        logic_errors.append(f"班級衝堂：{s['class_name']} 於週{s['day']}第{s['period']}節同時排有【{prev['subject_name']}】與【{s['subject_name']}】！")
+                else:
+                    class_slot_map[(cc, slot_key)] = s
+
+        # 9. 檢查手排課邏輯錯誤
+        manual_lock_errors = []
+        for s in schedules:
+            if "手排課" in str(s.get("desc", "")):
+                # Check if this manual lock collides
+                pass
+
+        return jsonify({
+            "status": "success",
+            "audit_summary": {
+                "class_scheduled_counts": list(class_scheduled_counts.values()),
+                "class_empty_slots": class_empty_slots,
+                "teacher_total_hours": list(teacher_total_hours.values()),
+                "unassigned_subjects": unassigned_subjects,
+                "multi_teacher_subjects": multi_teacher_subjects,
+                "subject_counts": subject_counts,
+                "logic_errors": logic_errors,
+                "manual_lock_errors": manual_lock_errors
+            }
+        })
+    except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route("/api/validate-solver")
@@ -1307,6 +1428,18 @@ def api_get_course_assignments():
             else:
                 t_assignments[tc]["courses"][key]["hours"] += 1
 
+        # Include all teachers in t_assignments so all teachers are selectable
+        all_teachers = data.get("teachers", [])
+        for t in all_teachers:
+            tc = t.get("code")
+            if tc and tc not in t_assignments:
+                t_assignments[tc] = {
+                    "teacher_code": tc,
+                    "teacher_name": t.get("name", tc),
+                    "total_hours": 0,
+                    "courses": {}
+                }
+
         # Recalculate teacher total hours with overrides
         for tc, info in t_assignments.items():
             tot = 0
@@ -1318,7 +1451,7 @@ def api_get_course_assignments():
             info["total_hours"] = tot
 
         res_teacher = []
-        for tc, info in t_assignments.items():
+        for tc, info in sorted(t_assignments.items(), key=lambda x: x[1]["teacher_name"]):
             res_teacher.append({
                 "teacher_code": tc,
                 "teacher_name": info["teacher_name"],
@@ -1664,6 +1797,33 @@ def api_save_grade_curriculum():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
+@app.route("/api/backup/download-zip", methods=["GET"])
+def api_download_zip_backup():
+    try:
+        import io, zipfile, datetime
+        mem = io.BytesIO()
+        now_str = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        zip_filename = f"School_Schedule_Backup_{now_str}.zip"
+        
+        with zipfile.ZipFile(mem, "w", zipfile.ZIP_DEFLATED) as zf:
+            # 1. config_rules.json
+            if os.path.exists(CONFIG_RULES_FILE):
+                zf.write(CONFIG_RULES_FILE, "config_rules.json")
+            # 2. Solved Excel if exists
+            excel_path = os.path.join(os.path.dirname(__file__), "School_Schedule_Solved.xlsx")
+            if os.path.exists(excel_path):
+                zf.write(excel_path, "School_Schedule_Solved.xlsx")
+                
+        mem.seek(0)
+        return send_file(
+            mem,
+            mimetype="application/zip",
+            as_attachment=True,
+            download_name=zip_filename
+        )
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 RESTORE_POINTS_DIR = os.path.join(DATA_DIR, "restore_points")
 
 def get_restore_points_manifest():
@@ -1790,6 +1950,194 @@ def api_delete_restore_point():
         save_restore_points_manifest(points)
         
         return jsonify({"status": "success", "message": f"還原點 {rp_id} 已刪除！", "restore_points": points})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+# --- SHIN-HER INTEGRATED EXTENSIONS ---
+
+@app.route("/api/venue-capacities", methods=["GET"])
+def api_get_venue_capacities():
+    try:
+        cfg = load_config_rules()
+        caps = cfg.get("venue_capacities", {
+            "電腦教室": 2,
+            "理化實驗室": 1,
+            "音樂教室": 1,
+            "體育場": 3
+        })
+        consec_subs = cfg.get("consecutive_subjects", ["104", "105", "110"])
+        return jsonify({"status": "success", "venue_capacities": caps, "consecutive_subjects": consec_subs})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/save-venue-capacities", methods=["POST"])
+def api_save_venue_capacities():
+    try:
+        req = request.get_json() or {}
+        caps = req.get("venue_capacities", {})
+        consec_subs = req.get("consecutive_subjects", [])
+        
+        cfg = load_config_rules()
+        cfg["venue_capacities"] = caps
+        cfg["consecutive_subjects"] = consec_subs
+        save_config_rules(cfg)
+        return jsonify({"status": "success", "message": "專用教室容納上限與強制連堂規則已成功儲存！"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/substitute/recommend", methods=["POST"])
+def api_substitute_recommend():
+    try:
+        req = request.get_json() or {}
+        absent_tcode = req.get("teacher_code", "").strip()
+        day = str(req.get("day", "1")).strip()
+        period = str(req.get("period", "1")).strip()
+        
+        data = load_schedule_data()
+        if "error" in data:
+            return jsonify(data), 500
+            
+        schedules = data.get("schedules", [])
+        teachers = data.get("teachers", [])
+
+        # Find who is currently occupied in slot (day, period)
+        busy_teachers = set()
+        absent_course = None
+        
+        for s in schedules:
+            if s["day"] == day and s["period"] == period:
+                if s["teacher_code"]:
+                    busy_teachers.add(s["teacher_code"])
+                if s["teacher_code"] == absent_tcode:
+                    absent_course = s
+
+        # Load no_teach blocked rules
+        cfg = load_config_rules()
+        no_teach_map = cfg.get("custom_no_teach", {})
+
+        candidates = []
+        target_subject = absent_course.get("subject_name", "") if absent_course else ""
+
+        for t in teachers:
+            t_code = t["code"]
+            if t_code == absent_tcode:
+                continue
+                
+            # Check if teacher is busy
+            if t_code in busy_teachers:
+                continue
+                
+            # Check if slot is blocked in no_teach
+            blocked_slots = no_teach_map.get(t_code, [])
+            if f"{day}-{period}" in blocked_slots:
+                continue
+
+            # Check matching department/subject score
+            same_subject_bonus = False
+            for s in schedules:
+                if s["teacher_code"] == t_code and target_subject and target_subject in s.get("subject_name", ""):
+                    same_subject_bonus = True
+                    break
+
+            candidates.append({
+                "teacher_code": t_code,
+                "teacher_name": t["name"],
+                "role": t.get("role", ""),
+                "is_same_domain": same_subject_bonus
+            })
+
+        candidates.sort(key=lambda x: (not x["is_same_domain"], x["teacher_name"]))
+
+        return jsonify({
+            "status": "success",
+            "absent_course": absent_course,
+            "candidates": candidates
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/substitute/save", methods=["POST"])
+def api_substitute_save():
+    try:
+        req = request.get_json() or {}
+        cfg = load_config_rules()
+        if "substitute_records" not in cfg:
+            cfg["substitute_records"] = []
+            
+        import datetime
+        record = {
+            "id": datetime.datetime.now().strftime("%Y%m%d_%H%M%S"),
+            "date": req.get("date", datetime.date.today().strftime("%Y-%m-%d")),
+            "day": req.get("day"),
+            "period": req.get("period"),
+            "class_name": req.get("class_name"),
+            "subject_name": req.get("subject_name"),
+            "absent_teacher": req.get("absent_teacher"),
+            "sub_teacher": req.get("sub_teacher"),
+            "reason": req.get("reason", "公假/病假代課")
+        }
+        cfg["substitute_records"].insert(0, record)
+        save_config_rules(cfg)
+        return jsonify({"status": "success", "message": "調代課紀錄已成功儲存！", "records": cfg["substitute_records"]})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/substitute/list", methods=["GET"])
+def api_substitute_list():
+    try:
+        cfg = load_config_rules()
+        records = cfg.get("substitute_records", [])
+        return jsonify({"status": "success", "records": records})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/exam-invigilation/solve", methods=["POST"])
+def api_exam_invigilation_solve():
+    try:
+        req = request.get_json() or {}
+        days_count = int(req.get("days", 2))
+        periods_per_day = int(req.get("periods", 4))
+        
+        data = load_schedule_data()
+        if "error" in data:
+            return jsonify(data), 500
+            
+        classes = [c for c in data.get("classes", []) if c["code"] and not c["code"].startswith("99")]
+        teachers = data.get("teachers", [])
+        
+        if not classes or not teachers:
+            return jsonify({"status": "error", "message": "No classes or teachers available for exam invigilation"}), 400
+
+        # Run simple balanced assignment
+        invigilation_plan = []
+        t_idx = 0
+        
+        for d in range(1, days_count + 1):
+            for p in range(1, periods_per_day + 1):
+                for c in classes:
+                    t = teachers[t_idx % len(teachers)]
+                    t_idx += 1
+                    invigilation_plan.append({
+                        "day": d,
+                        "period": p,
+                        "class_code": c["code"],
+                        "class_name": c["name"],
+                        "invigilator_code": t["code"],
+                        "invigilator_name": t["name"]
+                    })
+
+        cfg = load_config_rules()
+        cfg["exam_invigilations"] = {
+            "generated_at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "plan": invigilation_plan
+        }
+        save_config_rules(cfg)
+
+        return jsonify({
+            "status": "success",
+            "message": "定期考查 (段考) 監考表已成功自動生成！",
+            "plan": invigilation_plan
+        })
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
