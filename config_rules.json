@@ -14,10 +14,10 @@
     "max_consecutive_hours": 3
   },
   "venue_capacities": {
-    "電腦教室": 2,
+    "電腦教室": 1,
     "理化實驗室": 1,
     "音樂教室": 1,
-    "體育場": 3
+    "體育場/館": 3
   },
   "consecutive_subjects": [
     "104",
@@ -2652,5 +2652,6 @@
         "hours": 2
       }
     ]
-  }
+  },
+  "moe_course_codes": {}
 }

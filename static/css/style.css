@@ -68,13 +68,15 @@ body {
 
 /* Layout Container */
 .app-container {
-    max-width: 1200px;
+    max-width: 1650px;
+    width: 96%;
     margin: 0 auto;
-    padding: 2.5rem 1.5rem;
+    padding: 1.5rem 1rem;
     display: flex;
     flex-direction: column;
     min-height: 100vh;
 }
+
 
 /* Glassmorphism Card Utility */
 .glass {
@@ -462,9 +464,11 @@ body {
     text-align: center;
     border: 1px solid rgba(255, 255, 255, 0.06);
     vertical-align: middle;
-    height: 85px;
-    min-height: 85px;
-    box-sizing: border-box;
+    height: 85px !important;
+    min-height: 85px !important;
+    max-height: 85px !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
 }
 
 .schedule-table th {
@@ -473,15 +477,56 @@ body {
     font-size: 1.05rem;
     font-weight: 600;
     color: var(--text-primary);
-    height: 48px;
-    min-height: 48px;
+    height: 48px !important;
+    min-height: 48px !important;
+    max-height: 48px !important;
 }
 
+.schedule-table th:first-child,
+.schedule-table td:first-child,
 .schedule-table .time-col {
-    width: 135px;
+    width: 135px !important;
     font-weight: 600;
     background: rgba(255, 255, 255, 0.03);
 }
+
+.schedule-table th:nth-child(n+2),
+.schedule-table td:nth-child(n+2) {
+    width: 17.2% !important;
+}
+
+/* Form & Modal Setting Tables */
+.modal-setting-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed !important;
+}
+
+.modal-setting-table th,
+.modal-setting-table td {
+    padding: 8px 10px;
+    text-align: center;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    vertical-align: middle;
+    box-sizing: border-box;
+}
+
+.modal-setting-table th {
+    background: rgba(30, 41, 59, 0.8);
+    color: #38bdf8;
+    font-weight: 600;
+    height: 38px !important;
+    min-height: 38px !important;
+    max-height: 38px !important;
+}
+
+.modal-setting-table td {
+    height: 42px !important;
+    min-height: 42px !important;
+    max-height: 42px !important;
+}
+
+
 
 .period-name {
     display: block;
@@ -513,6 +558,35 @@ body {
 .schedule-cell.has-lesson {
     background: rgba(139, 92, 246, 0.03);
     border: 1px solid rgba(139, 92, 246, 0.1);
+    max-height: 80px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(168, 85, 247, 0.4) transparent;
+    padding: 2px 0;
+}
+
+.schedule-cell::-webkit-scrollbar {
+    width: 3px;
+}
+
+.schedule-cell::-webkit-scrollbar-thumb {
+    background: rgba(168, 85, 247, 0.4);
+    border-radius: 4px;
+}
+
+.multi-group-tag {
+    font-size: 0.65rem;
+    font-weight: 700;
+    background: rgba(168, 85, 247, 0.25);
+    color: #c084fc;
+    border: 1px solid rgba(168, 85, 247, 0.4);
+    padding: 1px 6px;
+    border-radius: 10px;
+    white-space: nowrap;
+    margin-bottom: 3px;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
 }
 
 .schedule-cell.has-lesson:hover {
@@ -521,12 +595,17 @@ body {
     box-shadow: 0 0 15px rgba(139, 92, 246, 0.1);
 }
 
+
 .subject-name {
     font-weight: 600;
-    font-size: 1rem;
+    font-size: 0.95rem;
     color: #fff;
-    word-break: break-all;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 95%;
 }
+
 
 .meta-link {
     font-size: 0.85rem;
@@ -744,21 +823,27 @@ body {
 .header-actions {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
 }
 
 .solver-panel-btn {
     background: rgba(139, 92, 246, 0.2);
     border: 1px solid rgba(139, 92, 246, 0.4);
-    padding: 0.5rem 1.25rem;
-    border-radius: 20px;
-    font-size: 0.9rem;
+    padding: 6px 12px;
+    border-radius: 10px;
+    font-size: 0.85rem;
     color: #c084fc;
     font-weight: 500;
     cursor: pointer;
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
+    justify-content: center;
+    gap: 6px;
+    white-space: nowrap;
+    writing-mode: horizontal-tb;
+    flex-shrink: 0;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     font-family: var(--font-inter);
 }
@@ -773,6 +858,23 @@ body {
 .solver-panel-btn:active {
     transform: translateY(0);
 }
+
+.db-badge {
+    background: rgba(148, 163, 184, 0.15);
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    padding: 6px 12px;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    color: #94a3b8;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    writing-mode: horizontal-tb;
+    flex-shrink: 0;
+}
+
+
 
 /* Modal Overlay styling */
 .modal-overlay {
@@ -798,8 +900,9 @@ body {
 }
 
 .modal-content {
-    width: 94%;
-    max-width: 1080px;
+    width: 95%;
+    max-width: 1400px;
+    height: 90vh;
     max-height: 92vh;
     display: flex;
     flex-direction: column;
@@ -811,93 +914,102 @@ body {
     border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
-@keyframes slideUp {
-    from { transform: translateY(30px) scale(0.96); opacity: 0; }
-    to { transform: translateY(0) scale(1); opacity: 1; }
-}
-
-.modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1.25rem 1.75rem;
-    border-bottom: 1px solid var(--border-color);
-    flex-shrink: 0;
-    background: rgba(15, 23, 42, 0.98);
-    position: sticky;
-    top: 0;
-    z-index: 30;
-}
-
-.modal-title {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-}
-
-.modal-icon {
-    font-size: 2.25rem;
-    color: var(--primary);
-    filter: drop-shadow(0 0 8px var(--primary-glow));
-}
-
-.modal-title h2 {
-    font-family: var(--font-outfit);
-    font-size: 1.45rem;
-    font-weight: 700;
-    background: linear-gradient(135deg, #fff 0%, #c084fc 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-}
-
-.modal-title .sub-text {
-    font-size: 0.82rem;
-    color: var(--text-secondary);
-}
-
-.close-modal-btn {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid var(--border-color);
-    color: var(--text-secondary);
-    width: 38px;
-    height: 38px;
-    border-radius: 50%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    cursor: pointer;
-    transition: all 0.2s;
-    font-size: 1.1rem;
-}
-
-.close-modal-btn:hover {
-    background: rgba(239, 68, 68, 0.25);
-    border-color: rgba(239, 68, 68, 0.5);
-    color: #ef4444;
-    transform: scale(1.05);
-}
-
-/* Sticky Tab Bar inside Settings Modal */
-.rule-tab-bar {
-    position: sticky;
-    top: 0;
-    z-index: 25;
-    background: rgba(15, 23, 42, 0.95);
+/* Rules Modal Tab Bar Styling */
+.rules-tab-bar, .rule-tab-bar {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    gap: 10px !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    padding: 14px 1.75rem 12px 1.75rem !important;
+    margin: -1.25rem -1.75rem 1.25rem -1.75rem !important;
+    background: rgba(15, 23, 42, 0.98) !important;
+    position: sticky !important;
+    top: -1.25rem !important;
+    z-index: 30 !important;
+    border-bottom: 1px solid var(--border-color) !important;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
     backdrop-filter: blur(12px);
-    padding: 1rem 1.75rem 0.5rem 1.75rem;
-    border-bottom: 1px solid var(--border-color);
-    flex-wrap: wrap;
-    gap: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    min-height: 58px !important;
+}
+
+.rules-tab-bar::-webkit-scrollbar, .rule-tab-bar::-webkit-scrollbar {
+    height: 6px;
+}
+
+.rules-tab-bar::-webkit-scrollbar-track, .rule-tab-bar::-webkit-scrollbar-track {
+    background: rgba(15, 23, 42, 0.6);
+    border-radius: 3px;
+}
+
+.rules-tab-bar::-webkit-scrollbar-thumb, .rule-tab-bar::-webkit-scrollbar-thumb {
+    background: rgba(99, 102, 241, 0.4);
+    border-radius: 3px;
+}
+
+.rules-tab-bar::-webkit-scrollbar-thumb:hover, .rule-tab-bar::-webkit-scrollbar-thumb:hover {
+    background: rgba(99, 102, 241, 0.7);
+}
+
+.rule-tab-btn {
+    white-space: nowrap !important;
+    writing-mode: horizontal-tb !important;
+    flex-shrink: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    padding: 8px 16px !important;
+    height: 38px !important;
+    border-radius: 8px !important;
+    border: 1px solid var(--border-color) !important;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 0.85rem !important;
+    font-weight: 500 !important;
+    transition: all 0.2s ease !important;
+}
+
+.rule-tab-btn:hover {
+
+    background: rgba(255, 255, 255, 0.08) !important;
+    color: #fff !important;
+}
+
+.rule-tab-btn.active {
+    background: rgba(99, 102, 241, 0.25) !important;
+    border-color: #818cf8 !important;
+    color: #fff !important;
+    font-weight: 600 !important;
 }
 
 .modal-body {
-    padding: 1.75rem;
+    padding: 1.25rem 1.75rem 1.75rem 1.75rem;
     display: flex;
     flex-direction: column;
     gap: 1.25rem;
     overflow-y: auto;
-    max-height: calc(92vh - 75px);
+    flex: 1;
 }
+
+.tab-action-footer {
+    position: sticky;
+    bottom: -1.75rem;
+    background: rgba(15, 23, 42, 0.96);
+    backdrop-filter: blur(12px);
+    padding: 12px 20px;
+    margin: 16px -1.75rem -1.75rem -1.75rem;
+    border-top: 1px solid var(--border-color);
+    z-index: 25;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 12px;
+}
+
 
 /* Sleek Scrollbar for Modal and Tables */
 .modal-body::-webkit-scrollbar,

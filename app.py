@@ -14,32 +14,59 @@ SEARCH_DIR = r"D:\土城高中"
 _cached_data = None
 _db_mtimes = {}
 
+def get_local_ip():
+    """Gets the local machine LAN IP address (e.g. 192.168.x.x)."""
+    import socket
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(('8.8.8.8', 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return '127.0.0.1'
+
+
 def get_latest_dbf_dir():
-    """Finds the newest spv*.wdb directory inside SEARCH_DIR containing the DBF folder."""
-    if not os.path.exists(SEARCH_DIR):
+    """Finds the newest DBF directory inside SEARCH_DIR containing class.dbf/claspv.dbf."""
+    cfg = load_config_rules()
+    search_dir = cfg.get("dbf_search_dir") or SEARCH_DIR
+    
+    if not os.path.exists(search_dir):
         local_dbf = os.path.join(os.path.dirname(__file__), "dbf_data")
         if os.path.isdir(local_dbf):
             return local_dbf
         return None
-    
+
+    # Check if search_dir directly contains class.dbf
+    try:
+        if any(f.lower() == "class.dbf" for f in os.listdir(search_dir)):
+            return search_dir
+    except Exception:
+        pass
+        
     candidates = []
-    for name in os.listdir(SEARCH_DIR):
-        path = os.path.join(SEARCH_DIR, name)
-        if os.path.isdir(path) and name.lower().startswith("spv") and name.lower().endswith(".wdb"):
-            dbf_path = os.path.join(path, "SPV2000", "SPV2000", "DBF")
-            if os.path.isdir(dbf_path):
-                candidates.append((path, dbf_path))
-                
+    try:
+        for root, dirs, files in os.walk(search_dir):
+            rel = os.path.relpath(root, search_dir)
+            if rel != "." and len(rel.split(os.sep)) > 5:
+                continue
+            if any(f.lower() == "class.dbf" for f in files) and any(f.lower() == "claspv.dbf" for f in files):
+                candidates.append(root)
+    except Exception:
+        pass
+
     if not candidates:
         local_dbf = os.path.join(os.path.dirname(__file__), "dbf_data")
         if os.path.isdir(local_dbf):
             return local_dbf
         return None
     
-    candidates.sort(key=lambda x: os.path.basename(x[0]), reverse=True)
-    return candidates[0][1]
+    candidates.sort(key=lambda x: os.path.getmtime(x), reverse=True)
+    return candidates[0]
 
 def load_schedule_data():
+
     """Loads all schedule data from DBF files and caches it."""
     global _cached_data, _db_mtimes
     
@@ -286,6 +313,89 @@ def load_schedule_data():
 def index():
     return render_template("index.html")
 
+@app.route("/teacher")
+@app.route("/teacher-portal")
+def teacher_portal():
+    return render_template("teacher_portal.html")
+
+
+@app.route("/api/open-browser", methods=["POST"])
+def api_open_browser():
+    try:
+        import webbrowser
+        req = request.get_json() or {}
+        raw_url = req.get("url") or "http://127.0.0.1:5000"
+        
+        # Replace 127.0.0.1 or localhost with real local LAN IP
+        local_ip = get_local_ip()
+        target_url = raw_url.replace("127.0.0.1", local_ip).replace("localhost", local_ip)
+        
+        webbrowser.open(target_url)
+        return jsonify({
+            "status": "success",
+            "message": f"已成功在預設 WEB 瀏覽器中開啟真實 IP 網址：{target_url}",
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/system-info", methods=["GET"])
+def api_get_system_info():
+
+    try:
+        cfg = load_config_rules()
+        dbf_dir = get_latest_dbf_dir()
+        
+        default_periods = {
+            "1": {"name": "第1節", "time": "08:10-08:55"},
+            "2": {"name": "第2節", "time": "09:05-09:50"},
+            "3": {"name": "第3節", "time": "10:10-10:55"},
+            "4": {"name": "第4節", "time": "11:05-11:50"},
+            "5": {"name": "第5節", "time": "13:10-13:55"},
+            "6": {"name": "第6節", "time": "14:05-14:50"},
+            "7": {"name": "第7節", "time": "15:05-15:50"},
+            "8": {"name": "第8節", "time": "16:00-16:45"}
+        }
+        period_times = cfg.get("period_times") or default_periods
+
+        return jsonify({
+            "status": "success",
+            "school_name": cfg.get("school_name", "臺南市立土城高級中學"),
+            "school_subtitle": cfg.get("school_subtitle", "Tainan Municipal Tucheng High School"),
+            "year": cfg.get("year", "114"),
+            "term": cfg.get("term", "1"),
+            "dbf_search_dir": cfg.get("dbf_search_dir", r"D:\土城高中"),
+            "actual_dbf_dir": dbf_dir,
+            "period_times": period_times
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/save-system-info", methods=["POST"])
+def api_save_system_info():
+    try:
+        req = request.get_json() or {}
+        cfg = load_config_rules()
+        
+        if "school_name" in req: cfg["school_name"] = str(req["school_name"]).strip()
+        if "school_subtitle" in req: cfg["school_subtitle"] = str(req["school_subtitle"]).strip()
+        if "year" in req: cfg["year"] = str(req["year"]).strip()
+        if "term" in req: cfg["term"] = str(req["term"]).strip()
+        if "dbf_search_dir" in req: cfg["dbf_search_dir"] = str(req["dbf_search_dir"]).strip()
+        if "period_times" in req: cfg["period_times"] = req["period_times"]
+        
+        save_config_rules(cfg)
+        
+        global _cached_data
+        _cached_data = None
+        
+        return jsonify({"status": "success", "message": "學校基本資料與系統設定已成功儲存！"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+
+
+
 @app.route("/api/metadata")
 def api_metadata():
     data = load_schedule_data()
@@ -297,8 +407,10 @@ def api_metadata():
         "teachers": data["teachers"],
         "classrooms": data["classrooms"],
         "period_times": data["period_times"],
-        "dbf_dir": data["dbf_dir"]
+        "dbf_dir": data["dbf_dir"],
+        "local_ip": get_local_ip()
     })
+
 
 @app.route("/api/schedule/class/<class_code>")
 def api_schedule_class(class_code):
@@ -1191,11 +1303,72 @@ def load_config_rules():
         }
     }
 
+SEMESTERS_DIR = os.path.join(DATA_DIR, "semesters")
+
+def get_active_semester_id():
+    cfg = load_config_rules()
+    return cfg.get("active_semester_id", "114-1")
+
+def get_semester_file_path(sem_id):
+    if not os.path.exists(SEMESTERS_DIR):
+        os.makedirs(SEMESTERS_DIR, exist_ok=True)
+    safe_id = str(sem_id).replace("/", "_").replace("\\", "_").replace(" ", "_")
+    return os.path.join(SEMESTERS_DIR, f"{safe_id}.json")
+
+def save_current_semester_single_file(sem_id=None):
+    try:
+        if os.path.exists(CONFIG_RULES_FILE):
+            with open(CONFIG_RULES_FILE, "r", encoding="utf-8") as f:
+                cfg = json.load(f)
+        else:
+            cfg = {}
+        
+        if not sem_id:
+            sem_id = cfg.get("active_semester_id", "114-1")
+            
+        cfg["active_semester_id"] = sem_id
+        
+        solved_records = []
+        solved_excel = os.path.join(os.path.dirname(__file__), "School_Schedule_Solved.xlsx")
+        if os.path.exists(solved_excel):
+            try:
+                import pandas as pd
+                df = pd.read_excel(solved_excel).fillna("")
+                solved_records = df.to_dict(orient="records")
+            except Exception:
+                pass
+
+        year = "114"
+        term = "1"
+        if "-" in str(sem_id):
+            parts = str(sem_id).split("-")
+            year, term = parts[0], parts[1]
+
+        sem_data = {
+            "semester_id": sem_id,
+            "school_name": cfg.get("school_name", "臺南市立土城高級中學"),
+            "year": year,
+            "term": term,
+            "updated_at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "config_rules": cfg,
+            "solved_schedules": solved_records
+        }
+        
+        file_path = get_semester_file_path(sem_id)
+        with open(file_path, "w", encoding="utf-8") as f:
+            json.dump(sem_data, f, ensure_ascii=False, indent=2)
+        return file_path
+    except Exception as e:
+        print("Error saving single semester file:", e)
+        return None
+
 def save_config_rules(data):
     json_str = json.dumps(data, ensure_ascii=False, indent=2)
     with open(CONFIG_RULES_FILE, "w", encoding="utf-8") as f:
         f.write(json_str)
     sync_to_github_cloud("config_rules.json", json_str, "Cloud Web UI Auto Save config_rules.json")
+    save_current_semester_single_file()
+
 
 @app.route("/api/export-config", methods=["GET"])
 def api_export_config():
@@ -1978,10 +2151,26 @@ def api_get_venue_capacities():
             "電腦教室": 2,
             "理化實驗室": 1,
             "音樂教室": 1,
-            "體育場": 3
+            "體育場/館": 3
         })
         consec_subs = cfg.get("consecutive_subjects", ["104", "105", "110"])
-        return jsonify({"status": "success", "venue_capacities": caps, "consecutive_subjects": consec_subs})
+        class_consec = cfg.get("class_consecutive_rules", [])
+        subj_venues = cfg.get("subject_venue_mappings", [
+            {"subject_code": "110", "subject_name": "程式設計", "room_name": "電腦教室"},
+            {"subject_code": "823", "subject_name": "資訊", "room_name": "電腦教室"},
+            {"subject_code": "502", "subject_name": "理化", "room_name": "理化實驗室"},
+            {"subject_code": "104", "subject_name": "物理", "room_name": "理化實驗室"},
+            {"subject_code": "105", "subject_name": "化學", "room_name": "理化實驗室"},
+            {"subject_code": "704", "subject_name": "音樂", "room_name": "音樂教室"},
+            {"subject_code": "802", "subject_name": "健體", "room_name": "體育場/館"}
+        ])
+        return jsonify({
+            "status": "success",
+            "venue_capacities": caps,
+            "consecutive_subjects": consec_subs,
+            "class_consecutive_rules": class_consec,
+            "subject_venue_mappings": subj_venues
+        })
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
@@ -1991,14 +2180,20 @@ def api_save_venue_capacities():
         req = request.get_json() or {}
         caps = req.get("venue_capacities", {})
         consec_subs = req.get("consecutive_subjects", [])
+        class_consec = req.get("class_consecutive_rules", [])
+        subj_venues = req.get("subject_venue_mappings", [])
         
         cfg = load_config_rules()
         cfg["venue_capacities"] = caps
         cfg["consecutive_subjects"] = consec_subs
+        cfg["class_consecutive_rules"] = class_consec
+        cfg["subject_venue_mappings"] = subj_venues
         save_config_rules(cfg)
-        return jsonify({"status": "success", "message": "專用教室容納上限與強制連堂規則已成功儲存！"})
+        return jsonify({"status": "success", "message": "專用教室容量、連堂與科目場地對應設定已成功儲存！"})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
+
+
 
 @app.route("/api/simultaneous-groups", methods=["GET"])
 def api_get_simultaneous_groups():
@@ -2327,12 +2522,741 @@ def api_exam_invigilation_save_plan():
             "plan": plan
         }
         save_config_rules(cfg)
-        return jsonify({"status": "success", "message": "監考表手動調整變更已成功儲存！"})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
+# --- SINGLE-FILE SEMESTER MANAGEMENT ENDPOINTS ---
+
+
+@app.route("/api/semesters/list", methods=["GET"])
+def api_get_semesters_list():
+    try:
+        active_id = get_active_semester_id()
+        if not os.path.exists(SEMESTERS_DIR):
+            os.makedirs(SEMESTERS_DIR, exist_ok=True)
+            save_current_semester_single_file(active_id)
+            
+        semesters = []
+        for name in os.listdir(SEMESTERS_DIR):
+            if name.endswith(".json"):
+                fpath = os.path.join(SEMESTERS_DIR, name)
+                try:
+                    with open(fpath, "r", encoding="utf-8") as f:
+                        sdata = json.load(f)
+                    semesters.append({
+                        "semester_id": sdata.get("semester_id", name[:-5]),
+                        "school_name": sdata.get("school_name", "土城高中"),
+                        "year": sdata.get("year", ""),
+                        "term": sdata.get("term", ""),
+                        "updated_at": sdata.get("updated_at", ""),
+                        "slots_count": len(sdata.get("solved_schedules", [])),
+                        "file_size": os.path.getsize(fpath)
+                    })
+                except Exception:
+                    pass
+                    
+        if not semesters:
+            save_current_semester_single_file(active_id)
+            semesters.append({
+                "semester_id": active_id,
+                "school_name": "土城高中",
+                "year": "114",
+                "term": "1",
+                "updated_at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "slots_count": 0,
+                "file_size": 1024
+            })
+            
+        semesters.sort(key=lambda x: x["semester_id"], reverse=True)
+        return jsonify({
+            "status": "success",
+            "active_semester_id": active_id,
+            "semesters": semesters
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/semesters/switch", methods=["POST"])
+def api_switch_semester():
+    try:
+        req = request.get_json() or {}
+        sem_id = req.get("semester_id", "").strip()
+        if not sem_id:
+            return jsonify({"status": "error", "message": "Semester ID is required"}), 400
+            
+        file_path = get_semester_file_path(sem_id)
+        if not os.path.exists(file_path):
+            return jsonify({"status": "error", "message": f"學期檔案 {sem_id}.json 不存在"}), 404
+            
+        with open(file_path, "r", encoding="utf-8") as f:
+            sem_data = json.load(f)
+            
+        cfg = sem_data.get("config_rules", {})
+        cfg["active_semester_id"] = sem_id
+        
+        # Save cfg to config_rules.json
+        with open(CONFIG_RULES_FILE, "w", encoding="utf-8") as f:
+            json.dump(cfg, f, ensure_ascii=False, indent=2)
+            
+        # Restore solved Excel if present
+        solved_records = sem_data.get("solved_schedules", [])
+        solved_excel = os.path.join(os.path.dirname(__file__), "School_Schedule_Solved.xlsx")
+        if solved_records:
+            import pandas as pd
+            df = pd.DataFrame(solved_records)
+            df.to_excel(solved_excel, index=False)
+        elif os.path.exists(solved_excel):
+            try:
+                os.remove(solved_excel)
+            except Exception:
+                pass
+
+        global _cached_data
+        _cached_data = None
+        
+        return jsonify({
+            "status": "success",
+            "message": f"已成功切換至學期：{sem_id}！",
+            "active_semester_id": sem_id
+        })
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/semesters/create", methods=["POST"])
+def api_create_semester():
+    try:
+        req = request.get_json() or {}
+        sem_id = req.get("semester_id", "").strip()
+        inherit = req.get("inherit", True)
+        
+        if not sem_id:
+            return jsonify({"status": "error", "message": "請提供學期名稱 (如 114-2)"}), 400
+            
+        file_path = get_semester_file_path(sem_id)
+        if os.path.exists(file_path):
+            return jsonify({"status": "error", "message": f"學期檔 {sem_id}.json 已存在！"}), 400
+            
+        if inherit:
+            curr_cfg = load_config_rules()
+            new_cfg = dict(curr_cfg)
+            new_cfg["active_semester_id"] = sem_id
+            new_cfg["substitute_records"] = []
+            new_cfg["exam_invigilations"] = {}
+        else:
+            new_cfg = {
+                "active_semester_id": sem_id,
+                "custom_no_teach": {},
+                "custom_no_sub": {},
+                "weights": {
+                    "consecutive_weight": 500,
+                    "no_teach_penalty": 200,
+                    "no_sub_penalty": 200,
+                    "spreading_weight": 10
+                }
+            }
+            
+        # Write config_rules.json
+        with open(CONFIG_RULES_FILE, "w", encoding="utf-8") as f:
+            json.dump(new_cfg, f, ensure_ascii=False, indent=2)
+            
+        save_current_semester_single_file(sem_id)
+        
+        global _cached_data
+        _cached_data = None
+        
+        return jsonify({
+            "status": "success",
+            "message": f"新學期【{sem_id}】已成功開辦！",
+            "active_semester_id": sem_id
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/semesters/delete", methods=["POST"])
+def api_delete_semester():
+    try:
+        req = request.get_json() or {}
+        sem_id = req.get("semester_id", "").strip()
+        active_id = get_active_semester_id()
+        
+        if not sem_id:
+            return jsonify({"status": "error", "message": "Semester ID is required"}), 400
+            
+        if sem_id == active_id:
+            return jsonify({"status": "error", "message": "無法刪除目前正在使用的學期檔！"}), 400
+            
+        file_path = get_semester_file_path(sem_id)
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            
+        return jsonify({"status": "success", "message": f"學期檔 {sem_id}.json 已成功刪除！"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/semesters/export-single/<sem_id>", methods=["GET"])
+def api_export_single_semester(sem_id):
+    try:
+        file_path = get_semester_file_path(sem_id)
+        if not os.path.exists(file_path):
+            # If current active semester single file doesn't exist yet, save it
+            save_current_semester_single_file(sem_id)
+            
+        if not os.path.exists(file_path):
+            return jsonify({"status": "error", "message": "Semester file not found"}), 404
+            
+        return send_file(
+            file_path,
+            mimetype="application/json",
+            as_attachment=True,
+            download_name=f"School_Schedule_{sem_id}.json"
+        )
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/semesters/import-single", methods=["POST"])
+def api_import_single_semester():
+    try:
+        if "file" not in request.files:
+            return jsonify({"status": "error", "message": "No file uploaded"}), 400
+        file = request.files["file"]
+        if file.filename == "":
+            return jsonify({"status": "error", "message": "No file selected"}), 400
+            
+        sdata = json.load(file)
+        if not isinstance(sdata, dict) or "semester_id" not in sdata:
+            return jsonify({"status": "error", "message": "無效的學期 JSON 單一存檔格式"}), 400
+            
+        sem_id = sdata["semester_id"]
+        file_path = get_semester_file_path(sem_id)
+        with open(file_path, "w", encoding="utf-8") as f:
+            json.dump(sdata, f, ensure_ascii=False, indent=2)
+            
+        # Switch to imported semester automatically
+        cfg = sdata.get("config_rules", {})
+        cfg["active_semester_id"] = sem_id
+        with open(CONFIG_RULES_FILE, "w", encoding="utf-8") as f:
+            json.dump(cfg, f, ensure_ascii=False, indent=2)
+            
+        solved_records = sdata.get("solved_schedules", [])
+        solved_excel = os.path.join(os.path.dirname(__file__), "School_Schedule_Solved.xlsx")
+        if solved_records:
+            import pandas as pd
+            df = pd.DataFrame(solved_records)
+            df.to_excel(solved_excel, index=False)
+            
+        global _cached_data
+        _cached_data = None
+        
+        return jsonify({
+            "status": "success",
+            "message": f"學期【{sem_id}】單一 JSON 存檔已成功匯入並切換啟用！",
+            "active_semester_id": sem_id
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+
+
+
+# --- 108 課綱 國教署課程代碼對照與健診 ENDPOINTS (州董 WINST-23 規範) ---
+
+
+def get_moe_course_codes_data():
+    cfg = load_config_rules()
+    custom_moe_map = cfg.get("moe_course_codes", {})
+    
+    dbf_dir = get_latest_dbf_dir()
+    subjects_dict = {}
+    
+    # 1. Read from subj.dbf if available
+    if dbf_dir and os.path.exists(os.path.join(dbf_dir, "subj.dbf")):
+        try:
+            from dbfread import DBF
+            subj_dbf = os.path.join(dbf_dir, "subj.dbf")
+            db_subj = DBF(subj_dbf, ignore_missing_memofile=True, encoding='cp950')
+            for r in db_subj:
+                code = str(r.get("SUBJ_NO", "")).strip()
+                name = str(r.get("SUBJ_NAME", "")).strip() or str(r.get("SUBJ_SHORT", "")).strip()
+                if code and name:
+                    subjects_dict[code] = {
+                        "subject_code": code,
+                        "subject_name": name,
+                        "hours": 2,
+                        "category": "部定必修"
+                    }
+        except Exception as e:
+            print("Error reading subj.dbf:", e)
+
+
+    # 2. Accumulate/update from actual schedule data
+    sched_data = load_schedule_data()
+    if isinstance(sched_data, dict) and "schedules" in sched_data:
+        from collections import defaultdict
+        subj_hours = defaultdict(int)
+        for s in sched_data["schedules"]:
+            code = str(s.get("subject_code", "")).strip()
+            name = str(s.get("subject_name", "")).strip()
+            if code and name:
+                if code not in subjects_dict:
+                    subjects_dict[code] = {
+                        "subject_code": code,
+                        "subject_name": name,
+                        "hours": 0,
+                        "category": "部定必修"
+                    }
+                subj_hours[code] += 1
+        for code, h in subj_hours.items():
+            if code in subjects_dict:
+                subjects_dict[code]["hours"] = max(1, h // 5)
+
+    year = cfg.get("year", "114")
+    school_name = cfg.get("school_name", "土城高中")
+
+    result_list = []
+    mapped_count = 0
+    
+    for code, info in subjects_dict.items():
+        sname = info["subject_name"]
+        
+        category = "部定必修"
+        if "選修" in sname:
+            category = "多元選修"
+        elif "彈性" in sname or "自主" in sname:
+            category = "彈性學習"
+        elif "社團" in sname or "班會" in sname or "週會" in sname or "團體" in sname:
+            category = "團體活動"
+        elif "校訂" in sname:
+            category = "校訂必修"
+
+        moe_code = custom_moe_map.get(code, "")
+        is_mapped = bool(moe_code)
+        
+        if is_mapped:
+            mapped_count += 1
+        else:
+            cat_num = "1" if category == "部定必修" else ("2" if category == "校訂必修" else ("3" if category == "多元選修" else "4"))
+            auto_gen = f"{year}-{cat_num}{code.zfill(4)}-001"
+            moe_code = auto_gen
+
+        result_list.append({
+            "subject_code": code,
+            "subject_name": sname,
+            "hours": info["hours"],
+            "category": category,
+            "moe_code": moe_code,
+            "is_mapped": is_mapped
+        })
+
+    result_list.sort(key=lambda x: x["subject_code"])
+    total_count = len(result_list)
+    unmapped_count = total_count - mapped_count
+    compliance_rate = round((mapped_count / total_count * 100), 1) if total_count > 0 else 100.0
+
+    return {
+        "year": year,
+        "school_name": school_name,
+        "total_count": total_count,
+        "mapped_count": mapped_count,
+        "unmapped_count": unmapped_count,
+        "compliance_rate": compliance_rate,
+        "moe_subjects": result_list
+    }
+
+@app.route("/api/moe-course-codes/get", methods=["GET"])
+def api_get_moe_course_codes():
+    try:
+        data = get_moe_course_codes_data()
+        return jsonify({"status": "success", **data})
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/moe-course-codes/save", methods=["POST"])
+def api_save_moe_course_codes():
+    try:
+        req = request.get_json() or {}
+        moe_map = req.get("moe_course_codes", {})
+        
+        cfg = load_config_rules()
+        cfg["moe_course_codes"] = moe_map
+        save_config_rules(cfg)
+        
+        return jsonify({"status": "success", "message": "108 課綱國教署課程代碼對照表已成功儲存！"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/moe-course-codes/export-csv", methods=["GET"])
+def api_export_moe_course_codes_csv():
+    try:
+        import io, csv
+        data = get_moe_course_codes_data()
+        moe_subjects = data.get("moe_subjects", [])
+        
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(["學年度", "校務系統科目代碼", "科目名稱", "每週節數", "108課綱類別", "國教署標準課程代碼(23碼)", "勾稽狀態"])
+        
+        for s in moe_subjects:
+            writer.writerow([
+                data.get("year", "114"),
+                s["subject_code"],
+                s["subject_name"],
+                s["hours"],
+                s["category"],
+                s["moe_code"],
+                "已對接完成" if s["is_mapped"] else "待確認上傳"
+            ])
+            
+        mem = io.BytesIO()
+        mem.write(output.getvalue().encode('utf-8-sig'))
+        mem.seek(0)
+        
+        year_str = data.get("year", "114")
+        filename = f"MOE_Course_Codes_{year_str}.csv"
+        
+        return send_file(
+            mem,
+            mimetype="text/csv",
+            as_attachment=True,
+            download_name=filename
+        )
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+# --- TEACHER & SUBJECT MANAGEMENT API (新增與刪除全校教師/科目) ---
+
+
+@app.route("/api/teachers/list", methods=["GET"])
+def api_get_teachers_list():
+    try:
+        cfg = load_config_rules()
+        custom_teachers = cfg.get("custom_teachers", [])
+        deleted_teacher_codes = set(cfg.get("deleted_teacher_codes", []))
+
+        sched_data = load_schedule_data()
+        db_teachers = sched_data.get("teachers", []) if isinstance(sched_data, dict) else []
+
+        merged_map = {}
+        for t in db_teachers:
+            code = str(t.get("code", "")).strip()
+            name = str(t.get("name", "")).strip()
+            role = str(t.get("role", "專任教師")).strip()
+            if code and code not in deleted_teacher_codes:
+                merged_map[code] = {"code": code, "name": name, "role": role}
+
+        for t in custom_teachers:
+            code = str(t.get("code", "")).strip()
+            name = str(t.get("name", "")).strip()
+            role = str(t.get("role", "專任教師")).strip()
+            if code and code not in deleted_teacher_codes:
+                merged_map[code] = {"code": code, "name": name, "role": role}
+
+        final_list = list(merged_map.values())
+        final_list.sort(key=lambda x: (x.get("code", ""), x.get("name", "")))
+
+        return jsonify({"status": "success", "teachers": final_list})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/teachers/add", methods=["POST"])
+def api_add_teacher():
+    try:
+        req = request.get_json() or {}
+        code = str(req.get("code", "")).strip()
+        name = str(req.get("name", "")).strip()
+        role = str(req.get("role", "專任教師")).strip() or "專任教師"
+
+        if not code or not name:
+            return jsonify({"status": "error", "message": "教師代碼與姓名不能為空！"}), 400
+
+        cfg = load_config_rules()
+        custom_teachers = cfg.get("custom_teachers", [])
+        deleted_teacher_codes = cfg.get("deleted_teacher_codes", [])
+
+        if code in deleted_teacher_codes:
+            deleted_teacher_codes.remove(code)
+            cfg["deleted_teacher_codes"] = deleted_teacher_codes
+
+        existing = next((t for t in custom_teachers if str(t.get("code", "")).strip() == code), None)
+        if existing:
+            existing["name"] = name
+            existing["role"] = role
+        else:
+            custom_teachers.append({"code": code, "name": name, "role": role})
+
+        cfg["custom_teachers"] = custom_teachers
+        save_config_rules(cfg)
+
+        global _cached_data
+        _cached_data = None
+
+        return jsonify({"status": "success", "message": f"成功新增/更新教師: 【{name}】({code})"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/teachers/delete", methods=["POST"])
+def api_delete_teacher():
+    try:
+        req = request.get_json() or {}
+        code = str(req.get("code", "")).strip()
+        if not code:
+            return jsonify({"status": "error", "message": "未指定欲刪除的教師代碼！"}), 400
+
+        cfg = load_config_rules()
+        custom_teachers = cfg.get("custom_teachers", [])
+        deleted_teacher_codes = cfg.get("deleted_teacher_codes", [])
+
+        cfg["custom_teachers"] = [t for t in custom_teachers if str(t.get("code", "")).strip() != code]
+
+        if code not in deleted_teacher_codes:
+            deleted_teacher_codes.append(code)
+            cfg["deleted_teacher_codes"] = deleted_teacher_codes
+
+        save_config_rules(cfg)
+
+        global _cached_data
+        _cached_data = None
+
+        return jsonify({"status": "success", "message": f"成功刪除教師 (代碼: {code})"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/subjects/list", methods=["GET"])
+def api_get_subjects_list():
+    try:
+        cfg = load_config_rules()
+        custom_subjects = cfg.get("custom_subjects", [])
+        deleted_subject_codes = set(cfg.get("deleted_subject_codes", []))
+
+        moe_data = get_moe_course_codes_data()
+        db_subjects = moe_data.get("moe_subjects", [])
+
+        merged_map = {}
+        for s in db_subjects:
+            code = str(s.get("subject_code", "")).strip()
+            name = str(s.get("subject_name", "")).strip()
+            if code and code not in deleted_subject_codes:
+                merged_map[code] = {
+                    "code": code,
+                    "name": name,
+                    "category": s.get("category", "部定必修")
+                }
+
+        for s in custom_subjects:
+            code = str(s.get("code", "")).strip()
+            name = str(s.get("name", "")).strip()
+            category = str(s.get("category", "部定必修")).strip()
+            if code and code not in deleted_subject_codes:
+                merged_map[code] = {"code": code, "name": name, "category": category}
+
+        final_list = list(merged_map.values())
+        final_list.sort(key=lambda x: (x.get("code", ""), x.get("name", "")))
+
+        return jsonify({"status": "success", "subjects": final_list})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/subjects/add", methods=["POST"])
+def api_add_subject():
+    try:
+        req = request.get_json() or {}
+        code = str(req.get("code", "")).strip()
+        name = str(req.get("name", "")).strip()
+        category = str(req.get("category", "部定必修")).strip() or "部定必修"
+
+        if not code or not name:
+            return jsonify({"status": "error", "message": "科目代碼與名稱不能為空！"}), 400
+
+        cfg = load_config_rules()
+        custom_subjects = cfg.get("custom_subjects", [])
+        deleted_subject_codes = cfg.get("deleted_subject_codes", [])
+
+        if code in deleted_subject_codes:
+            deleted_subject_codes.remove(code)
+            cfg["deleted_subject_codes"] = deleted_subject_codes
+
+        existing = next((s for s in custom_subjects if str(s.get("code", "")).strip() == code), None)
+        if existing:
+            existing["name"] = name
+            existing["category"] = category
+        else:
+            custom_subjects.append({"code": code, "name": name, "category": category})
+
+        cfg["custom_subjects"] = custom_subjects
+        save_config_rules(cfg)
+
+        global _cached_data
+        _cached_data = None
+
+        return jsonify({"status": "success", "message": f"成功新增/更新科目: 【{name}】({code})"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/subjects/delete", methods=["POST"])
+def api_delete_subject():
+    try:
+        req = request.get_json() or {}
+        code = str(req.get("code", "")).strip()
+        if not code:
+            return jsonify({"status": "error", "message": "未指定欲刪除的科目代碼！"}), 400
+
+        cfg = load_config_rules()
+        custom_subjects = cfg.get("custom_subjects", [])
+        deleted_subject_codes = cfg.get("deleted_subject_codes", [])
+
+        cfg["custom_subjects"] = [s for s in custom_subjects if str(s.get("code", "")).strip() != code]
+
+        if code not in deleted_subject_codes:
+            deleted_subject_codes.append(code)
+            cfg["deleted_subject_codes"] = deleted_subject_codes
+
+        save_config_rules(cfg)
+
+        global _cached_data
+        _cached_data = None
+
+        return jsonify({"status": "success", "message": f"成功刪除科目 (代碼: {code})"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+# --- CLASS MANAGEMENT API (新增與刪除全校班級與高國中學制) ---
+
+@app.route("/api/classes/list", methods=["GET"])
+def api_get_classes_list():
+    try:
+        cfg = load_config_rules()
+        custom_classes = cfg.get("custom_classes", [])
+        deleted_class_codes = set(cfg.get("deleted_class_codes", []))
+
+        sched_data = load_schedule_data()
+        db_classes = sched_data.get("classes", []) if isinstance(sched_data, dict) else []
+
+        merged_map = {}
+        for c in db_classes:
+            code = str(c.get("code", "")).strip()
+            name = str(c.get("name", "")).strip()
+            tutor = str(c.get("tutor", "")).strip()
+            if code and code not in deleted_class_codes:
+                group = "國中部" if (code.startswith("7") or code.startswith("8") or code.startswith("9")) else ("跨班選修" if "跨班" in name or code in ["404","504","604"] else "高中部")
+                merged_map[code] = {"code": code, "name": name, "tutor": tutor, "group": group}
+
+        for c in custom_classes:
+            code = str(c.get("code", "")).strip()
+            name = str(c.get("name", "")).strip()
+            tutor = str(c.get("tutor", "")).strip()
+            group = str(c.get("group", "")).strip() or ("國中部" if (code.startswith("7") or code.startswith("8") or code.startswith("9")) else "高中部")
+            if code and code not in deleted_class_codes:
+                merged_map[code] = {"code": code, "name": name, "tutor": tutor, "group": group}
+
+        final_list = list(merged_map.values())
+        final_list.sort(key=lambda x: (x.get("code", ""), x.get("name", "")))
+
+        return jsonify({"status": "success", "classes": final_list})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/classes/add", methods=["POST"])
+def api_add_class():
+    try:
+        req = request.get_json() or {}
+        code = str(req.get("code", "")).strip()
+        name = str(req.get("name", "")).strip()
+        tutor = str(req.get("tutor", "")).strip()
+        group = str(req.get("group", "高中部")).strip() or "高中部"
+
+        if not code or not name:
+            return jsonify({"status": "error", "message": "班級代碼與名稱不能為空！"}), 400
+
+        cfg = load_config_rules()
+        custom_classes = cfg.get("custom_classes", [])
+        deleted_class_codes = cfg.get("deleted_class_codes", [])
+
+        if code in deleted_class_codes:
+            deleted_class_codes.remove(code)
+            cfg["deleted_class_codes"] = deleted_class_codes
+
+        existing = next((c for c in custom_classes if str(c.get("code", "")).strip() == code), None)
+        if existing:
+            existing["name"] = name
+            existing["tutor"] = tutor
+            existing["group"] = group
+        else:
+            custom_classes.append({"code": code, "name": name, "tutor": tutor, "group": group})
+
+        cfg["custom_classes"] = custom_classes
+        save_config_rules(cfg)
+
+        global _cached_data
+        _cached_data = None
+
+        return jsonify({"status": "success", "message": f"成功新增/更新班級: 【{name}】({code})"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/classes/delete", methods=["POST"])
+def api_delete_class():
+    try:
+        req = request.get_json() or {}
+        code = str(req.get("code", "")).strip()
+        if not code:
+            return jsonify({"status": "error", "message": "未指定欲刪除的班級代碼！"}), 400
+
+        cfg = load_config_rules()
+        custom_classes = cfg.get("custom_classes", [])
+        deleted_class_codes = cfg.get("deleted_class_codes", [])
+
+        cfg["custom_classes"] = [c for c in custom_classes if str(c.get("code", "")).strip() != code]
+
+        if code not in deleted_class_codes:
+            deleted_class_codes.append(code)
+            cfg["deleted_class_codes"] = deleted_class_codes
+
+        save_config_rules(cfg)
+
+        global _cached_data
+        _cached_data = None
+
+        return jsonify({"status": "success", "message": f"成功刪除班級 (代碼: {code})"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+
+
+
+
+
+
+
+
+
 if __name__ == "__main__":
-    load_schedule_data()
-    app.run(host="127.0.0.1", port=5000, debug=True)
+    if len(sys.argv) > 1 and ("desktop" in sys.argv[1].lower() or "--desktop" in sys.argv[1].lower()):
+        import desktop_app
+        desktop_app.main()
+    else:
+        load_schedule_data()
+        port = int(os.environ.get("PORT", 5000))
+        local_ip = get_local_ip()
+        print(f"\n==================================================")
+        print(f" 🚀 土城高中課表系統已啟動 (Waitress WSGI Server)")
+        print(f" 📍 本機瀏覽網址: http://127.0.0.1:{port}")
+        print(f" 🌐 局域網/手機連線網址: http://{local_ip}:{port}")
+        print(f"==================================================\n")
+        try:
+            from waitress import serve
+            serve(app, host="0.0.0.0", port=port, threads=8)
+        except ImportError:
+            app.run(host="0.0.0.0", port=port, debug=False)
+
+
+
+
 
 

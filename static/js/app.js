@@ -59,6 +59,35 @@ function setupEventListeners() {
         window.print();
     });
 
+    // Open Web Browser Button
+    const openWebBrowserBtn = document.getElementById('openWebBrowserBtn');
+    if (openWebBrowserBtn) {
+        openWebBrowserBtn.addEventListener('click', async () => {
+            let currentUrl = window.location.href;
+            const localIp = metadata.local_ip;
+            if (localIp && localIp !== '127.0.0.1') {
+                currentUrl = currentUrl.replace('127.0.0.1', localIp).replace('localhost', localIp);
+            }
+            try {
+                const resp = await fetch('/api/open-browser', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: currentUrl })
+                });
+                const data = await resp.json();
+                if (data.status === 'success') {
+                    showToast(`已開啟真實 IP 網址：${data.target_url || currentUrl}`, 'success');
+                } else {
+                    window.open(currentUrl, '_blank');
+                }
+            } catch (e) {
+                window.open(currentUrl, '_blank');
+            }
+        });
+    }
+
+
+
     // Tab buttons for quick selection
     tabBtns.forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -135,12 +164,17 @@ async function fetchMetadata() {
 
         metadata = data;
         
-        // Show database name/path in badge
+        // Show database name/path & local LAN IP in badge
+        const dbBadge = document.getElementById('dbBadge');
         if (data.dbf_dir) {
             const parts = data.dbf_dir.split(/[\\/]/);
             const dbfFolder = parts.find(p => p.toLowerCase().startsWith('spv') && p.toLowerCase().endsWith('.wdb'));
             dbPathText.textContent = dbfFolder || "SPV2000 資料庫";
         }
+        if (data.local_ip && dbBadge) {
+            dbBadge.title = `資料庫: ${data.dbf_dir}\n局域網連線網址: http://${data.local_ip}:5000`;
+        }
+
 
         renderQuickSelectGrids();
     } catch (e) {
@@ -415,7 +449,16 @@ function renderScheduleGrid(type, code, slots) {
                 const cellContainer = document.createElement('div');
                 cellContainer.className = 'schedule-cell has-lesson';
                 
-                // If there are multiple lessons (e.g. odd/even week alternations)
+                // If there are multiple lessons (e.g. split grouping or remedial teaching)
+                if (lessons.length > 1) {
+                    const tag = document.createElement('div');
+                    tag.className = 'multi-group-tag';
+                    tag.title = '同時間分組教學 / 抽離輔導 / 彈性學習時段';
+                    tag.innerHTML = `<i class="fa-solid fa-layer-group"></i> 分組教學 (${lessons.length}組)`;
+                    cellContainer.appendChild(tag);
+                }
+
+
                 lessons.forEach((lesson, index) => {
                     const lessonDiv = document.createElement('div');
                     lessonDiv.style.width = '100%';
@@ -450,9 +493,9 @@ function renderScheduleGrid(type, code, slots) {
                     });
                     
                     if (index > 0) {
-                        lessonDiv.style.borderTop = '1px dashed rgba(255,255,255,0.1)';
-                        lessonDiv.style.paddingTop = '6px';
-                        lessonDiv.style.marginTop = '6px';
+                        lessonDiv.style.borderTop = '1px dashed rgba(255,255,255,0.15)';
+                        lessonDiv.style.paddingTop = '4px';
+                        lessonDiv.style.marginTop = '4px';
                     }
 
                     let mainText = lesson.subject_name;
@@ -482,7 +525,7 @@ function renderScheduleGrid(type, code, slots) {
                     }
 
                     lessonDiv.innerHTML = `
-                        <span class="subject-name">${mainText}</span>
+                        <span class="subject-name" style="${lessons.length > 1 ? 'font-size: 0.82rem;' : ''}">${mainText}</span>
                         ${targetLink}
                         ${roomLink}
                         ${badge}
@@ -493,6 +536,7 @@ function renderScheduleGrid(type, code, slots) {
 
                 cell.appendChild(cellContainer);
             }
+
             row.appendChild(cell);
         }
         
@@ -817,8 +861,9 @@ function setupSettingsPanel() {
     settingsModalBtn.addEventListener('click', () => {
         settingsModal.style.display = 'flex';
         initSettingsModal();
-        switchRuleTab('teacher');
+        switchRuleTab('school');
     });
+
 
     closeSettingsBtn.addEventListener('click', () => {
         settingsModal.style.display = 'none';
@@ -843,64 +888,200 @@ function setupSettingsPanel() {
     const ruleTabRestore = document.getElementById('ruleTabRestore');
 
     function switchRuleTab(tabName) {
-        [tabRuleTeacherBtn, tabRuleSubBtn, tabRuleWeightsBtn, tabRuleAssignBtn, tabRuleCatalogBtn, tabRuleVenuesBtn, tabRuleSimBtn, tabRuleRestoreBtn].forEach(b => {
-            if (b) {
-                b.classList.remove('active');
-                b.style.background = 'transparent';
-                b.style.color = 'var(--text-secondary)';
-            }
+        document.querySelectorAll('.rule-tab-btn').forEach(b => {
+            b.classList.remove('active');
+            b.style.background = 'transparent';
+            b.style.color = 'var(--text-secondary)';
         });
-        [ruleTabTeacher, ruleTabSub, ruleTabWeights, ruleTabAssign, ruleTabCatalog, ruleTabVenues, ruleTabSim, ruleTabRestore].forEach(c => {
-            if (c) c.style.display = 'none';
+        document.querySelectorAll('.rule-tab-content').forEach(c => {
+            c.style.display = 'none';
+            c.classList.remove('active');
         });
 
-        if (tabName === 'teacher') {
-            tabRuleTeacherBtn.classList.add('active');
-            tabRuleTeacherBtn.style.background = 'rgba(99, 102, 241, 0.2)';
-            tabRuleTeacherBtn.style.color = '#818cf8';
-            ruleTabTeacher.style.display = 'block';
+        if (tabName === 'school') {
+            const tabRuleSchoolBtn = document.getElementById('tabRuleSchoolBtn');
+            const ruleTabSchool = document.getElementById('ruleTabSchool');
+            if (tabRuleSchoolBtn) {
+                tabRuleSchoolBtn.classList.add('active');
+                tabRuleSchoolBtn.style.background = 'rgba(56, 189, 248, 0.2)';
+                tabRuleSchoolBtn.style.color = '#38bdf8';
+            }
+            if (ruleTabSchool) {
+                ruleTabSchool.style.display = 'block';
+                ruleTabSchool.classList.add('active');
+            }
+            loadSystemInfo();
+            loadClassesMaintainList();
+        } else if (tabName === 'teachermaintain') {
+            const tabRuleTeacherMaintainBtn = document.getElementById('tabRuleTeacherMaintainBtn');
+            const ruleTabTeacherMaintain = document.getElementById('ruleTabTeacherMaintain');
+            if (tabRuleTeacherMaintainBtn) {
+                tabRuleTeacherMaintainBtn.classList.add('active');
+                tabRuleTeacherMaintainBtn.style.background = 'rgba(56, 189, 248, 0.2)';
+                tabRuleTeacherMaintainBtn.style.color = '#38bdf8';
+            }
+            if (ruleTabTeacherMaintain) {
+                ruleTabTeacherMaintain.style.display = 'block';
+                ruleTabTeacherMaintain.classList.add('active');
+            }
+            loadTeachersMaintainList();
+        } else if (tabName === 'teacher') {
+            if (tabRuleTeacherBtn) {
+                tabRuleTeacherBtn.classList.add('active');
+                tabRuleTeacherBtn.style.background = 'rgba(99, 102, 241, 0.2)';
+                tabRuleTeacherBtn.style.color = '#818cf8';
+            }
+            if (ruleTabTeacher) {
+                ruleTabTeacher.style.display = 'block';
+                ruleTabTeacher.classList.add('active');
+            }
+
+            loadTeachersMaintainList();
         } else if (tabName === 'sub') {
-            tabRuleSubBtn.classList.add('active');
-            tabRuleSubBtn.style.background = 'rgba(99, 102, 241, 0.2)';
-            tabRuleSubBtn.style.color = '#818cf8';
-            ruleTabSub.style.display = 'block';
+            if (tabRuleSubBtn) {
+                tabRuleSubBtn.classList.add('active');
+                tabRuleSubBtn.style.background = 'rgba(99, 102, 241, 0.2)';
+                tabRuleSubBtn.style.color = '#818cf8';
+            }
+            if (ruleTabSub) {
+                ruleTabSub.style.display = 'block';
+                ruleTabSub.classList.add('active');
+            }
         } else if (tabName === 'weights') {
-            tabRuleWeightsBtn.classList.add('active');
-            tabRuleWeightsBtn.style.background = 'rgba(99, 102, 241, 0.2)';
-            tabRuleWeightsBtn.style.color = '#818cf8';
-            ruleTabWeights.style.display = 'block';
+            if (tabRuleWeightsBtn) {
+                tabRuleWeightsBtn.classList.add('active');
+                tabRuleWeightsBtn.style.background = 'rgba(99, 102, 241, 0.2)';
+                tabRuleWeightsBtn.style.color = '#818cf8';
+            }
+            if (ruleTabWeights) {
+                ruleTabWeights.style.display = 'block';
+                ruleTabWeights.classList.add('active');
+            }
         } else if (tabName === 'assign') {
-            tabRuleAssignBtn.classList.add('active');
-            tabRuleAssignBtn.style.background = 'rgba(99, 102, 241, 0.2)';
-            tabRuleAssignBtn.style.color = '#818cf8';
-            ruleTabAssign.style.display = 'block';
+            if (tabRuleAssignBtn) {
+                tabRuleAssignBtn.classList.add('active');
+                tabRuleAssignBtn.style.background = 'rgba(99, 102, 241, 0.2)';
+                tabRuleAssignBtn.style.color = '#818cf8';
+            }
+            if (ruleTabAssign) {
+                ruleTabAssign.style.display = 'block';
+                ruleTabAssign.classList.add('active');
+            }
             loadCourseAssignments();
+
         } else if (tabName === 'catalog') {
-            tabRuleCatalogBtn.classList.add('active');
-            tabRuleCatalogBtn.style.background = 'rgba(99, 102, 241, 0.2)';
-            tabRuleCatalogBtn.style.color = '#818cf8';
-            ruleTabCatalog.style.display = 'block';
+            if (tabRuleCatalogBtn) {
+                tabRuleCatalogBtn.classList.add('active');
+                tabRuleCatalogBtn.style.background = 'rgba(99, 102, 241, 0.2)';
+                tabRuleCatalogBtn.style.color = '#818cf8';
+            }
+            if (ruleTabCatalog) {
+                ruleTabCatalog.style.display = 'block';
+                ruleTabCatalog.classList.add('active');
+            }
             loadSubjectCatalog();
+            loadSubjectsMaintainList();
         } else if (tabName === 'venues') {
-            tabRuleVenuesBtn.classList.add('active');
-            tabRuleVenuesBtn.style.background = 'rgba(99, 102, 241, 0.2)';
-            tabRuleVenuesBtn.style.color = '#818cf8';
-            ruleTabVenues.style.display = 'block';
+
+            if (tabRuleVenuesBtn) {
+                tabRuleVenuesBtn.classList.add('active');
+                tabRuleVenuesBtn.style.background = 'rgba(99, 102, 241, 0.2)';
+                tabRuleVenuesBtn.style.color = '#818cf8';
+            }
+            if (ruleTabVenues) {
+                ruleTabVenues.style.display = 'block';
+                ruleTabVenues.classList.add('active');
+            }
             loadVenueCapacities();
         } else if (tabName === 'sim') {
-            tabRuleSimBtn.classList.add('active');
-            tabRuleSimBtn.style.background = 'rgba(99, 102, 241, 0.2)';
-            tabRuleSimBtn.style.color = '#818cf8';
-            ruleTabSim.style.display = 'block';
+            if (tabRuleSimBtn) {
+                tabRuleSimBtn.classList.add('active');
+                tabRuleSimBtn.style.background = 'rgba(99, 102, 241, 0.2)';
+                tabRuleSimBtn.style.color = '#818cf8';
+            }
+            if (ruleTabSim) {
+                ruleTabSim.style.display = 'block';
+                ruleTabSim.classList.add('active');
+            }
             loadSimultaneousGroups();
+        } else if (tabName === 'semester') {
+            const tabRuleSemesterBtn = document.getElementById('tabRuleSemesterBtn');
+            const ruleTabSemester = document.getElementById('ruleTabSemester');
+            if (tabRuleSemesterBtn) {
+                tabRuleSemesterBtn.classList.add('active');
+                tabRuleSemesterBtn.style.background = 'rgba(168, 85, 247, 0.2)';
+                tabRuleSemesterBtn.style.color = '#c084fc';
+            }
+            if (ruleTabSemester) {
+                ruleTabSemester.style.display = 'block';
+                ruleTabSemester.classList.add('active');
+            }
+            loadSemestersList();
+        } else if (tabName === 'moecode') {
+            const tabRuleMoeCodeBtn = document.getElementById('tabRuleMoeCodeBtn');
+            const ruleTabMoeCode = document.getElementById('ruleTabMoeCode');
+            if (tabRuleMoeCodeBtn) {
+                tabRuleMoeCodeBtn.classList.add('active');
+                tabRuleMoeCodeBtn.style.background = 'rgba(251, 191, 36, 0.2)';
+                tabRuleMoeCodeBtn.style.color = '#fbbf24';
+            }
+            if (ruleTabMoeCode) {
+                ruleTabMoeCode.style.display = 'block';
+                ruleTabMoeCode.classList.add('active');
+            }
+            loadMoeCourseCodes();
+        } else if (tabName === 'checklist') {
+            const tabRuleChecklistBtn = document.getElementById('tabRuleChecklistBtn');
+            const ruleTabChecklist = document.getElementById('ruleTabChecklist');
+            if (tabRuleChecklistBtn) {
+                tabRuleChecklistBtn.classList.add('active');
+                tabRuleChecklistBtn.style.background = 'rgba(52, 211, 153, 0.2)';
+                tabRuleChecklistBtn.style.color = '#34d399';
+            }
+            if (ruleTabChecklist) {
+                ruleTabChecklist.style.display = 'block';
+                ruleTabChecklist.classList.add('active');
+            }
+            updateChecklistProgress();
         } else if (tabName === 'restore') {
-            tabRuleRestoreBtn.classList.add('active');
-            tabRuleRestoreBtn.style.background = 'rgba(99, 102, 241, 0.2)';
-            tabRuleRestoreBtn.style.color = '#818cf8';
-            ruleTabRestore.style.display = 'block';
+            if (tabRuleRestoreBtn) {
+                tabRuleRestoreBtn.classList.add('active');
+                tabRuleRestoreBtn.style.background = 'rgba(99, 102, 241, 0.2)';
+                tabRuleRestoreBtn.style.color = '#818cf8';
+            }
+            if (ruleTabRestore) {
+                ruleTabRestore.style.display = 'block';
+                ruleTabRestore.classList.add('active');
+            }
             loadRestorePoints();
         }
     }
+
+
+    // Unified Rule Tab Click Listener Binding
+    document.querySelectorAll('.rule-tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tabName = btn.getAttribute('data-ruletab');
+            if (tabName) {
+                switchRuleTab(tabName);
+            }
+        });
+    });
+
+    const tabRuleTeacherMaintainBtn = document.getElementById('tabRuleTeacherMaintainBtn');
+    if (tabRuleTeacherMaintainBtn) tabRuleTeacherMaintainBtn.addEventListener('click', () => switchRuleTab('teachermaintain'));
+
+    const tabRuleChecklistBtn = document.getElementById('tabRuleChecklistBtn');
+    if (tabRuleChecklistBtn) tabRuleChecklistBtn.addEventListener('click', () => switchRuleTab('checklist'));
+
+    const tabRuleMoeCodeBtn = document.getElementById('tabRuleMoeCodeBtn');
+    if (tabRuleMoeCodeBtn) tabRuleMoeCodeBtn.addEventListener('click', () => switchRuleTab('moecode'));
+
+    const tabRuleSemesterBtn = document.getElementById('tabRuleSemesterBtn');
+    if (tabRuleSemesterBtn) tabRuleSemesterBtn.addEventListener('click', () => switchRuleTab('semester'));
+
+    const tabRuleSchoolBtn = document.getElementById('tabRuleSchoolBtn');
+    if (tabRuleSchoolBtn) tabRuleSchoolBtn.addEventListener('click', () => switchRuleTab('school'));
 
     if (tabRuleTeacherBtn) tabRuleTeacherBtn.addEventListener('click', () => switchRuleTab('teacher'));
     if (tabRuleSubBtn) tabRuleSubBtn.addEventListener('click', () => switchRuleTab('sub'));
@@ -910,6 +1091,8 @@ function setupSettingsPanel() {
     if (tabRuleVenuesBtn) tabRuleVenuesBtn.addEventListener('click', () => switchRuleTab('venues'));
     if (tabRuleSimBtn) tabRuleSimBtn.addEventListener('click', () => switchRuleTab('sim'));
     if (tabRuleRestoreBtn) tabRuleRestoreBtn.addEventListener('click', () => switchRuleTab('restore'));
+
+
 
     // Range Sliders
     const weightConsecutive = document.getElementById('weightConsecutive');
@@ -1379,11 +1562,11 @@ function renderCourseAssignTable() {
 
     thead.innerHTML = `
         <tr>
-            <th>科目名稱 (代碼)</th>
-            <th>每週節數</th>
-            <th>目前授課教師</th>
-            <th>變更配課教師</th>
-            <th>操作</th>
+            <th style="width: 26%;">科目名稱 (代碼)</th>
+            <th style="width: 14%;">每週節數</th>
+            <th style="width: 20%;">目前授課教師</th>
+            <th style="width: 22%;">變更配課教師</th>
+            <th style="width: 18%;">操作</th>
         </tr>
     `;
 
@@ -1443,6 +1626,7 @@ function renderCourseAssignTable() {
         sel.style.background = 'rgba(15, 23, 42, 0.8)';
         sel.style.color = '#fff';
         sel.style.border = '1px solid var(--border-color)';
+        sel.style.width = '100%';
 
         const defaultOpt = document.createElement('option');
         defaultOpt.value = '';
@@ -1465,14 +1649,19 @@ function renderCourseAssignTable() {
 
         // Action Save & Delete Buttons
         const tdAct = document.createElement('td');
-        tdAct.style.display = 'flex';
-        tdAct.style.gap = '6px';
-        tdAct.style.justifyContent = 'center';
+        tdAct.style.textAlign = 'center';
+        tdAct.style.whiteSpace = 'nowrap';
+
+        const actWrap = document.createElement('div');
+        actWrap.style.display = 'flex';
+        actWrap.style.gap = '6px';
+        actWrap.style.justifyContent = 'center';
+        actWrap.style.alignItems = 'center';
 
         const btn = document.createElement('button');
         btn.className = 'solver-action-btn primary-btn';
-        btn.style.padding = '4px 10px';
-        btn.style.fontSize = '0.8rem';
+        btn.style.padding = '4px 8px';
+        btn.style.fontSize = '0.75rem';
         btn.style.background = '#6366f1';
         btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> 儲存';
 
@@ -1516,8 +1705,8 @@ function renderCourseAssignTable() {
 
         const delBtn = document.createElement('button');
         delBtn.className = 'solver-action-btn secondary-btn';
-        delBtn.style.padding = '4px 10px';
-        delBtn.style.fontSize = '0.8rem';
+        delBtn.style.padding = '4px 8px';
+        delBtn.style.fontSize = '0.75rem';
         delBtn.style.background = 'rgba(239, 68, 68, 0.2)';
         delBtn.style.borderColor = 'rgba(239, 68, 68, 0.4)';
         delBtn.style.color = '#ef4444';
@@ -1546,8 +1735,9 @@ function renderCourseAssignTable() {
             }
         });
 
-        tdAct.appendChild(btn);
-        tdAct.appendChild(delBtn);
+        actWrap.appendChild(btn);
+        actWrap.appendChild(delBtn);
+        tdAct.appendChild(actWrap);
         tr.appendChild(tdAct);
 
         tbody.appendChild(tr);
@@ -1581,11 +1771,11 @@ function renderTeacherAssignTable() {
 
     thead.innerHTML = `
         <tr>
-            <th>授課班級 (代碼)</th>
-            <th>科目名稱 (代碼)</th>
-            <th>每週授課節數</th>
-            <th>配課狀態</th>
-            <th>操作</th>
+            <th style="width: 20%;">授課班級 (代碼)</th>
+            <th style="width: 26%;">科目名稱 (代碼)</th>
+            <th style="width: 16%;">每週授課節數</th>
+            <th style="width: 20%;">配課狀態</th>
+            <th style="width: 18%;">操作</th>
         </tr>
     `;
 
@@ -1621,6 +1811,14 @@ function renderTeacherAssignTable() {
         // Action Delete Button
         const tdAct = document.createElement('td');
         tdAct.style.textAlign = 'center';
+        tdAct.style.whiteSpace = 'nowrap';
+
+        const actWrap = document.createElement('div');
+        actWrap.style.display = 'flex';
+        actWrap.style.gap = '6px';
+        actWrap.style.justifyContent = 'center';
+        actWrap.style.alignItems = 'center';
+
         const delBtn = document.createElement('button');
         delBtn.className = 'solver-action-btn secondary-btn';
         delBtn.style.padding = '4px 10px';
@@ -1653,12 +1851,14 @@ function renderTeacherAssignTable() {
             }
         });
 
-        tdAct.appendChild(delBtn);
+        actWrap.appendChild(delBtn);
+        tdAct.appendChild(actWrap);
         tr.appendChild(tdAct);
 
         tbody.appendChild(tr);
     });
 }
+
 
 let currentCatalogMode = 'master';
 let masterSubjectCatalogData = [];
@@ -2123,17 +2323,149 @@ function renderRestorePointsTable() {
     });
 }
 
+let classConsecutiveRules = [];
+let subjectVenueMappings = [];
+
 async function loadVenueCapacities() {
     const saveVenueCapacitiesBtn = document.getElementById('saveVenueCapacitiesBtn');
+    const addNewVenueBtn = document.getElementById('addNewVenueBtn');
+    const addClassConsecutiveBtn = document.getElementById('addClassConsecutiveBtn');
+    const addSubjectVenueBtn = document.getElementById('addSubjectVenueBtn');
+    const consecClassSelect = document.getElementById('consecClassSelect');
+    const consecSubjectSelect = document.getElementById('consecSubjectSelect');
+    const mapSubjectSelect = document.getElementById('mapSubjectSelect');
+
+    // Populate selects
+    if (consecClassSelect && metadata.classes) {
+        consecClassSelect.innerHTML = '<option value="">選擇班級...</option>';
+        metadata.classes.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c.code;
+            opt.textContent = `${c.name} (${c.code})`;
+            consecClassSelect.appendChild(opt);
+        });
+    }
+
+    if (consecSubjectSelect && metadata.subjects) {
+        consecSubjectSelect.innerHTML = '<option value="">選擇科目...</option>';
+        metadata.subjects.forEach(s => {
+            const opt = document.createElement('option');
+            opt.value = s.code;
+            opt.textContent = `${s.name} (${s.code})`;
+            consecSubjectSelect.appendChild(opt);
+        });
+    }
+
+    if (mapSubjectSelect && metadata.subjects) {
+        mapSubjectSelect.innerHTML = '<option value="">選擇科目...</option>';
+        metadata.subjects.forEach(s => {
+            const opt = document.createElement('option');
+            opt.value = s.code;
+            opt.textContent = `${s.name} (${s.code})`;
+            mapSubjectSelect.appendChild(opt);
+        });
+    }
+
+    // Add Custom Venue Handler
+    if (addNewVenueBtn && addNewVenueBtn.dataset.listener !== 'true') {
+        addNewVenueBtn.dataset.listener = 'true';
+        addNewVenueBtn.addEventListener('click', () => {
+            const vnameInput = document.getElementById('newVenueNameInput');
+            const vcapInput = document.getElementById('newVenueCapInput');
+            const vname = (vnameInput.value || '').trim();
+            const vcap = parseInt(vcapInput.value || 1);
+            if (!vname) {
+                showToast("請輸入教室名稱！");
+                return;
+            }
+
+            const container = document.getElementById('customVenuesContainer');
+            if (container) {
+                const item = document.createElement('div');
+                item.style.display = 'flex';
+                item.style.alignItems = 'center';
+                item.style.gap = '8px';
+                item.style.background = 'rgba(15,23,42,0.4)';
+                item.style.padding = '6px 10px';
+                item.style.borderRadius = '6px';
+                item.innerHTML = `
+                    <label style="font-size: 0.85rem; min-width: 90px;">🏫 ${vname}：</label>
+                    <input type="number" class="venue-cap-input" data-vname="${vname}" min="1" max="10" value="${vcap}" style="width: 55px; padding: 4px; border-radius: 4px; background: rgba(15,23,42,0.8); color: #fff; border: 1px solid var(--border-color);"> 班
+                    <button type="button" onclick="this.parentElement.remove()" style="background: rgba(239,68,68,0.2); color: #ef4444; border: 1px solid rgba(239,68,68,0.4); border-radius: 4px; padding: 2px 6px; font-size: 0.75rem; cursor: pointer;">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                `;
+                container.appendChild(item);
+                vnameInput.value = '';
+                showToast(`已成功新增【${vname}】專用教室！`);
+            }
+        });
+    }
+
+    // Add Class Consecutive Rule Handler
+    if (addClassConsecutiveBtn && addClassConsecutiveBtn.dataset.listener !== 'true') {
+        addClassConsecutiveBtn.dataset.listener = 'true';
+        addClassConsecutiveBtn.addEventListener('click', () => {
+            const classCode = consecClassSelect.value;
+            const className = consecClassSelect.options[consecClassSelect.selectedIndex]?.text || classCode;
+            const subjCode = consecSubjectSelect.value;
+            const subjName = consecSubjectSelect.options[consecSubjectSelect.selectedIndex]?.text || subjCode;
+            const length = parseInt(document.getElementById('consecLengthSelect').value || 2);
+
+            if (!classCode || !subjCode) {
+                showToast("請先選擇班級與科目！");
+                return;
+            }
+
+            classConsecutiveRules.push({
+                class_code: classCode,
+                class_name: className,
+                subject_code: subjCode,
+                subject_name: subjName,
+                length: length
+            });
+
+            renderClassConsecutiveTable();
+            showToast(`已新增【${className}】${subjName} 連堂 ${length} 節約束！`);
+        });
+    }
+
+    // Add Subject Venue Mapping Handler
+    if (addSubjectVenueBtn && addSubjectVenueBtn.dataset.listener !== 'true') {
+        addSubjectVenueBtn.dataset.listener = 'true';
+        addSubjectVenueBtn.addEventListener('click', () => {
+            const mapSubjectSelect = document.getElementById('mapSubjectSelect');
+            const mapVenueSelect = document.getElementById('mapVenueSelect');
+            const subjCode = mapSubjectSelect.value;
+            const subjName = mapSubjectSelect.options[mapSubjectSelect.selectedIndex]?.text || subjCode;
+            const roomName = mapVenueSelect.value;
+
+            if (!subjCode || !roomName) {
+                showToast("請先選擇科目與專用教室！");
+                return;
+            }
+
+            subjectVenueMappings.push({
+                subject_code: subjCode,
+                subject_name: subjName,
+                room_name: roomName
+            });
+
+            renderSubjectVenueTable();
+            showToast(`已成功指派【${subjName}】➔ ${roomName}！`);
+        });
+    }
+
+    // Save All Button
     if (saveVenueCapacitiesBtn && saveVenueCapacitiesBtn.dataset.listener !== 'true') {
         saveVenueCapacitiesBtn.dataset.listener = 'true';
         saveVenueCapacitiesBtn.addEventListener('click', async () => {
-            const caps = {
-                "電腦教室": parseInt(document.getElementById('capComputerRoom').value || 2),
-                "理化實驗室": parseInt(document.getElementById('capScienceLab').value || 1),
-                "音樂教室": parseInt(document.getElementById('capMusicRoom').value || 1),
-                "體育場/館": parseInt(document.getElementById('capGym').value || 3)
-            };
+            const caps = {};
+            document.querySelectorAll('.venue-cap-input').forEach(inp => {
+                const vn = inp.getAttribute('data-vname');
+                const val = parseInt(inp.value || 1);
+                if (vn) caps[vn] = val;
+            });
 
             const checkedBoxes = document.querySelectorAll('#consecutiveSubjectsCheckboxes input[type="checkbox"]:checked');
             const consec = Array.from(checkedBoxes).map(cb => cb.value);
@@ -2144,7 +2476,9 @@ async function loadVenueCapacities() {
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
                         venue_capacities: caps,
-                        consecutive_subjects: consec
+                        consecutive_subjects: consec,
+                        class_consecutive_rules: classConsecutiveRules,
+                        subject_venue_mappings: subjectVenueMappings
                     })
                 });
                 const res = await resp.json();
@@ -2164,16 +2498,38 @@ async function loadVenueCapacities() {
         const data = await resp.json();
         if (data.status === 'success') {
             const caps = data.venue_capacities || {};
-            if (caps["電腦教室"] !== undefined) document.getElementById('capComputerRoom').value = caps["電腦教室"];
-            if (caps["理化實驗室"] !== undefined) document.getElementById('capScienceLab').value = caps["理化實驗室"];
-            if (caps["音樂教室"] !== undefined) document.getElementById('capMusicRoom').value = caps["音樂教室"];
-            if (caps["體育場/館"] !== undefined || caps["體育場/馆"] !== undefined) {
-                document.getElementById('capGym').value = caps["體育場/館"] || caps["體育場/馆"] || 3;
-            }
-
-            const container = document.getElementById('consecutiveSubjectsCheckboxes');
+            const container = document.getElementById('customVenuesContainer');
             if (container) {
                 container.innerHTML = '';
+                Object.keys(caps).forEach(vname => {
+                    const icon = vname.includes("電腦") ? "💻" : vname.includes("實驗") ? "🧪" : vname.includes("音樂") ? "🎵" : vname.includes("體育") ? "🏀" : "🏫";
+                    const item = document.createElement('div');
+                    item.style.display = 'flex';
+                    item.style.alignItems = 'center';
+                    item.style.gap = '8px';
+                    item.style.background = 'rgba(15,23,42,0.4)';
+                    item.style.padding = '6px 10px';
+                    item.style.borderRadius = '6px';
+                    item.innerHTML = `
+                        <label style="font-size: 0.85rem; min-width: 90px;">${icon} ${vname}：</label>
+                        <input type="number" class="venue-cap-input" data-vname="${vname}" min="1" max="10" value="${caps[vname]}" style="width: 55px; padding: 4px; border-radius: 4px; background: rgba(15,23,42,0.8); color: #fff; border: 1px solid var(--border-color);"> 班
+                        <button type="button" onclick="this.parentElement.remove()" style="background: rgba(239,68,68,0.2); color: #ef4444; border: 1px solid rgba(239,68,68,0.4); border-radius: 4px; padding: 2px 6px; font-size: 0.75rem; cursor: pointer;">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    `;
+                    container.appendChild(item);
+                });
+            }
+
+            classConsecutiveRules = data.class_consecutive_rules || [];
+            renderClassConsecutiveTable();
+
+            subjectVenueMappings = data.subject_venue_mappings || [];
+            renderSubjectVenueTable();
+
+            const consecContainer = document.getElementById('consecutiveSubjectsCheckboxes');
+            if (consecContainer) {
+                consecContainer.innerHTML = '';
                 const activeConsec = new Set(data.consecutive_subjects || ["104", "105", "110"]);
                 if (metadata.subjects && metadata.subjects.length > 0) {
                     metadata.subjects.forEach(s => {
@@ -2187,22 +2543,7 @@ async function loadVenueCapacities() {
                         lbl.style.alignItems = 'center';
                         lbl.style.gap = '4px';
                         lbl.innerHTML = `<input type="checkbox" value="${s.code}" ${isChecked}> ${s.name} (${s.code})`;
-                        container.appendChild(lbl);
-                    });
-                } else {
-                    ["104|物理", "105|化學", "110|程式設計", "101|國文", "102|英文", "103|數學"].forEach(str => {
-                        const [code, name] = str.split('|');
-                        const isChecked = activeConsec.has(code) ? 'checked' : '';
-                        const lbl = document.createElement('label');
-                        lbl.style.fontSize = '0.85rem';
-                        lbl.style.cursor = 'pointer';
-                        lbl.style.marginRight = '14px';
-                        lbl.style.marginBottom = '6px';
-                        lbl.style.display = 'inline-flex';
-                        lbl.style.alignItems = 'center';
-                        lbl.style.gap = '4px';
-                        lbl.innerHTML = `<input type="checkbox" value="${code}" ${isChecked}> ${name} (${code})`;
-                        container.appendChild(lbl);
+                        consecContainer.appendChild(lbl);
                     });
                 }
             }
@@ -2211,6 +2552,72 @@ async function loadVenueCapacities() {
         console.error("Load venue capacities failed:", e);
     }
 }
+
+function renderClassConsecutiveTable() {
+    const tbody = document.getElementById('classConsecutiveTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    if (classConsecutiveRules.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 8px;">尚無手動設定的特定班級連堂規則</td></tr>';
+        return;
+    }
+
+    classConsecutiveRules.forEach((rule, idx) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${rule.class_name || rule.class_code}</td>
+            <td>${rule.subject_name || rule.subject_code}</td>
+            <td><span style="color: #38bdf8; font-weight: 600;">連續 ${rule.length || 2} 節</span></td>
+            <td style="text-align: center;">
+                <button type="button" onclick="deleteClassConsecutiveRule(${idx})" style="background: rgba(239,68,68,0.2); color: #ef4444; border: 1px solid rgba(239,68,68,0.4); border-radius: 4px; padding: 2px 8px; font-size: 0.8rem; cursor: pointer;">
+                    <i class="fa-solid fa-trash"></i> 刪除
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function deleteClassConsecutiveRule(idx) {
+    classConsecutiveRules.splice(idx, 1);
+    renderClassConsecutiveTable();
+    showToast("已刪除該筆特定班級連堂規則。");
+}
+
+function renderSubjectVenueTable() {
+    const tbody = document.getElementById('subjectVenueTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    if (subjectVenueMappings.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: var(--text-muted); padding: 8px;">尚無對應的科目與專用教室指派關係</td></tr>';
+        return;
+    }
+
+    subjectVenueMappings.forEach((mapItem, idx) => {
+        const icon = mapItem.room_name.includes("電腦") ? "💻" : mapItem.room_name.includes("實驗") ? "🧪" : mapItem.room_name.includes("音樂") ? "🎵" : mapItem.room_name.includes("體育") ? "🏀" : "🏫";
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${mapItem.subject_name || mapItem.subject_code}</td>
+            <td><span style="color: #34d399; font-weight: 600;">${icon} ${mapItem.room_name}</span></td>
+            <td style="text-align: center;">
+                <button type="button" onclick="deleteSubjectVenueMapping(${idx})" style="background: rgba(239,68,68,0.2); color: #ef4444; border: 1px solid rgba(239,68,68,0.4); border-radius: 4px; padding: 2px 8px; font-size: 0.8rem; cursor: pointer;">
+                    <i class="fa-solid fa-trash"></i> 刪除
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function deleteSubjectVenueMapping(idx) {
+    subjectVenueMappings.splice(idx, 1);
+    renderSubjectVenueTable();
+    showToast("已刪除該筆科目專用教室對應。");
+}
+
+
 
 let currentSimGroupsData = [];
 
@@ -3065,4 +3472,813 @@ async function loadDataDebugReport() {
         console.error("Load debug report failed:", e);
     }
 }
+
+// --- SINGLE-FILE SEMESTER MANAGEMENT FRONTEND LOGIC ---
+async function loadSemestersList() {
+    try {
+        const resp = await fetch('/api/semesters/list');
+        const data = await resp.json();
+        if (data.status === 'success') {
+            const activeId = data.active_semester_id;
+            const semesters = data.semesters || [];
+
+            // Update Header Selector
+            const headerSemesterSelect = document.getElementById('headerSemesterSelect');
+            if (headerSemesterSelect) {
+                headerSemesterSelect.innerHTML = '';
+                semesters.forEach(s => {
+                    const opt = document.createElement('option');
+                    opt.value = s.semester_id;
+                    opt.textContent = `${s.semester_id} 學期`;
+                    opt.style.background = '#0f172a';
+                    opt.style.color = '#fff';
+                    if (s.semester_id === activeId) opt.selected = true;
+                    headerSemesterSelect.appendChild(opt);
+                });
+            }
+
+            // Update Active Badge
+            const activeSemesterBadge = document.getElementById('activeSemesterBadge');
+            if (activeSemesterBadge) {
+                activeSemesterBadge.textContent = `${activeId} 學期`;
+            }
+
+            // Render Table Body
+            const tbody = document.getElementById('semestersTableBody');
+            if (tbody) {
+                if (semesters.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color: var(--text-muted);">無學期資料檔</td></tr>';
+                } else {
+                    tbody.innerHTML = '';
+                    semesters.forEach(s => {
+                        const isCurrent = s.semester_id === activeId;
+                        const tr = document.createElement('tr');
+
+                        const tdId = document.createElement('td');
+                        tdId.style.fontWeight = 'bold';
+                        tdId.style.color = isCurrent ? '#c084fc' : '#fff';
+                        tdId.textContent = `${s.semester_id} ${isCurrent ? ' (目前啟用)' : ''}`;
+                        tr.appendChild(tdId);
+
+                        const tdSchool = document.createElement('td');
+                        tdSchool.textContent = s.school_name || '土城高中';
+                        tr.appendChild(tdSchool);
+
+                        const tdTime = document.createElement('td');
+                        tdTime.style.fontSize = '0.8rem';
+                        tdTime.style.color = 'var(--text-muted)';
+                        tdTime.textContent = s.updated_at || '未紀錄';
+                        tr.appendChild(tdTime);
+
+                        const tdSlots = document.createElement('td');
+                        tdSlots.textContent = s.slots_count ? `${s.slots_count} 節` : '0 節 (未排課)';
+                        tr.appendChild(tdSlots);
+
+                        const tdSize = document.createElement('td');
+                        tdSize.style.fontSize = '0.8rem';
+                        tdSize.textContent = `${(s.file_size / 1024).toFixed(1)} KB`;
+                        tr.appendChild(tdSize);
+
+                        const tdActions = document.createElement('td');
+                        if (isCurrent) {
+                            tdActions.innerHTML = `
+                                <span style="color:#10b981; font-weight:bold; font-size:0.8rem; margin-right:8px;"><i class="fa-solid fa-circle-check"></i> 使用中</span>
+                                <a href="/api/semesters/export-single/${encodeURIComponent(s.semester_id)}" download class="solver-action-btn primary-btn" style="padding: 2px 8px; font-size: 0.75rem; background: #0284c7; text-decoration: none;">匯出單檔</a>
+                            `;
+                        } else {
+                            tdActions.innerHTML = `
+                                <button onclick="switchSemester('${s.semester_id}')" class="solver-action-btn primary-btn" style="padding: 2px 8px; font-size: 0.75rem; background: #a855f7; margin-right: 4px;">切換啟用</button>
+                                <a href="/api/semesters/export-single/${encodeURIComponent(s.semester_id)}" download class="solver-action-btn primary-btn" style="padding: 2px 8px; font-size: 0.75rem; background: #0284c7; text-decoration: none; margin-right: 4px;">匯出單檔</a>
+                                <button onclick="deleteSemester('${s.semester_id}')" class="solver-action-btn secondary-btn" style="padding: 2px 8px; font-size: 0.75rem; color:#f87171;">刪除</button>
+                            `;
+                        }
+                        tr.appendChild(tdActions);
+
+                        tbody.appendChild(tr);
+                    });
+                }
+            }
+        }
+    } catch (e) {
+        console.error("Load semesters list failed:", e);
+    }
+}
+
+async function switchSemester(semesterId) {
+    if (!confirm(`確定要切換至學期【${semesterId}】嗎？全校排課與規則將切換為該學期的存檔狀態。`)) return;
+    try {
+        const resp = await fetch('/api/semesters/switch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ semester_id: semesterId })
+        });
+        const data = await resp.json();
+        if (data.status === 'success') {
+            showToast(data.message, 'success');
+            await fetchMetadata();
+            await loadSemestersList();
+            if (window.location.hash) {
+                handleHashChange();
+            } else {
+                switchQuickSelectTab('class');
+            }
+        } else {
+            showToast(data.message || '切換學期失敗', 'error');
+        }
+    } catch (e) {
+        showToast('切換學期請求失敗', 'error');
+    }
+}
+
+async function createNewSemester() {
+    const input = document.getElementById('newSemesterIdInput');
+    if (!input) return;
+    const semId = input.value.trim();
+    if (!semId) {
+        showToast('請輸入新學期名稱 (例如 114-2)', 'warning');
+        return;
+    }
+    if (!confirm(`確定要開辦新學期【${semId}】並繼承目前全校配課規則嗎？`)) return;
+
+    try {
+        const resp = await fetch('/api/semesters/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ semester_id: semId, inherit: true })
+        });
+        const data = await resp.json();
+        if (data.status === 'success') {
+            showToast(data.message, 'success');
+            input.value = '';
+            await fetchMetadata();
+            await loadSemestersList();
+        } else {
+            showToast(data.message || '開辦新學期失敗', 'error');
+        }
+    } catch (e) {
+        showToast('開辦新學期請求失敗', 'error');
+    }
+}
+
+async function deleteSemester(semesterId) {
+    if (!confirm(`確定要刪除學期【${semesterId}】的單一 JSON 存檔嗎？此動作無法復原！`)) return;
+    try {
+        const resp = await fetch('/api/semesters/delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ semester_id: semesterId })
+        });
+        const data = await resp.json();
+        if (data.status === 'success') {
+            showToast(data.message, 'success');
+            await loadSemestersList();
+        } else {
+            showToast(data.message || '刪除失敗', 'error');
+        }
+    } catch (e) {
+        showToast('刪除請求失敗', 'error');
+    }
+}
+
+// Bind Semester Listeners
+document.addEventListener('DOMContentLoaded', () => {
+    loadSemestersList();
+
+    const headerSemesterSelect = document.getElementById('headerSemesterSelect');
+    if (headerSemesterSelect) {
+        headerSemesterSelect.addEventListener('change', (e) => {
+            const selectedId = e.target.value;
+            if (selectedId) {
+                switchSemester(selectedId);
+            }
+        });
+    }
+
+    const createNewSemesterBtn = document.getElementById('createNewSemesterBtn');
+    if (createNewSemesterBtn) {
+        createNewSemesterBtn.addEventListener('click', createNewSemester);
+    }
+
+    const exportCurrentSemesterBtn = document.getElementById('exportCurrentSemesterBtn');
+    if (exportCurrentSemesterBtn) {
+        exportCurrentSemesterBtn.addEventListener('click', () => {
+            const activeSemesterBadge = document.getElementById('activeSemesterBadge');
+            let semId = '114-1';
+            if (activeSemesterBadge && activeSemesterBadge.textContent) {
+                semId = activeSemesterBadge.textContent.replace(' 學期', '').trim();
+            }
+            window.location.href = `/api/semesters/export-single/${encodeURIComponent(semId)}`;
+        });
+    }
+
+    const importSemesterFileInput = document.getElementById('importSemesterFileInput');
+    if (importSemesterFileInput) {
+        importSemesterFileInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const formData = new FormData();
+            formData.append('file', file);
+            try {
+                const resp = await fetch('/api/semesters/import-single', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await resp.json();
+                if (data.status === 'success') {
+                    showToast(data.message, 'success');
+                    await fetchMetadata();
+                    await loadSemestersList();
+                } else {
+                    showToast(data.message || '匯入失敗', 'error');
+                }
+            } catch (err) {
+                showToast('匯入學期 JSON 失敗', 'error');
+            }
+            e.target.value = '';
+        });
+    }
+});
+
+// --- SYSTEM INFO & SCHOOL BASIC DATA LOGIC ---
+async function loadSystemInfo() {
+    try {
+        const resp = await fetch('/api/system-info');
+        const data = await resp.json();
+        if (data.status === 'success') {
+            const schoolNameInput = document.getElementById('schoolNameInput');
+            const schoolSubtitleInput = document.getElementById('schoolSubtitleInput');
+            const schoolYearInput = document.getElementById('schoolYearInput');
+            const schoolTermInput = document.getElementById('schoolTermInput');
+            const dbfSearchDirInput = document.getElementById('dbfSearchDirInput');
+
+            if (schoolNameInput) schoolNameInput.value = data.school_name || '';
+            if (schoolSubtitleInput) schoolSubtitleInput.value = data.school_subtitle || '';
+            if (schoolYearInput) schoolYearInput.value = data.year || '114';
+            if (schoolTermInput) schoolTermInput.value = data.term || '1';
+            if (dbfSearchDirInput) dbfSearchDirInput.value = data.dbf_search_dir || '';
+
+            updatePageHeaderTitles(data.school_name, data.school_subtitle, data.year, data.term);
+
+            const tbody = document.getElementById('periodTimesTableBody');
+            if (tbody) {
+                tbody.innerHTML = '';
+                const pTimes = data.period_times || {};
+                for (let p = 1; p <= 8; p++) {
+                    const pKey = String(p);
+                    const info = pTimes[pKey] || { name: `第${p}節`, time: "" };
+                    const tr = document.createElement('tr');
+
+                    tr.innerHTML = `
+                        <td style="font-weight:bold; color:#818cf8;">第 ${p} 節</td>
+                        <td>
+                            <input type="text" class="period-name-input" data-period="${p}" value="${info.name || `第${p}節`}" style="padding: 4px 8px; border-radius: 4px; background: rgba(15, 23, 42, 0.8); color: #fff; border: 1px solid var(--border-color); width: 100%;">
+                        </td>
+                        <td>
+                            <input type="text" class="period-time-input" data-period="${p}" value="${info.time || ''}" placeholder="例如 08:10-08:55" style="padding: 4px 8px; border-radius: 4px; background: rgba(15, 23, 42, 0.8); color: #fff; border: 1px solid var(--border-color); width: 100%;">
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                }
+            }
+        }
+    } catch (e) {
+        console.error("Load system info failed:", e);
+    }
+}
+
+function updatePageHeaderTitles(schoolName, schoolSubtitle, year, term) {
+    if (!schoolName) return;
+    const termText = term === '2' ? '第二學期' : '第一學期';
+    const appHeaderTitle = document.getElementById('appHeaderTitle');
+    const appHeaderSubtext = document.getElementById('appHeaderSubtext');
+    const printSchoolTitle = document.getElementById('printSchoolTitle');
+
+    if (appHeaderTitle) {
+        appHeaderTitle.textContent = schoolName;
+    }
+    if (appHeaderSubtext && schoolSubtitle) {
+        appHeaderSubtext.textContent = schoolSubtitle;
+    }
+    if (printSchoolTitle) {
+        printSchoolTitle.textContent = `${schoolName} ${year || '114'} 學年度${termText} 正式課表`;
+    }
+    document.title = schoolName;
+}
+
+
+async function saveSystemInfo() {
+    const schoolNameInput = document.getElementById('schoolNameInput');
+    const schoolSubtitleInput = document.getElementById('schoolSubtitleInput');
+    const schoolYearInput = document.getElementById('schoolYearInput');
+    const schoolTermInput = document.getElementById('schoolTermInput');
+    const dbfSearchDirInput = document.getElementById('dbfSearchDirInput');
+
+    const nameInputs = document.querySelectorAll('.period-name-input');
+    const timeInputs = document.querySelectorAll('.period-time-input');
+
+    const periodTimes = {};
+    for (let p = 1; p <= 8; p++) {
+        const pKey = String(p);
+        let pName = `第${p}節`;
+        let pTime = '';
+        nameInputs.forEach(inp => { if (inp.dataset.period === pKey) pName = inp.value.trim(); });
+        timeInputs.forEach(inp => { if (inp.dataset.period === pKey) pTime = inp.value.trim(); });
+        periodTimes[pKey] = { name: pName, time: pTime };
+    }
+
+    const payload = {
+        school_name: schoolNameInput ? schoolNameInput.value.trim() : '',
+        school_subtitle: schoolSubtitleInput ? schoolSubtitleInput.value.trim() : '',
+        year: schoolYearInput ? schoolYearInput.value.trim() : '114',
+        term: schoolTermInput ? schoolTermInput.value : '1',
+        dbf_search_dir: dbfSearchDirInput ? dbfSearchDirInput.value.trim() : '',
+        period_times: periodTimes
+    };
+
+    try {
+        const resp = await fetch('/api/save-system-info', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const data = await resp.json();
+        if (data.status === 'success') {
+            showToast(data.message, 'success');
+            updatePageHeaderTitles(payload.school_name, payload.school_subtitle, payload.year, payload.term);
+            await fetchMetadata();
+        } else {
+            showToast(data.message || '儲存失敗', 'error');
+        }
+    } catch (e) {
+        showToast('儲存系統基本資料請求失敗', 'error');
+    }
+}
+
+// Bind System Info Listeners
+document.addEventListener('DOMContentLoaded', () => {
+    loadSystemInfo();
+
+    const saveSystemInfoBtn = document.getElementById('saveSystemInfoBtn');
+    if (saveSystemInfoBtn) {
+        saveSystemInfoBtn.addEventListener('click', saveSystemInfo);
+    }
+});
+
+// --- 108 CURRICULUM MOE COURSE CODE LOGIC (WINST-23) ---
+let currentMoeSubjectsData = [];
+
+async function loadMoeCourseCodes() {
+    try {
+        const resp = await fetch('/api/moe-course-codes/get');
+        const data = await resp.json();
+        if (data.status === 'success') {
+            currentMoeSubjectsData = data.moe_subjects || [];
+
+            const moeTotalCount = document.getElementById('moeTotalCount');
+            const moeMappedCount = document.getElementById('moeMappedCount');
+            const moeUnmappedCount = document.getElementById('moeUnmappedCount');
+            const moeComplianceRate = document.getElementById('moeComplianceRate');
+
+            if (moeTotalCount) moeTotalCount.textContent = `${data.total_count || 0} 門`;
+            if (moeMappedCount) moeMappedCount.textContent = `${data.mapped_count || 0} 門`;
+            if (moeUnmappedCount) moeUnmappedCount.textContent = `${data.unmapped_count || 0} 門`;
+            if (moeComplianceRate) moeComplianceRate.textContent = `${data.compliance_rate || 0} %`;
+
+            const tbody = document.getElementById('moeCodesTableBody');
+            if (tbody) {
+                tbody.innerHTML = '';
+                if (currentMoeSubjectsData.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--text-muted);">暫無開課科目資料</td></tr>';
+                } else {
+                    currentMoeSubjectsData.forEach(s => {
+                        const tr = document.createElement('tr');
+                        const statusBadge = s.is_mapped
+                            ? '<span style="color:#34d399; font-weight:bold;"><i class="fa-solid fa-circle-check"></i> 已對接</span>'
+                            : '<span style="color:#fbbf24; font-weight:bold;"><i class="fa-solid fa-clock"></i> 建議確認</span>';
+
+                        tr.innerHTML = `
+                            <td style="font-weight:bold; color:#818cf8;">${s.subject_code}</td>
+                            <td style="font-weight:bold; color:#fff;">${s.subject_name}</td>
+                            <td>${s.hours} 節</td>
+                            <td><span style="background:rgba(99,102,241,0.2); color:#818cf8; padding:2px 8px; border-radius:4px; font-size:0.75rem;">${s.category}</span></td>
+                            <td>
+                                <input type="text" class="moe-code-input" data-subjcode="${s.subject_code}" value="${s.moe_code || ''}" placeholder="例如: 114-10001-001" style="padding:4px 8px; border-radius:4px; background:rgba(15,23,42,0.8); color:#fff; border:1px solid var(--border-color); width:100%; font-family:monospace;">
+                            </td>
+                            <td>${statusBadge}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
+            }
+        }
+    } catch (e) {
+        console.error("Load MOE course codes failed:", e);
+    }
+}
+
+function autoGenMoeCodes() {
+    const inputs = document.querySelectorAll('.moe-code-input');
+    inputs.forEach(inp => {
+        const code = inp.dataset.subjcode;
+        const subj = currentMoeSubjectsData.find(x => x.subject_code === code);
+        if (subj) {
+            inp.value = subj.moe_code;
+        }
+    });
+    showToast('已完成 108 課綱國教署標準代碼智慧自動帶入！', 'success');
+}
+
+async function saveMoeCourseCodes() {
+    const inputs = document.querySelectorAll('.moe-code-input');
+    const moeMap = {};
+    inputs.forEach(inp => {
+        const code = inp.dataset.subjcode;
+        const val = inp.value.trim();
+        if (code && val) {
+            moeMap[code] = val;
+        }
+    });
+
+    try {
+        const resp = await fetch('/api/moe-course-codes/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ moe_course_codes: moeMap })
+        });
+        const data = await resp.json();
+        if (data.status === 'success') {
+            showToast(data.message, 'success');
+            await loadMoeCourseCodes();
+        } else {
+            showToast(data.message || '儲存失敗', 'error');
+        }
+    } catch (e) {
+        showToast('儲存國教署代碼對照請求失敗', 'error');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const autoGenMoeCodesBtn = document.getElementById('autoGenMoeCodesBtn');
+    if (autoGenMoeCodesBtn) autoGenMoeCodesBtn.addEventListener('click', autoGenMoeCodes);
+
+    const saveMoeCodesBtn = document.getElementById('saveMoeCodesBtn');
+    if (saveMoeCodesBtn) saveMoeCodesBtn.addEventListener('click', saveMoeCourseCodes);
+});
+
+// --- PRE-SCHEDULING CHECKLIST LOGIC ---
+function updateChecklistProgress() {
+    const items = document.querySelectorAll('.checklist-item');
+    let total = items.length;
+    let checked = 0;
+    
+    items.forEach(item => {
+        const id = item.dataset.id;
+        if (id) {
+            const savedState = localStorage.getItem(`schedule_chk_${id}`);
+            if (savedState === 'true') {
+                item.checked = true;
+            }
+        }
+        if (item.checked) checked++;
+    });
+
+    const pct = total > 0 ? Math.round((checked / total) * 100) : 0;
+    const txt = document.getElementById('checklistProgressText');
+    const bar = document.getElementById('checklistProgressBar');
+
+    if (txt) txt.textContent = `${checked} / ${total} 完成 (${pct}%)`;
+    if (bar) bar.style.width = `${pct}%`;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    updateChecklistProgress();
+
+    document.body.addEventListener('change', (e) => {
+        if (e.target && e.target.classList.contains('checklist-item')) {
+            const id = e.target.dataset.id;
+            if (id) {
+                localStorage.setItem(`schedule_chk_${id}`, e.target.checked);
+            }
+            updateChecklistProgress();
+        }
+    });
+});
+
+// --- TEACHER & SUBJECT CRUD MANAGEMENT LOGIC ---
+
+async function loadTeachersMaintainList() {
+    try {
+        const resp = await fetch('/api/teachers/list');
+        const data = await resp.json();
+        if (data.status === 'success') {
+            const tbody = document.getElementById('teachersMaintainTableBody');
+            if (tbody) {
+                tbody.innerHTML = '';
+                const teachers = data.teachers || [];
+                if (teachers.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--text-muted);">暫無教師資料</td></tr>';
+                } else {
+                    teachers.forEach(t => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td style="font-weight:bold; color:#818cf8;">${t.code}</td>
+                            <td style="font-weight:bold; color:#fff;">${t.name}</td>
+                            <td><span style="background:rgba(56,189,248,0.15); color:#38bdf8; padding:2px 8px; border-radius:4px; font-size:0.75rem;">${t.role || '專任教師'}</span></td>
+                            <td>
+                                <button class="delete-teacher-btn solver-action-btn secondary-btn" data-code="${t.code}" style="padding:2px 8px; font-size:0.75rem; color:#f87171; border-color:rgba(248,113,113,0.3);">
+                                    <i class="fa-solid fa-trash-can"></i> 刪除
+                                </button>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
+            }
+        }
+    } catch (e) {
+        console.error("Load teachers list failed:", e);
+    }
+}
+
+async function addTeacherAction() {
+    const codeInp = document.getElementById('newTeacherCodeInput');
+    const nameInp = document.getElementById('newTeacherNameInput');
+    const roleSel = document.getElementById('newTeacherRoleSelect');
+
+    const code = codeInp ? codeInp.value.trim() : '';
+    const name = nameInp ? nameInp.value.trim() : '';
+    const role = roleSel ? roleSel.value : '專任教師';
+
+    if (!code || !name) {
+        showToast('請輸入完整的教師代碼與姓名！', 'warning');
+        return;
+    }
+
+    try {
+        const resp = await fetch('/api/teachers/add', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code, name, role })
+        });
+        const data = await resp.json();
+        if (data.status === 'success') {
+            showToast(data.message, 'success');
+            if (codeInp) codeInp.value = '';
+            if (nameInp) nameInp.value = '';
+            await loadTeachersMaintainList();
+            await fetchMetadata();
+        } else {
+            showToast(data.message || '新增失敗', 'error');
+        }
+    } catch (e) {
+        showToast('新增教師請求失敗', 'error');
+    }
+}
+
+async function deleteTeacherAction(code) {
+    if (!confirm(`確定要刪除代碼為【${code}】的教師嗎？`)) return;
+
+    try {
+        const resp = await fetch('/api/teachers/delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code })
+        });
+        const data = await resp.json();
+        if (data.status === 'success') {
+            showToast(data.message, 'success');
+            await loadTeachersMaintainList();
+            await fetchMetadata();
+        } else {
+            showToast(data.message || '刪除失敗', 'error');
+        }
+    } catch (e) {
+        showToast('刪除教師請求失敗', 'error');
+    }
+}
+
+async function loadSubjectsMaintainList() {
+    try {
+        const resp = await fetch('/api/subjects/list');
+        const data = await resp.json();
+        if (data.status === 'success') {
+            const tbody = document.getElementById('masterSubjectTableBody');
+            if (tbody) {
+                tbody.innerHTML = '';
+                const subjects = data.subjects || [];
+                if (subjects.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">暫無科目資料</td></tr>';
+                } else {
+                    subjects.forEach(s => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td style="font-weight:bold; color:#818cf8;">${s.code}</td>
+                            <td style="font-weight:bold; color:#fff;">${s.name}</td>
+                            <td><span style="background:rgba(99,102,241,0.2); color:#818cf8; padding:2px 8px; border-radius:4px; font-size:0.75rem;">${s.category || '部定必修'}</span></td>
+                            <td>2 節</td>
+                            <td>
+                                <button class="delete-subj-btn solver-action-btn secondary-btn" data-code="${s.code}" style="padding:2px 8px; font-size:0.75rem; color:#f87171; border-color:rgba(248,113,113,0.3);">
+                                    <i class="fa-solid fa-trash-can"></i> 刪除
+                                </button>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
+            }
+        }
+    } catch (e) {
+        console.error("Load subjects list failed:", e);
+    }
+}
+
+async function addSubjectAction() {
+    const codeInp = document.getElementById('catNewCodeInput');
+    const nameInp = document.getElementById('catNewNameInput');
+    const catInp = document.getElementById('catNewCategoryInput');
+
+    const code = codeInp ? codeInp.value.trim() : '';
+    const name = nameInp ? nameInp.value.trim() : '';
+    const category = catInp ? catInp.value.trim() : '部定必修';
+
+    if (!code || !name) {
+        showToast('請輸入學科代碼與名稱！', 'warning');
+        return;
+    }
+
+    try {
+        const resp = await fetch('/api/subjects/add', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code, name, category })
+        });
+        const data = await resp.json();
+        if (data.status === 'success') {
+            showToast(data.message, 'success');
+            if (codeInp) codeInp.value = '';
+            if (nameInp) nameInp.value = '';
+            await loadSubjectsMaintainList();
+        } else {
+            showToast(data.message || '新增科目失敗', 'error');
+        }
+    } catch (e) {
+        showToast('新增科目請求失敗', 'error');
+    }
+}
+
+async function deleteSubjectAction(code) {
+    if (!confirm(`確定要刪除代碼為【${code}】的科目嗎？`)) return;
+
+    try {
+        const resp = await fetch('/api/subjects/delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code })
+        });
+        const data = await resp.json();
+        if (data.status === 'success') {
+            showToast(data.message, 'success');
+            await loadSubjectsMaintainList();
+        } else {
+            showToast(data.message || '刪除科目失敗', 'error');
+        }
+    } catch (e) {
+        showToast('刪除科目請求失敗', 'error');
+    }
+}
+
+// --- CLASS CRUD MANAGEMENT LOGIC ---
+
+async function loadClassesMaintainList() {
+    try {
+        const resp = await fetch('/api/classes/list');
+        const data = await resp.json();
+        if (data.status === 'success') {
+            const tbody = document.getElementById('classesMaintainTableBody');
+            if (tbody) {
+                tbody.innerHTML = '';
+                const classes = data.classes || [];
+                if (classes.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">暫無班級資料</td></tr>';
+                } else {
+                    classes.forEach(c => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td style="font-weight:bold; color:#818cf8;">${c.code}</td>
+                            <td style="font-weight:bold; color:#fff;">${c.name}</td>
+                            <td>${c.tutor ? '<span style="color:#38bdf8;">' + c.tutor + ' 導師</span>' : '<span style="color:var(--text-muted);">無導師</span>'}</td>
+                            <td><span style="background:rgba(99,102,241,0.2); color:#818cf8; padding:2px 8px; border-radius:4px; font-size:0.75rem;">${c.group || '高中部'}</span></td>
+                            <td>
+                                <button class="delete-class-btn solver-action-btn secondary-btn" data-code="${c.code}" style="padding:2px 8px; font-size:0.75rem; color:#f87171; border-color:rgba(248,113,113,0.3);">
+                                    <i class="fa-solid fa-trash-can"></i> 刪除
+                                </button>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
+            }
+        }
+    } catch (e) {
+        console.error("Load classes list failed:", e);
+    }
+}
+
+async function addClassAction() {
+    const codeInp = document.getElementById('newClassCodeInput');
+    const nameInp = document.getElementById('newClassNameInput');
+    const tutorInp = document.getElementById('newClassTutorInput');
+    const grpSel = document.getElementById('newClassGroupSelect');
+
+    const code = codeInp ? codeInp.value.trim() : '';
+    const name = nameInp ? nameInp.value.trim() : '';
+    const tutor = tutorInp ? tutorInp.value.trim() : '';
+    const group = grpSel ? grpSel.value : '高中部';
+
+    if (!code || !name) {
+        showToast('請輸入完整的班級代碼與名稱！', 'warning');
+        return;
+    }
+
+    try {
+        const resp = await fetch('/api/classes/add', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code, name, tutor, group })
+        });
+        const data = await resp.json();
+        if (data.status === 'success') {
+            showToast(data.message, 'success');
+            if (codeInp) codeInp.value = '';
+            if (nameInp) nameInp.value = '';
+            if (tutorInp) tutorInp.value = '';
+            await loadClassesMaintainList();
+            await fetchMetadata();
+        } else {
+            showToast(data.message || '新增失敗', 'error');
+        }
+    } catch (e) {
+        showToast('新增班級請求失敗', 'error');
+    }
+}
+
+async function deleteClassAction(code) {
+    if (!confirm(`確定要刪除代碼為【${code}】的班級嗎？`)) return;
+
+    try {
+        const resp = await fetch('/api/classes/delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code })
+        });
+        const data = await resp.json();
+        if (data.status === 'success') {
+            showToast(data.message, 'success');
+            await loadClassesMaintainList();
+            await fetchMetadata();
+        } else {
+            showToast(data.message || '刪除失敗', 'error');
+        }
+    } catch (e) {
+        showToast('刪除班級請求失敗', 'error');
+    }
+}
+
+// Bind CRUD Listeners
+document.addEventListener('DOMContentLoaded', () => {
+    const addTeacherBtn = document.getElementById('addTeacherBtn');
+    if (addTeacherBtn) addTeacherBtn.addEventListener('click', addTeacherAction);
+
+    const saveNewMasterSubBtn = document.getElementById('saveNewMasterSubBtn');
+    if (saveNewMasterSubBtn) saveNewMasterSubBtn.addEventListener('click', addSubjectAction);
+
+    const addClassBtn = document.getElementById('addClassBtn');
+    if (addClassBtn) addClassBtn.addEventListener('click', addClassAction);
+
+    document.body.addEventListener('click', (e) => {
+        const tBtn = e.target.closest('.delete-teacher-btn');
+        if (tBtn) {
+            deleteTeacherAction(tBtn.dataset.code);
+            return;
+        }
+
+        const sBtn = e.target.closest('.delete-subj-btn');
+        if (sBtn) {
+            deleteSubjectAction(sBtn.dataset.code);
+            return;
+        }
+
+        const cBtn = e.target.closest('.delete-class-btn');
+        if (cBtn) {
+            deleteClassAction(cBtn.dataset.code);
+            return;
+        }
+    });
+});
+
+
+
+
+
+
 
