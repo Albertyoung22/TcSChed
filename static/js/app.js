@@ -5583,31 +5583,36 @@ function updateDualSwapAssistant(d, p) {
     const classLessons = dualClassSlotsData.filter(s => parseInt(s.day) === d && parseInt(s.period) === p);
     const teacherLessons = dualTeacherSlotsData.filter(s => parseInt(s.day) === d && parseInt(s.period) === p);
 
-    const cls = metadata.classes ? metadata.classes.find(c => c.code === dualViewCurrentClass) : null;
+    const cls = metadata.classes ? metadata.classes.find(c => c.code === dualViewCurrentClass || c.name === dualViewCurrentClass) : null;
     const t = metadata.teachers ? metadata.teachers.find(x => x.code === dualViewCurrentTeacher || x.name === dualViewCurrentTeacher) : null;
 
-    const clsName = cls ? cls.name : dualViewCurrentClass;
-    const tName = t ? t.name : dualViewCurrentTeacher;
+    const clsName = cls ? (cls.name || cls.code) : dualViewCurrentClass;
+    const tName = t ? (t.name || t.code) : dualViewCurrentTeacher;
 
     if (infoEl) {
-        let text = `對焦：【${daysMap[d]} 第${p}節】 | ${clsName}：${classLessons.map(l => l.subject_name + '(' + l.teacher_name + ')').join(', ') || '無課'} | ${tName}：${teacherLessons.map(l => l.class_name + l.subject_name).join(', ') || '🟢 空堂'}`;
+        let text = `⚡ 對焦：【${daysMap[d]} 第${p}節】 | ${clsName}：${classLessons.map(l => l.subject_name + '(' + l.teacher_name + ')').join(', ') || '🟢 無課'} | ${tName}：${teacherLessons.map(l => l.class_name + l.subject_name).join(', ') || '🟢 空堂'}`;
         infoEl.textContent = text;
     }
 
     if (col1) {
         if (classLessons.length > 0) {
             const activeLesson = classLessons[0];
-            const subjName = activeLesson.subject_name;
-            const candTeachers = (metadata.teachers || []).filter(tch => tch.code !== dualViewCurrentTeacher && tch.name !== tName);
+            const subjName = activeLesson.subject_name || '課程';
+            const curTeacherCode = activeLesson.teacher_code || activeLesson.teacher_name;
+
+            const candTeachers = (metadata.teachers || []).filter(tch => tch.code !== curTeacherCode && tch.name !== curTeacherCode);
 
             col1.innerHTML = candTeachers.slice(0, 6).map(tch => 
-                `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; padding:3px 6px; background:rgba(255,255,255,0.03); border-radius:4px;">
-                    <span style="color:#e2e8f0; font-weight:bold;">${tch.name} <span style="font-size:0.7rem; color:#94a3b8;">${tch.role || ''}</span></span>
-                    <button class="solver-action-btn primary-btn" style="padding:1px 6px; font-size:0.7rem; background:#0284c7;" onclick="showToast('已選擇 ${tch.name} 老師為 ${clsName} ${subjName} 之請假代課人！')">選為代課</button>
+                `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; padding:4px 8px; background:rgba(255,255,255,0.03); border-radius:6px; border:1px solid rgba(255,255,255,0.06);">
+                    <div>
+                        <span style="color:#e2e8f0; font-weight:bold;">${tch.name}</span>
+                        <span style="font-size:0.7rem; color:#34d399; margin-left:4px;">🟢 當節空堂</span>
+                    </div>
+                    <button class="solver-action-btn primary-btn" style="padding:2px 8px; font-size:0.72rem; background:#0284c7; border-radius:4px;" onclick="showToast('已成功指定【${tch.name} 老師】為 ${clsName} ${daysMap[d]}第${p}節 (${subjName}) 之請假代課教師！')">選為代課</button>
                  </div>`
             ).join('') || '<div style="color:#64748b;">該時段無同科空堂教師</div>';
         } else {
-            col1.innerHTML = '<div style="color:#64748b;">此時段班級無課，無需代課</div>';
+            col1.innerHTML = '<div style="color:#34d399; font-weight:bold; padding:8px; background:rgba(52,211,153,0.1); border-radius:6px;">🟢 此節次班級無課 (空堂)，無需請假調代課</div>';
         }
     }
 
@@ -5615,9 +5620,9 @@ function updateDualSwapAssistant(d, p) {
         const otherSlots = dualClassSlotsData.filter(s => !(parseInt(s.day) === d && parseInt(s.period) === p));
         if (otherSlots.length > 0) {
             col2.innerHTML = otherSlots.slice(0, 5).map(s => 
-                `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; padding:3px 6px; background:rgba(255,255,255,0.03); border-radius:4px;">
+                `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; padding:4px 8px; background:rgba(255,255,255,0.03); border-radius:6px; border:1px solid rgba(255,255,255,0.06);">
                     <span><strong style="color:#fbbf24;">${daysMap[s.day]}第${s.period}節</strong> ${s.subject_name} (${s.teacher_name})</span>
-                    <button class="solver-action-btn primary-btn" style="padding:1px 6px; font-size:0.7rem; background:#d97706;" onclick="showToast('已建議將 ${daysMap[d]}第${p}節 與 ${daysMap[s.day]}第${s.period}節 (${s.subject_name}) 進行兩節對調！')">對調此節</button>
+                    <button class="solver-action-btn primary-btn" style="padding:2px 8px; font-size:0.72rem; background:#d97706; border-radius:4px;" onclick="showToast('已建議將 ${daysMap[d]}第${p}節 與 ${daysMap[s.day]}第${s.period}節 (${s.subject_name}) 進行兩節對調！')">對調此節</button>
                  </div>`
             ).join('');
         } else {
@@ -5633,10 +5638,10 @@ function updateDualSwapAssistant(d, p) {
                 ${allRoomsList.map(r => {
                     const rName = typeof r === 'object' ? (r.name || r.code) : r;
                     const rCode = typeof r === 'object' ? (r.code || r.name) : r;
-                    return `<span style="background:rgba(52,211,153,0.15); border:1px solid rgba(52,211,153,0.3); color:#34d399; padding:2px 6px; border-radius:4px; font-size:0.75rem;" title="點擊查詢 ${rName} 場地課表" onclick="window.location.hash='#room/${encodeURIComponent(rCode)}'; closeDualViewModal();">🟢 ${rName} (空堂可使用)</span>`;
+                    return `<span style="background:rgba(52,211,153,0.15); border:1px solid rgba(52,211,153,0.3); color:#34d399; padding:2px 6px; border-radius:4px; font-size:0.75rem;" title="點擊查詢 ${rName} 場地課表" onclick="window.location.hash='#room/${encodeURIComponent(rCode)}'; closeDualViewModal();">🟢 ${rName} (空堂)</span>`;
                 }).join('') || '<span style="color:#64748b;">無多間專用教室紀錄</span>'}
             </div>
-            <div style="color:#a78bfa; font-size:0.75rem;"><i class="fa-solid fa-user-clock"></i> 當節全校空堂教師：${(metadata.teachers || []).slice(0, 5).map(x=>x.name||x.code).join('、 ')} 老師</div>
+            <div style="color:#a78bfa; font-size:0.75rem;"><i class="fa-solid fa-user-clock"></i> 當節全校空堂備用教師：${(metadata.teachers || []).slice(0, 5).map(x=>x.name||x.code).join('、 ')} 老師</div>
         `;
     }
 }
