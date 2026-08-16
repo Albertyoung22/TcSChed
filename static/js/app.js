@@ -529,17 +529,17 @@ function renderScheduleGrid(type, code, slots) {
                     let roomLink = '';
 
                     if (type === 'class') {
-                        // Class view: link to teacher and classroom
-                        targetLink = lesson.teacher_name ? `<a href="#teacher/${encodeURIComponent(lesson.teacher_code || lesson.teacher_name)}" class="meta-link"><i class="fa-solid fa-chalkboard-user"></i> ${lesson.teacher_name}</a>` : '';
+                        // Class view: link to teacher and classroom with Dual-View Modal trigger
+                        targetLink = lesson.teacher_name ? `<a href="#teacher/${encodeURIComponent(lesson.teacher_code || lesson.teacher_name)}" onclick="openDualViewModal('${code}', '${lesson.teacher_code || lesson.teacher_name}'); return false;" class="meta-link" title="開啟雙視窗課表對照與調課助手"><i class="fa-solid fa-chalkboard-user"></i> ${lesson.teacher_name} <i class="fa-solid fa-columns" style="font-size:0.7rem; opacity:0.7;"></i></a>` : '';
                         roomLink = lesson.room_name ? `<a href="#room/${encodeURIComponent(lesson.room_code || lesson.room_name)}" class="room-lbl meta-link"><i class="fa-solid fa-location-dot"></i> ${lesson.room_name}</a>` : '';
                     } else if (type === 'teacher') {
-                        // Teacher view: link to class and classroom
-                        targetLink = lesson.class_name ? `<a href="#class/${encodeURIComponent(lesson.class_code || lesson.class_name)}" class="meta-link"><i class="fa-solid fa-users"></i> ${lesson.class_name}</a>` : '';
+                        // Teacher view: link to class and classroom with Dual-View Modal trigger
+                        targetLink = lesson.class_name ? `<a href="#class/${encodeURIComponent(lesson.class_code || lesson.class_name)}" onclick="openDualViewModal('${lesson.class_code || lesson.class_name}', '${code}'); return false;" class="meta-link" title="開啟雙視窗課表對照與調課助手"><i class="fa-solid fa-users"></i> ${lesson.class_name} <i class="fa-solid fa-columns" style="font-size:0.7rem; opacity:0.7;"></i></a>` : '';
                         roomLink = lesson.room_name ? `<a href="#room/${encodeURIComponent(lesson.room_code || lesson.room_name)}" class="room-lbl meta-link"><i class="fa-solid fa-location-dot"></i> ${lesson.room_name}</a>` : '';
                     } else if (type === 'room') {
                         // Room view: link to class and teacher
                         targetLink = lesson.class_name ? `<a href="#class/${encodeURIComponent(lesson.class_code || lesson.class_name)}" class="meta-link"><i class="fa-solid fa-users"></i> ${lesson.class_name}</a>` : '';
-                        roomLink = lesson.teacher_name ? `<span class="room-lbl" style="font-size:0.85rem;"><a href="#teacher/${encodeURIComponent(lesson.teacher_code || lesson.teacher_name)}" class="meta-link"><i class="fa-solid fa-chalkboard-user"></i> ${lesson.teacher_name}</a></span>` : '';
+                        roomLink = lesson.teacher_name ? `<span class="room-lbl" style="font-size:0.85rem;"><a href="#teacher/${encodeURIComponent(lesson.teacher_code || lesson.teacher_name)}" onclick="openDualViewModal('${lesson.class_code}', '${lesson.teacher_code || lesson.teacher_name}'); return false;" class="meta-link"><i class="fa-solid fa-chalkboard-user"></i> ${lesson.teacher_name}</a></span>` : '';
                     }
 
                     // Week Mode Banner
@@ -5233,6 +5233,279 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (e) {
                 showToast("連線異常，無法儲存 Groq 設定。");
             }
+        });
+    }
+});
+
+/* ==========================================================================
+   雙視窗對照模式 (Dual-View Split Modal) & 智慧調代課試算助手 (Swap Assistant)
+   ========================================================================== */
+
+let dualViewCurrentClass = '';
+let dualViewCurrentTeacher = '';
+let dualClassSlotsData = [];
+let dualTeacherSlotsData = [];
+let dualSelectedDay = null;
+let dualSelectedPeriod = null;
+
+async function openDualViewModal(classCode, teacherCode) {
+    const modal = document.getElementById('dualViewModal');
+    if (!modal) return;
+
+    modal.style.display = 'flex';
+
+    const classSelect = document.getElementById('dualViewClassSelect');
+    const teacherSelect = document.getElementById('dualViewTeacherSelect');
+
+    // Populate classSelect dropdown if empty
+    if (classSelect && metadata.classes) {
+        classSelect.innerHTML = metadata.classes.map(c => 
+            `<option value="${c.code}" ${c.code === classCode ? 'selected' : ''}>${c.name} (導師：${c.tutor || '無'})</option>`
+        ).join('');
+    }
+
+    // Populate teacherSelect dropdown if empty
+    if (teacherSelect && metadata.teachers) {
+        teacherSelect.innerHTML = metadata.teachers.map(t => 
+            `<option value="${t.code}" ${t.code === teacherCode || t.name === teacherCode ? 'selected' : ''}>${t.name} ${t.role ? '(' + t.role + ')' : ''}</option>`
+        ).join('');
+    }
+
+    dualViewCurrentClass = classCode || (metadata.classes[0] ? metadata.classes[0].code : '');
+    
+    let tMatch = metadata.teachers ? metadata.teachers.find(t => t.code === teacherCode || t.name === teacherCode) : null;
+    dualViewCurrentTeacher = tMatch ? tMatch.code : (teacherCode || (metadata.teachers[0] ? metadata.teachers[0].code : ''));
+
+    if (classSelect) classSelect.value = dualViewCurrentClass;
+    if (teacherSelect) teacherSelect.value = dualViewCurrentTeacher;
+
+    await loadDualViewData();
+}
+
+async function loadDualViewData() {
+    const classSelect = document.getElementById('dualViewClassSelect');
+    const teacherSelect = document.getElementById('dualViewTeacherSelect');
+
+    if (classSelect) dualViewCurrentClass = classSelect.value;
+    if (teacherSelect) dualViewCurrentTeacher = teacherSelect.value;
+
+    try {
+        const [clsRes, tRes] = await Promise.all([
+            fetch(`/api/schedule/class/${encodeURIComponent(dualViewCurrentClass)}`).then(r => r.json()),
+            fetch(`/api/schedule/teacher/${encodeURIComponent(dualViewCurrentTeacher)}`).then(r => r.json())
+        ]);
+
+        dualClassSlotsData = clsRes.status === 'success' ? (clsRes.slots || clsRes.data || []) : [];
+        dualTeacherSlotsData = tRes.status === 'success' ? (tRes.slots || tRes.data || []) : [];
+
+        renderDualClassGrid();
+        renderDualTeacherGrid();
+
+        if (dualSelectedDay && dualSelectedPeriod) {
+            highlightDualSlotSync(dualSelectedDay, dualSelectedPeriod);
+        } else {
+            highlightDualSlotSync(1, 1);
+        }
+    } catch (e) {
+        console.error("Error loading dual view data:", e);
+    }
+}
+
+function renderDualClassGrid() {
+    const tbody = document.getElementById('dualClassBody');
+    const titleEl = document.getElementById('dualClassTitle');
+    const tutorEl = document.getElementById('dualClassTutor');
+
+    if (!tbody) return;
+
+    const cls = metadata.classes ? metadata.classes.find(c => c.code === dualViewCurrentClass) : null;
+    if (titleEl) titleEl.innerHTML = `<span><i class="fa-solid fa-chalkboard"></i> ${cls ? cls.name : dualViewCurrentClass} 班級課表</span>`;
+    if (tutorEl) tutorEl.textContent = cls && cls.tutor ? `導師：${cls.tutor}` : '';
+
+    const grid = Array(8).fill(null).map(() => Array(5).fill(null).map(() => []));
+    dualClassSlotsData.forEach(s => {
+        const d = parseInt(s.day);
+        const p = parseInt(s.period);
+        if (d >= 1 && d <= 5 && p >= 1 && p <= 8) grid[p-1][d-1].push(s);
+    });
+
+    tbody.innerHTML = '';
+    for (let p = 1; p <= 8; p++) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td style="font-weight:bold; background:rgba(255,255,255,0.02); text-align:center;">第${p}節</td>`;
+        for (let d = 1; d <= 5; d++) {
+            const td = document.createElement('td');
+            td.style.cursor = 'pointer';
+            td.dataset.day = d;
+            td.dataset.period = p;
+            td.className = 'dual-cell-slot';
+
+            const lessons = grid[p-1][d-1];
+            if (lessons.length === 0) {
+                td.innerHTML = '<span style="color:#64748b; font-size:0.7rem;">- 空堂 -</span>';
+            } else {
+                td.innerHTML = lessons.map(l => 
+                    `<div style="font-weight:bold; color:#38bdf8;">${l.subject_name}</div>
+                     <div style="font-size:0.72rem; color:#94a3b8;">${l.teacher_name || ''} ${l.room_name ? '['+l.room_name+']' : ''}</div>`
+                ).join('<hr style="border:0; border-top:1px dashed rgba(255,255,255,0.1); margin:2px 0;">');
+            }
+
+            td.addEventListener('click', () => highlightDualSlotSync(d, p));
+            tr.appendChild(td);
+        }
+        tbody.appendChild(tr);
+    }
+}
+
+function renderDualTeacherGrid() {
+    const tbody = document.getElementById('dualTeacherBody');
+    const titleEl = document.getElementById('dualTeacherTitle');
+    const roleEl = document.getElementById('dualTeacherRole');
+
+    if (!tbody) return;
+
+    const t = metadata.teachers ? metadata.teachers.find(x => x.code === dualViewCurrentTeacher || x.name === dualViewCurrentTeacher) : null;
+    if (titleEl) titleEl.innerHTML = `<span><i class="fa-solid fa-user-graduate"></i> ${t ? t.name : dualViewCurrentTeacher} 老師課表</span>`;
+    if (roleEl) roleEl.textContent = t && t.role ? `職務：${t.role}` : '';
+
+    const grid = Array(8).fill(null).map(() => Array(5).fill(null).map(() => []));
+    dualTeacherSlotsData.forEach(s => {
+        const d = parseInt(s.day);
+        const p = parseInt(s.period);
+        if (d >= 1 && d <= 5 && p >= 1 && p <= 8) grid[p-1][d-1].push(s);
+    });
+
+    tbody.innerHTML = '';
+    for (let p = 1; p <= 8; p++) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td style="font-weight:bold; background:rgba(255,255,255,0.02); text-align:center;">第${p}節</td>`;
+        for (let d = 1; d <= 5; d++) {
+            const td = document.createElement('td');
+            td.style.cursor = 'pointer';
+            td.dataset.day = d;
+            td.dataset.period = p;
+            td.className = 'dual-cell-slot';
+
+            const lessons = grid[p-1][d-1];
+            if (lessons.length === 0) {
+                td.innerHTML = '<span style="color:#34d399; font-size:0.7rem; font-weight:bold;">🟢 空堂 (無課)</span>';
+            } else {
+                td.innerHTML = lessons.map(l => 
+                    `<div style="font-weight:bold; color:#818cf8;">${l.class_name} ${l.subject_name}</div>
+                     <div style="font-size:0.72rem; color:#94a3b8;">${l.room_name ? '['+l.room_name+']' : ''}</div>`
+                ).join('<hr style="border:0; border-top:1px dashed rgba(255,255,255,0.1); margin:2px 0;">');
+            }
+
+            td.addEventListener('click', () => highlightDualSlotSync(d, p));
+            tr.appendChild(td);
+        }
+        tbody.appendChild(tr);
+    }
+}
+
+function highlightDualSlotSync(d, p) {
+    dualSelectedDay = d;
+    dualSelectedPeriod = p;
+
+    document.querySelectorAll('#dualClassBody td, #dualTeacherBody td').forEach(td => {
+        td.style.background = '';
+        td.style.boxShadow = '';
+    });
+
+    const classCell = document.querySelector(`#dualClassBody td[data-day="${d}"][data-period="${p}"]`);
+    const teacherCell = document.querySelector(`#dualTeacherBody td[data-day="${d}"][data-period="${p}"]`);
+
+    if (classCell) {
+        classCell.style.background = 'rgba(56, 189, 248, 0.25)';
+        classCell.style.boxShadow = 'inset 0 0 0 2px #38bdf8';
+    }
+    if (teacherCell) {
+        teacherCell.style.background = 'rgba(129, 140, 248, 0.25)';
+        teacherCell.style.boxShadow = 'inset 0 0 0 2px #818cf8';
+    }
+
+    updateDualSwapAssistant(d, p);
+}
+
+function updateDualSwapAssistant(d, p) {
+    const daysMap = ['', '週一', '週二', '週三', '週四', '週五'];
+    const infoEl = document.getElementById('dualSelectedSlotInfo');
+    const col1 = document.getElementById('dualSameSubjTeachers');
+    const col2 = document.getElementById('dualClassSwapCandidates');
+    const col3 = document.getElementById('dualSchoolwideFreeInfo');
+
+    const classLessons = dualClassSlotsData.filter(s => parseInt(s.day) === d && parseInt(s.period) === p);
+    const teacherLessons = dualTeacherSlotsData.filter(s => parseInt(s.day) === d && parseInt(s.period) === p);
+
+    const cls = metadata.classes ? metadata.classes.find(c => c.code === dualViewCurrentClass) : null;
+    const t = metadata.teachers ? metadata.teachers.find(x => x.code === dualViewCurrentTeacher || x.name === dualViewCurrentTeacher) : null;
+
+    const clsName = cls ? cls.name : dualViewCurrentClass;
+    const tName = t ? t.name : dualViewCurrentTeacher;
+
+    if (infoEl) {
+        let text = `對焦：【${daysMap[d]} 第${p}節】 | ${clsName}：${classLessons.map(l => l.subject_name + '(' + l.teacher_name + ')').join(', ') || '無課'} | ${tName}：${teacherLessons.map(l => l.class_name + l.subject_name).join(', ') || '🟢 空堂'}`;
+        infoEl.textContent = text;
+    }
+
+    if (col1) {
+        if (classLessons.length > 0) {
+            const activeLesson = classLessons[0];
+            const subjName = activeLesson.subject_name;
+            const candTeachers = (metadata.teachers || []).filter(tch => tch.code !== dualViewCurrentTeacher && tch.name !== tName);
+
+            col1.innerHTML = candTeachers.slice(0, 6).map(tch => 
+                `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; padding:3px 6px; background:rgba(255,255,255,0.03); border-radius:4px;">
+                    <span style="color:#e2e8f0; font-weight:bold;">${tch.name} <span style="font-size:0.7rem; color:#94a3b8;">${tch.role || ''}</span></span>
+                    <button class="solver-action-btn primary-btn" style="padding:1px 6px; font-size:0.7rem; background:#0284c7;" onclick="showToast('已選擇 ${tch.name} 老師為 ${clsName} ${subjName} 之請假代課人！')">選為代課</button>
+                 </div>`
+            ).join('') || '<div style="color:#64748b;">該時段無同科空堂教師</div>';
+        } else {
+            col1.innerHTML = '<div style="color:#64748b;">此時段班級無課，無需代課</div>';
+        }
+    }
+
+    if (col2) {
+        const otherSlots = dualClassSlotsData.filter(s => !(parseInt(s.day) === d && parseInt(s.period) === p));
+        if (otherSlots.length > 0) {
+            col2.innerHTML = otherSlots.slice(0, 5).map(s => 
+                `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; padding:3px 6px; background:rgba(255,255,255,0.03); border-radius:4px;">
+                    <span><strong style="color:#fbbf24;">${daysMap[s.day]}第${s.period}節</strong> ${s.subject_name} (${s.teacher_name})</span>
+                    <button class="solver-action-btn primary-btn" style="padding:1px 6px; font-size:0.7rem; background:#d97706;" onclick="showToast('已建議將 ${daysMap[d]}第${p}節 與 ${daysMap[s.day]}第${s.period}節 (${s.subject_name}) 進行兩節對調！')">對調此節</button>
+                 </div>`
+            ).join('');
+        } else {
+            col2.innerHTML = '<div style="color:#64748b;">無可對調節次</div>';
+        }
+    }
+
+    if (col3) {
+        const freeRooms = (metadata.classrooms || []).slice(0, 4);
+        col3.innerHTML = `
+            <div style="color:#34d399; margin-bottom:4px;"><i class="fa-solid fa-door-open"></i> 可租借空房：${freeRooms.map(r => typeof r==='object'?r.name:r).join(', ') || '無'}</div>
+            <div style="color:#a78bfa;"><i class="fa-solid fa-user-clock"></i> 辦公室預備代課：${(metadata.teachers || []).slice(0, 3).map(x=>x.name).join('、 ')} 老師</div>
+        `;
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const closeBtn = document.getElementById('closeDualViewBtn');
+    const modal = document.getElementById('dualViewModal');
+    const classSelect = document.getElementById('dualViewClassSelect');
+    const teacherSelect = document.getElementById('dualViewTeacherSelect');
+    const printBtn = document.getElementById('dualViewPrintBtn');
+
+    if (closeBtn && modal) {
+        closeBtn.addEventListener('click', () => {
+            modal.style.display = 'none';
+        });
+    }
+
+    if (classSelect) classSelect.addEventListener('change', loadDualViewData);
+    if (teacherSelect) teacherSelect.addEventListener('change', loadDualViewData);
+    if (printBtn) {
+        printBtn.addEventListener('click', () => {
+            window.print();
         });
     }
 });
