@@ -5256,6 +5256,7 @@ let dualSelectedPeriod = null;
 
 async function openDualViewModal(classCode, teacherCode) {
     console.log("openDualViewModal triggered:", classCode, teacherCode);
+    initDualViewEvents();
     const modal = document.getElementById('dualViewModal');
     if (!modal) {
         console.error("dualViewModal element not found!");
@@ -5532,7 +5533,9 @@ function updateDualSwapAssistant(d, p) {
 
 window.openDualViewModal = openDualViewModal;
 
-document.addEventListener('DOMContentLoaded', () => {
+let dualEventsInitialized = false;
+function initDualViewEvents() {
+    if (dualEventsInitialized) return;
     const closeBtn = document.getElementById('closeDualViewBtn');
     const modal = document.getElementById('dualViewModal');
     const classSelect = document.getElementById('dualViewClassSelect');
@@ -5553,6 +5556,14 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    if (modal) {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+    }
+
     if (classSelect) classSelect.addEventListener('change', loadDualViewData);
     if (teacherSelect) teacherSelect.addEventListener('change', loadDualViewData);
     if (printBtn) {
@@ -5560,7 +5571,14 @@ document.addEventListener('DOMContentLoaded', () => {
             window.print();
         });
     }
-});
+    dualEventsInitialized = true;
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initDualViewEvents);
+} else {
+    initDualViewEvents();
+}
 
 
 
