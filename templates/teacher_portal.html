@@ -713,6 +713,11 @@
                 allTeachers = data.teachers || [];
                 allClasses = data.classes || [];
                 allRooms = ["電腦教室", "理化實驗室", "生物實驗室", "音樂教室", "美術教室", "體育場/館", "家政教室", "生活科技教室"];
+                if (typeof metadata !== 'undefined') {
+                    metadata.teachers = allTeachers;
+                    metadata.classes = allClasses;
+                    metadata.classrooms = allRooms;
+                }
             } catch (e) {
                 console.error("Load metadata failed:", e);
             }
