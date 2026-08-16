@@ -5630,12 +5630,12 @@ function openNoteModal(key, title, day, period) {
     const deleteBtn = document.getElementById('deleteNoteBtn');
 
     if (existing) {
-        selectNoteType(existing.note_type || '調課');
+        selectNoteType(existing.note_type || '兼課');
         document.getElementById('noteTextInput').value = existing.note_text || '';
         document.getElementById('noteAuthorInput').value = existing.author || '教務處';
         if (deleteBtn) deleteBtn.style.display = 'inline-block';
     } else {
-        selectNoteType('調課');
+        selectNoteType('兼課');
         document.getElementById('noteTextInput').value = '';
         document.getElementById('noteAuthorInput').value = '教務處';
         if (deleteBtn) deleteBtn.style.display = 'none';
@@ -5671,11 +5671,30 @@ function selectNoteType(type) {
 }
 
 function getNoteTypeColorBg(type) {
+    if (type === '兼課') return 'rgba(245, 158, 11, 0.25)';
     if (type === '調課') return 'rgba(251, 191, 36, 0.25)';
     if (type === '代課') return 'rgba(56, 189, 248, 0.25)';
     if (type === '段考') return 'rgba(239, 68, 68, 0.25)';
     if (type === '地點') return 'rgba(52, 211, 153, 0.25)';
     return 'rgba(167, 139, 250, 0.25)';
+}
+
+function getNoteTypeColorBorder(type) {
+    if (type === '兼課') return '#f59e0b';
+    if (type === '調課') return '#fbbf24';
+    if (type === '代課') return '#38bdf8';
+    if (type === '段考') return '#ef4444';
+    if (type === '地點') return '#34d399';
+    return '#a78bfa';
+}
+
+function getNoteTypeColorText(type) {
+    if (type === '兼課') return '#f59e0b';
+    if (type === '調課') return '#fbbf24';
+    if (type === '代課') return '#38bdf8';
+    if (type === '段考') return '#ef4444';
+    if (type === '地點') return '#34d399';
+    return '#a78bfa';
 }
 
 function getNoteTypeColorBorder(type) {
