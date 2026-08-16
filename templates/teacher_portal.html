@@ -811,6 +811,34 @@
             }
         }
 
+        async function crossQuery(targetMode, targetCode) {
+            console.log("crossQuery triggered:", targetMode, targetCode);
+            if (!targetCode) return;
+            switchPortalMode(targetMode);
+
+            const select = document.getElementById('teacherSelect');
+            if (select) {
+                let foundOpt = false;
+                for (let i = 0; i < select.options.length; i++) {
+                    const opt = select.options[i];
+                    if (opt.value === targetCode || opt.text.includes(targetCode)) {
+                        select.selectedIndex = i;
+                        foundOpt = true;
+                        break;
+                    }
+                }
+                if (!foundOpt) {
+                    const newOpt = document.createElement('option');
+                    newOpt.value = targetCode;
+                    newOpt.textContent = targetCode;
+                    newOpt.selected = true;
+                    select.appendChild(newOpt);
+                }
+            }
+
+            await renderScheduleMatrix(targetCode);
+        }
+
         async function onItemSelected(val) {
             if (!val) {
                 document.getElementById('teacherProfileCard').style.display = 'none';
@@ -894,63 +922,65 @@
             const days = ['1', '2', '3', '4', '5'];
             const periods = ['1', '2', '3', '4', '5', '6', '7', '8'];
 
+            periods.forEach(p => {
+                const tr = document.createElement('tr');
+                const pInfo = periodTimesMap[p] || { name: `第${p}節`, time: '' };
+                const th = document.createElement('td');
+                th.innerHTML = `<div class="period-header">${pInfo.name}</div><div class="period-time">${pInfo.time}</div>`;
+                tr.appendChild(th);
 
+                days.forEach(d => {
+                    const td = document.createElement('td');
+                    td.style.cursor = 'pointer';
+                    const slotLessons = schedules.filter(s => String(s.day) === d && String(s.period) === p);
 
-        periods.forEach(p => {
-            const tr = document.createElement('tr');
-            const pInfo = periodTimesMap[p] || { name: `第${p}節`, time: '' };
-            const th = document.createElement('td');
-            th.innerHTML = `<div class="period-header">${pInfo.name}</div><div class="period-time">${pInfo.time}</div>`;
-            tr.appendChild(th);
-
-            days.forEach(d => {
-                const td = document.createElement('td');
-                td.style.cursor = 'pointer';
-                const slotLessons = schedules.filter(s => String(s.day) === d && String(s.period) === p);
-
-                if (slotLessons.length > 0) {
-                    const lesson = slotLessons[0];
-                    let cCode = lesson.class_code || lesson.class_name || '';
-                    let cName = lesson.class_name || lesson.class_code || '';
-                    let tCode = lesson.teacher_code || lesson.teacher_name || '';
-                    let tName = lesson.teacher_name || lesson.teacher_code || '';
-
-                    let infoSecond = `<i class="fa-solid fa-users"></i> <a href="#" onclick="event.stopPropagation(); openDualViewModal('${cCode}', '${tCode}'); return false;" style="color:#38bdf8; text-decoration:none;" title="開啟雙視窗對照與請假調課助手"><i class="fa-solid fa-columns" style="font-size:0.7rem; opacity:0.8;"></i> ${cName}</a>`;
-                    
-                    if (currentMode === 'class') {
-                        infoSecond = `<i class="fa-solid fa-chalkboard-user"></i> <a href="#" onclick="event.stopPropagation(); openDualViewModal('${queryVal}', '${tCode}'); return false;" style="color:#818cf8; text-decoration:none;" title="開啟雙視窗對照與請假調課助手"><i class="fa-solid fa-columns" style="font-size:0.7rem; opacity:0.8;"></i> ${tName}</a>`;
-                    } else if (currentMode === 'room') {
-                        infoSecond = `<i class="fa-solid fa-users"></i> <a href="#" onclick="event.stopPropagation(); openDualViewModal('${cCode}', '${tCode}'); return false;" style="color:#34d399; text-decoration:none;" title="開啟雙視窗對照與請假調課助手"><i class="fa-solid fa-columns" style="font-size:0.7rem; opacity:0.8;"></i> ${cName} (${tName})</a>`;
-                    }
-
-                    td.innerHTML = `
-                        <div class="slot-card">
-                            <div class="slot-subject">${lesson.subject_name || lesson.subject_code}</div>
-                            <div class="slot-class">${infoSecond}</div>
-                            ${lesson.room_name && currentMode !== 'room' ? `<div class="slot-room"><i class="fa-solid fa-location-dot"></i> ${lesson.room_name}</div>` : ''}
-                        </div>
-                    `;
-                } else {
-                    td.innerHTML = '<span class="slot-empty">-</span>';
-                }
-
-                // Read-Only Click Handler: Open Dual View Comparison Modal
-                td.addEventListener('click', () => {
-                    const lesson = slotLessons[0];
-                    if (lesson) {
+                    if (slotLessons.length > 0) {
+                        const lesson = slotLessons[0];
                         let cCode = lesson.class_code || lesson.class_name || '';
+                        let cName = lesson.class_name || lesson.class_code || '';
                         let tCode = lesson.teacher_code || lesson.teacher_name || '';
-                        if (currentMode === 'class') cCode = queryVal;
-                        if (currentMode === 'teacher') tCode = queryVal;
-                        openDualViewModal(cCode, tCode);
+                        let tName = lesson.teacher_name || lesson.teacher_code || '';
+
+                        let infoSecond = `<i class="fa-solid fa-users"></i> <a href="#" onclick="event.stopPropagation(); crossQuery('class', '${cCode}'); return false;" style="color:#38bdf8; text-decoration:underline; font-weight:bold;" title="點擊切換查詢 ${cName} 班級課表">${cName}</a> <button onclick="event.stopPropagation(); openDualViewModal('${cCode}', '${tCode}'); return false;" style="background:rgba(56,189,248,0.2); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; border-radius:4px; padding:1px 5px; font-size:0.7rem; cursor:pointer; margin-left:4px;" title="開啟雙視窗對照"><i class="fa-solid fa-columns"></i> 對照</button>`;
+                        
+                        if (currentMode === 'class') {
+                            infoSecond = `<i class="fa-solid fa-chalkboard-user"></i> <a href="#" onclick="event.stopPropagation(); crossQuery('teacher', '${tCode}'); return false;" style="color:#818cf8; text-decoration:underline; font-weight:bold;" title="點擊切換查詢 ${tName} 老師課表">${tName}</a> <button onclick="event.stopPropagation(); openDualViewModal('${queryVal}', '${tCode}'); return false;" style="background:rgba(129,140,248,0.2); border:1px solid rgba(129,140,248,0.4); color:#818cf8; border-radius:4px; padding:1px 5px; font-size:0.7rem; cursor:pointer; margin-left:4px;" title="開啟雙視窗對照"><i class="fa-solid fa-columns"></i> 對照</button>`;
+                        } else if (currentMode === 'room') {
+                            infoSecond = `<i class="fa-solid fa-users"></i> <a href="#" onclick="event.stopPropagation(); crossQuery('class', '${cCode}'); return false;" style="color:#34d399; text-decoration:underline; font-weight:bold;" title="點擊切換查詢 ${cName}">${cName}</a> (<a href="#" onclick="event.stopPropagation(); crossQuery('teacher', '${tCode}'); return false;" style="color:#a78bfa; text-decoration:underline;" title="點擊切換查詢 ${tName}">${tName}</a>) <button onclick="event.stopPropagation(); openDualViewModal('${cCode}', '${tCode}'); return false;" style="background:rgba(52,211,153,0.2); border:1px solid rgba(52,211,153,0.4); color:#34d399; border-radius:4px; padding:1px 5px; font-size:0.7rem; cursor:pointer; margin-left:4px;" title="開啟雙視窗對照"><i class="fa-solid fa-columns"></i> 對照</button>`;
+                        }
+
+                        td.innerHTML = `
+                            <div class="slot-card">
+                                <div class="slot-subject">${lesson.subject_name || lesson.subject_code}</div>
+                                <div class="slot-class">${infoSecond}</div>
+                                ${lesson.room_name && currentMode !== 'room' ? `<div class="slot-room"><i class="fa-solid fa-location-dot"></i> ${lesson.room_name}</div>` : ''}
+                            </div>
+                        `;
+                    } else {
+                        td.innerHTML = '<span class="slot-empty">-</span>';
                     }
+
+                    // Read-Only Click Handler: Switch query or Open Dual View Comparison Modal
+                    td.addEventListener('click', () => {
+                        const lesson = slotLessons[0];
+                        if (lesson) {
+                            let cCode = lesson.class_code || lesson.class_name || '';
+                            let tCode = lesson.teacher_code || lesson.teacher_name || '';
+                            if (currentMode === 'class') {
+                                crossQuery('teacher', tCode);
+                            } else if (currentMode === 'teacher') {
+                                crossQuery('class', cCode);
+                            } else {
+                                openDualViewModal(cCode, tCode);
+                            }
+                        }
+                    });
+
+                    tr.appendChild(td);
                 });
 
-                tr.appendChild(td);
+                tbody.appendChild(tr);
             });
-
-            tbody.appendChild(tr);
-        });
     }
     </script>
     <!-- Core App JS with Dual View Handlers -->
