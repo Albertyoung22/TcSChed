@@ -267,6 +267,7 @@ def run_solver():
             for u in units_list:
                 if u["class_code"] == t_cc and u["subject_code"] == t_sc:
                     matched_uids.append(u["unit_id"])
+                    break  # Match only 1 unit per member class
         if matched_uids:
             if len(matched_uids) > 1:
                 f_uid = matched_uids[0]
