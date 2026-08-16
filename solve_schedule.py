@@ -459,6 +459,7 @@ def run_solver():
         key = (u["class_code"], u["subject_code"])
         class_sub_units.setdefault(key, []).append(u)
 
+    consec_pairs = []
     consec_subject_codes = set(custom_rules.get("consecutive_subjects", ["104", "105", "110"]))
     class_consec_list = custom_rules.get("class_consecutive_rules", [])
     class_consec_map = {(r.get("class_code"), r.get("subject_code")): int(r.get("length", 2)) for r in class_consec_list}
@@ -466,11 +467,14 @@ def run_solver():
     for (c_code, s_code), u_list in class_sub_units.items():
         is_consec = s_code in consec_subject_codes or (c_code, s_code) in class_consec_map
         if is_consec and len(u_list) >= 2:
-            # Pair adjacent units to be consecutive on the same day (e.g. P1-P2, P3-P4)
+            # Pair adjacent units to be consecutive on the same day (avoiding lunch break P4-P5)
             u1, u2 = u_list[0], u_list[1]
             u1_id, u2_id = u1["unit_id"], u2["unit_id"]
-            model.Add(day_vars[u1_id] == day_vars[u2_id])
-            model.Add(period_vars[u2_id] == period_vars[u1_id] + 1)
+            same_day_consec = model.NewBoolVar(f'consec_{u1_id}_{u2_id}')
+            model.Add(day_vars[u1_id] == day_vars[u2_id]).OnlyEnforceIf(same_day_consec)
+            model.Add(period_vars[u2_id] == period_vars[u1_id] + 1).OnlyEnforceIf(same_day_consec)
+            model.Add(period_vars[u1_id] != 4).OnlyEnforceIf(same_day_consec)
+            consec_pairs.append(same_day_consec)
 
     active_vars = []
     for key, u_list in class_sub_units.items():
@@ -486,6 +490,7 @@ def run_solver():
 
     # Multi-Objective Function
     model.Maximize(
+        w_consecutive * sum(consec_pairs) +
         w_spreading * sum(active_vars) -
         w_no_teach * sum(no_teach_violations) -
         w_no_sub * sum(no_sub_violations) -
