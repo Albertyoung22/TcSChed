@@ -1914,7 +1914,56 @@
         </div>
     </div>
 
+    <!-- Lesson Note Modal Dialog -->
+    <div id="noteModal" class="modal-overlay" style="display: none; z-index: 100000;">
+        <div class="modal-content glass" style="max-width: 520px; width: 92vw; padding: 24px; border-radius: 16px;">
+            <div class="modal-header" style="padding: 0 0 16px 0; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; color: #f8fafc; font-size: 1.15rem; display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-pen-to-square" style="color: #38bdf8;"></i> <span id="noteModalTitle">課表/調課事項註記</span>
+                </h3>
+                <button class="close-modal-btn" onclick="closeNoteModal()">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 16px 0; display: flex; flex-direction: column; gap: 14px;">
+                <input type="hidden" id="noteTargetKey">
+                <input type="hidden" id="selectedNoteType" value="調課">
+                
+                <div>
+                    <label style="font-size: 0.85rem; color: #94a3b8; font-weight: 600; margin-bottom: 6px; display: block;">註記類型 (點選標籤)：</label>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;" id="noteTypeSelector">
+                        <button type="button" class="btn-note-tag active" data-type="調課" onclick="selectNoteType('調課')" style="padding: 5px 12px; border-radius: 6px; border: 1px solid #fbbf24; background: rgba(251, 191, 36, 0.25); color: #fbbf24; cursor: pointer; font-size: 0.82rem; font-weight: bold;">🔁 調課</button>
+                        <button type="button" class="btn-note-tag" data-type="代課" onclick="selectNoteType('代課')" style="padding: 5px 12px; border-radius: 6px; border: 1px solid #38bdf8; background: transparent; color: #94a3b8; cursor: pointer; font-size: 0.82rem;">👤 代課</button>
+                        <button type="button" class="btn-note-tag" data-type="段考" onclick="selectNoteType('段考')" style="padding: 5px 12px; border-radius: 6px; border: 1px solid #ef4444; background: transparent; color: #94a3b8; cursor: pointer; font-size: 0.82rem;">📝 段考</button>
+                        <button type="button" class="btn-note-tag" data-type="地點" onclick="selectNoteType('地點')" style="padding: 5px 12px; border-radius: 6px; border: 1px solid #34d399; background: transparent; color: #94a3b8; cursor: pointer; font-size: 0.82rem;">📍 地點</button>
+                        <button type="button" class="btn-note-tag" data-type="備註" onclick="selectNoteType('備註')" style="padding: 5px 12px; border-radius: 6px; border: 1px solid #a78bfa; background: transparent; color: #94a3b8; cursor: pointer; font-size: 0.82rem;">📌 備註</button>
+                    </div>
+                </div>
+
+                <div>
+                    <label style="font-size: 0.85rem; color: #94a3b8; font-weight: 600; margin-bottom: 6px; display: block;">註記說明內容：</label>
+                    <textarea id="noteTextInput" rows="3" placeholder="請輸入註記說明內容 (如: 由游貞維老師代課、或第1次段考考場)..." style="width: 100%; padding: 10px; border-radius: 8px; background: rgba(15, 23, 42, 0.7); color: #fff; border: 1px solid var(--border-color); font-size: 0.9rem; outline: none; box-sizing: border-box;"></textarea>
+                </div>
+
+                <div>
+                    <label style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 4px; display: block;">註記人/單位：</label>
+                    <input type="text" id="noteAuthorInput" value="教務處" style="width: 100%; padding: 6px 10px; border-radius: 6px; background: rgba(15, 23, 42, 0.7); color: #fff; border: 1px solid var(--border-color); font-size: 0.85rem; box-sizing: border-box;">
+                </div>
+            </div>
+
+            <div class="modal-footer" style="padding-top: 16px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                <button type="button" onclick="deleteLessonNote()" id="deleteNoteBtn" style="background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.4); color: #f87171; padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; display: none;">
+                    <i class="fa-solid fa-trash-can"></i> 刪除註記
+                </button>
+                <div style="margin-left: auto; display: flex; gap: 8px;">
+                    <button type="button" onclick="closeNoteModal()" style="background: transparent; border: 1px solid var(--border-color); color: #94a3b8; padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: 0.85rem;">取消</button>
+                    <button type="button" onclick="saveLessonNote()" style="background: #6366f1; border: none; color: #fff; padding: 6px 18px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.85rem;">
+                        <i class="fa-solid fa-floppy-disk"></i> 儲存註記
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- JS Scripts with Cache-Buster -->
-    <script src="/static/js/app.js?v=20260816_v15"></script>
+    <script src="/static/js/app.js?v=20260816_v16"></script>
 </body>
 </html>
