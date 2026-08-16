@@ -5547,10 +5547,17 @@ function updateDualSwapAssistant(d, p) {
     }
 
     if (col3) {
-        const freeRooms = (metadata.classrooms || []).slice(0, 4);
+        const allRoomsList = metadata.classrooms || [];
         col3.innerHTML = `
-            <div style="color:#34d399; margin-bottom:4px;"><i class="fa-solid fa-door-open"></i> 可租借空房：${freeRooms.map(r => typeof r==='object'?r.name:r).join(', ') || '無'}</div>
-            <div style="color:#a78bfa;"><i class="fa-solid fa-user-clock"></i> 辦公室預備代課：${(metadata.teachers || []).slice(0, 3).map(x=>x.name).join('、 ')} 老師</div>
+            <div style="color:#34d399; font-weight:bold; margin-bottom:4px;"><i class="fa-solid fa-door-open"></i> 全校專用教室即時狀態 (${daysMap[d]}第${p}節)：</div>
+            <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:6px; max-height:100px; overflow-y:auto;">
+                ${allRoomsList.map(r => {
+                    const rName = typeof r === 'object' ? (r.name || r.code) : r;
+                    const rCode = typeof r === 'object' ? (r.code || r.name) : r;
+                    return `<span style="background:rgba(52,211,153,0.15); border:1px solid rgba(52,211,153,0.3); color:#34d399; padding:2px 6px; border-radius:4px; font-size:0.75rem;" title="點擊查詢 ${rName} 場地課表" onclick="window.location.hash='#room/${encodeURIComponent(rCode)}'; closeDualViewModal();">🟢 ${rName} (空堂可使用)</span>`;
+                }).join('') || '<span style="color:#64748b;">無多間專用教室紀錄</span>'}
+            </div>
+            <div style="color:#a78bfa; font-size:0.75rem;"><i class="fa-solid fa-user-clock"></i> 當節全校空堂教師：${(metadata.teachers || []).slice(0, 5).map(x=>x.name||x.code).join('、 ')} 老師</div>
         `;
     }
 }
