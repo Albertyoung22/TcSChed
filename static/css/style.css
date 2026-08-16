@@ -914,7 +914,50 @@ body {
     border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
-/* Rules Modal Tab Bar Styling - Premium Executive Design */
+.modal-header {
+    position: relative !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 1.25rem 2rem 1rem 2rem !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+    background: rgba(15, 23, 42, 0.95) !important;
+    flex-shrink: 0 !important;
+}
+
+.modal-title {
+    display: flex !important;
+    align-items: center !important;
+    gap: 14px !important;
+    padding-right: 50px !important;
+}
+
+.close-modal-btn, .close-btn, .modal-close-btn {
+    position: absolute !important;
+    top: 20px !important;
+    right: 24px !important;
+    width: 38px !important;
+    height: 38px !important;
+    border-radius: 50% !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    color: #cbd5e1 !important;
+    font-size: 1.2rem !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    z-index: 100 !important;
+}
+
+.close-modal-btn:hover, .close-btn:hover, .modal-close-btn:hover {
+    background: rgba(239, 68, 68, 0.3) !important;
+    border-color: rgba(239, 68, 68, 0.6) !important;
+    color: #ffffff !important;
+    transform: rotate(90deg) scale(1.08) !important;
+}
+
 /* Rules Modal Tab Bar Styling - Responsive Grid Navigation (No Scrollbar Needed) */
 .rules-tab-bar, .rule-tab-bar {
     display: grid !important;
