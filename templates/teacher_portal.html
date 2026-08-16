@@ -946,38 +946,48 @@
                         let tCode = lesson.teacher_code || lesson.teacher_name || '';
                         let tName = lesson.teacher_name || lesson.teacher_code || '';
 
-                        let infoSecond = `<i class="fa-solid fa-users"></i> <a href="#" onclick="event.stopPropagation(); crossQuery('class', '${cCode}'); return false;" style="color:#38bdf8; text-decoration:underline; font-weight:bold;" title="點擊切換查詢 ${cName} 班級課表">${cName}</a> <button onclick="event.stopPropagation(); openDualViewModal('${cCode}', '${tCode}'); return false;" style="background:rgba(56,189,248,0.2); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; border-radius:4px; padding:1px 5px; font-size:0.7rem; cursor:pointer; margin-left:4px;" title="開啟雙視窗對照"><i class="fa-solid fa-columns"></i> 對照</button>`;
-                        
+                        let targetLink = '';
+                        let roomLink = '';
+
                         if (currentMode === 'class') {
-                            infoSecond = `<i class="fa-solid fa-chalkboard-user"></i> <a href="#" onclick="event.stopPropagation(); crossQuery('teacher', '${tCode}'); return false;" style="color:#818cf8; text-decoration:underline; font-weight:bold;" title="點擊切換查詢 ${tName} 老師課表">${tName}</a> <button onclick="event.stopPropagation(); openDualViewModal('${queryVal}', '${tCode}'); return false;" style="background:rgba(129,140,248,0.2); border:1px solid rgba(129,140,248,0.4); color:#818cf8; border-radius:4px; padding:1px 5px; font-size:0.7rem; cursor:pointer; margin-left:4px;" title="開啟雙視窗對照"><i class="fa-solid fa-columns"></i> 對照</button>`;
-                        } else if (currentMode === 'room') {
-                            infoSecond = `<i class="fa-solid fa-users"></i> <a href="#" onclick="event.stopPropagation(); crossQuery('class', '${cCode}'); return false;" style="color:#34d399; text-decoration:underline; font-weight:bold;" title="點擊切換查詢 ${cName}">${cName}</a> (<a href="#" onclick="event.stopPropagation(); crossQuery('teacher', '${tCode}'); return false;" style="color:#a78bfa; text-decoration:underline;" title="點擊切換查詢 ${tName}">${tName}</a>) <button onclick="event.stopPropagation(); openDualViewModal('${cCode}', '${tCode}'); return false;" style="background:rgba(52,211,153,0.2); border:1px solid rgba(52,211,153,0.4); color:#34d399; border-radius:4px; padding:1px 5px; font-size:0.7rem; cursor:pointer; margin-left:4px;" title="開啟雙視窗對照"><i class="fa-solid fa-columns"></i> 對照</button>`;
+                            targetLink = tName ? `<a href="#" onclick="openDualViewModal('${queryVal}', '${tCode}'); return false;" class="meta-link" style="color: #818cf8; font-weight: bold;" title="開啟雙視窗課表對照與調課助手"><i class="fa-solid fa-chalkboard-user"></i> ${tName} <i class="fa-solid fa-columns" style="font-size:0.7rem; opacity:0.8;"></i></a>` : '';
+                            roomLink = lesson.room_name ? `<span class="room-lbl meta-link" style="color: #94a3b8;"><i class="fa-solid fa-location-dot"></i> ${lesson.room_name}</span>` : '';
+                        } else if (currentMode === 'teacher') {
+                            targetLink = cName ? `<a href="#" onclick="openDualViewModal('${cCode}', '${queryVal}'); return false;" class="meta-link" style="color: #38bdf8; font-weight: bold;" title="開啟雙視窗課表對照與調課助手"><i class="fa-solid fa-users"></i> ${cName} <i class="fa-solid fa-columns" style="font-size:0.7rem; opacity:0.8;"></i></a>` : '';
+                            roomLink = lesson.room_name ? `<span class="room-lbl meta-link" style="color: #94a3b8;"><i class="fa-solid fa-location-dot"></i> ${lesson.room_name}</span>` : '';
+                        } else {
+                            targetLink = cName ? `<a href="#" onclick="crossQuery('class', '${cCode}'); return false;" class="meta-link" style="color: #34d399;"><i class="fa-solid fa-users"></i> ${cName}</a>` : '';
+                            roomLink = tName ? `<span class="room-lbl meta-link" style="color: #a78bfa;"><a href="#" onclick="openDualViewModal('${cCode}', '${tCode}'); return false;" class="meta-link"><i class="fa-solid fa-chalkboard-user"></i> ${tName} <i class="fa-solid fa-columns" style="font-size:0.7rem; opacity:0.8;"></i></a></span>` : '';
+                        }
+
+                        // Week Mode Banner
+                        let badge = '';
+                        if (lesson.week_mode === 1) {
+                            badge = '<span class="week-badge odd" style="background:#ef4444; color:#fff; padding:1px 4px; border-radius:3px; font-size:0.65rem; margin-left:4px;">單</span>';
+                        } else if (lesson.week_mode === 2) {
+                            badge = '<span class="week-badge even" style="background:#3b82f6; color:#fff; padding:1px 4px; border-radius:3px; font-size:0.65rem; margin-left:4px;">雙</span>';
                         }
 
                         td.innerHTML = `
-                            <div class="slot-card">
-                                <div class="slot-subject">${lesson.subject_name || lesson.subject_code}</div>
-                                <div class="slot-class">${infoSecond}</div>
-                                ${lesson.room_name && currentMode !== 'room' ? `<div class="slot-room"><i class="fa-solid fa-location-dot"></i> ${lesson.room_name}</div>` : ''}
+                            <div class="lesson-item" style="padding: 6px; border-radius: 8px; background: rgba(30,41,59,0.8); border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 2px;">
+                                <div class="subject-name" style="font-weight: bold; color: #fff; font-size: 0.9rem;">${lesson.subject_name || lesson.subject_code} ${badge}</div>
+                                <div>${targetLink}</div>
+                                ${roomLink ? `<div>${roomLink}</div>` : ''}
                             </div>
                         `;
                     } else {
-                        td.innerHTML = '<span class="slot-empty">-</span>';
+                        td.innerHTML = '<span class="slot-empty" style="color: rgba(255,255,255,0.2);">-</span>';
                     }
 
-                    // Read-Only Click Handler: Switch query or Open Dual View Comparison Modal
+                    // Click cell to open Dual View Comparison Modal
                     td.addEventListener('click', () => {
                         const lesson = slotLessons[0];
                         if (lesson) {
                             let cCode = lesson.class_code || lesson.class_name || '';
                             let tCode = lesson.teacher_code || lesson.teacher_name || '';
-                            if (currentMode === 'class') {
-                                crossQuery('teacher', tCode);
-                            } else if (currentMode === 'teacher') {
-                                crossQuery('class', cCode);
-                            } else {
-                                openDualViewModal(cCode, tCode);
-                            }
+                            if (currentMode === 'class') cCode = queryVal;
+                            if (currentMode === 'teacher') tCode = queryVal;
+                            openDualViewModal(cCode, tCode);
                         }
                     });
 
@@ -989,6 +999,6 @@
     }
     </script>
     <!-- Core App JS with Dual View Handlers -->
-    <script src="/static/js/app.js?v=20260816_v13"></script>
+    <script src="/static/js/app.js?v=20260816_v14"></script>
 </body>
 </html>
