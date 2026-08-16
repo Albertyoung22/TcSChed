@@ -284,41 +284,44 @@
             <div class="modal-body">
                 <div class="rules-tab-bar">
 
-                    <button id="tabRuleChecklistBtn" class="rule-tab-btn active" data-ruletab="checklist" style="padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border-color); background: rgba(99, 102, 241, 0.2); color: #818cf8; cursor: pointer;">
-                        <i class="fa-solid fa-list-check" style="color: #34d399;"></i> ① 排課前資料自我檢核嚮導
+                    <button id="tabRuleAiCenterBtn" class="rule-tab-btn active" data-ruletab="aicenter">
+                        <i class="fa-solid fa-wand-magic-sparkles" style="color: #fbbf24;"></i> 🚀 ① 全校 AI 智慧預設 Center
                     </button>
-                    <button id="tabRuleSchoolBtn" class="rule-tab-btn" data-ruletab="school" style="padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border-color); background: transparent; color: var(--text-secondary); cursor: pointer;">
-                        <i class="fa-solid fa-school" style="color: #38bdf8;"></i> ② 學校基本資料與學制管理
+                    <button id="tabRuleChecklistBtn" class="rule-tab-btn" data-ruletab="checklist">
+                        <i class="fa-solid fa-list-check" style="color: #34d399;"></i> ② 排課前資料自我檢核嚮導
                     </button>
-                    <button id="tabRuleTeacherMaintainBtn" class="rule-tab-btn" data-ruletab="teachermaintain" style="padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border-color); background: transparent; color: var(--text-secondary); cursor: pointer;">
-                        <i class="fa-solid fa-user-plus" style="color: #38bdf8;"></i> ③ 全校教師名單管理 (新增代理/社團)
+                    <button id="tabRuleSchoolBtn" class="rule-tab-btn" data-ruletab="school">
+                        <i class="fa-solid fa-school" style="color: #38bdf8;"></i> ③ 學校基本資料與學制管理
                     </button>
-                    <button id="tabRuleAssignBtn" class="rule-tab-btn" data-ruletab="assign" style="padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border-color); background: transparent; color: var(--text-secondary); cursor: pointer;">
-                        <i class="fa-solid fa-list-check"></i> ④ 全校配課管理 (班級/教師)
+                    <button id="tabRuleTeacherMaintainBtn" class="rule-tab-btn" data-ruletab="teachermaintain">
+                        <i class="fa-solid fa-user-plus" style="color: #38bdf8;"></i> ④ 全校教師名單管理 (新增代理/社團)
                     </button>
-                    <button id="tabRuleCatalogBtn" class="rule-tab-btn" data-ruletab="catalog" style="padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border-color); background: transparent; color: var(--text-secondary); cursor: pointer;">
+                    <button id="tabRuleCatalogBtn" class="rule-tab-btn" data-ruletab="catalog">
                         <i class="fa-solid fa-book-bookmark"></i> ⑤ 學科種類與年級課程規劃
                     </button>
-                    <button id="tabRuleTeacherBtn" class="rule-tab-btn" data-ruletab="teacher" style="padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border-color); background: transparent; color: var(--text-secondary); cursor: pointer;">
-                        <i class="fa-solid fa-user-clock" style="color: #fbbf24;"></i> ⑥ 教師不排課時段設定
+                    <button id="tabRuleAssignBtn" class="rule-tab-btn" data-ruletab="assign">
+                        <i class="fa-solid fa-list-check"></i> ⑥ 全校配課管理 (班級/教師)
                     </button>
-                    <button id="tabRuleSubBtn" class="rule-tab-btn" data-ruletab="sub" style="padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border-color); background: transparent; color: var(--text-secondary); cursor: pointer;">
-                        <i class="fa-solid fa-ban"></i> ⑦ 科目限制時段
+                    <button id="tabRuleTeacherBtn" class="rule-tab-btn" data-ruletab="teacher">
+                        <i class="fa-solid fa-user-clock" style="color: #fbbf24;"></i> ⑦ 教師不排課時段設定
                     </button>
-                    <button id="tabRuleVenuesBtn" class="rule-tab-btn" data-ruletab="venues" style="padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border-color); background: transparent; color: var(--text-secondary); cursor: pointer;">
-                        <i class="fa-solid fa-building-user"></i> ⑧ 專用教室與連堂約束
+                    <button id="tabRuleSubBtn" class="rule-tab-btn" data-ruletab="sub">
+                        <i class="fa-solid fa-ban"></i> ⑧ 科目限制時段
                     </button>
-                    <button id="tabRuleSimBtn" class="rule-tab-btn" data-ruletab="sim" style="padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border-color); background: transparent; color: var(--text-secondary); cursor: pointer;">
-                        <i class="fa-solid fa-link"></i> ⑨ 同時排課 / 跨班分組設定
+                    <button id="tabRuleVenuesBtn" class="rule-tab-btn" data-ruletab="venues">
+                        <i class="fa-solid fa-building-user"></i> ⑨ 專用教室與連堂約束
                     </button>
-                    <button id="tabRuleWeightsBtn" class="rule-tab-btn" data-ruletab="weights" style="padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border-color); background: transparent; color: var(--text-secondary); cursor: pointer;">
-                        <i class="fa-solid fa-scale-balanced"></i> ⑩ AI 權重與偏好
+                    <button id="tabRuleSimBtn" class="rule-tab-btn" data-ruletab="sim">
+                        <i class="fa-solid fa-link"></i> ⑩ 同時排課 / 跨班分組設定
                     </button>
-                    <button id="tabRuleMoeCodeBtn" class="rule-tab-btn" data-ruletab="moecode" style="padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border-color); background: transparent; color: var(--text-secondary); cursor: pointer;">
-                        <i class="fa-solid fa-scroll" style="color: #fbbf24;"></i> ⑪ 108課綱國教署代碼對照 (WINST-23)
+                    <button id="tabRuleWeightsBtn" class="rule-tab-btn" data-ruletab="weights">
+                        <i class="fa-solid fa-scale-balanced"></i> ⑪ AI 權重與偏好
                     </button>
-                    <button id="tabRuleSemesterBtn" class="rule-tab-btn" data-ruletab="semester" style="padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border-color); background: transparent; color: var(--text-secondary); cursor: pointer;">
-                        <i class="fa-solid fa-folder-open" style="color: #c084fc;"></i> ⑫ 學期切換與歷史還原
+                    <button id="tabRuleMoeCodeBtn" class="rule-tab-btn" data-ruletab="moecode">
+                        <i class="fa-solid fa-scroll" style="color: #fbbf24;"></i> ⑫ 108課綱國教署代碼對照
+                    </button>
+                    <button id="tabRuleSemesterBtn" class="rule-tab-btn" data-ruletab="semester">
+                        <i class="fa-solid fa-folder-open" style="color: #c084fc;"></i> ⑬ 學期切換與歷史還原
                     </button>
 
 
@@ -326,6 +329,113 @@
                 </div>
 
 
+
+                <!-- Tab 1: 全校 AI 智慧預設與一鍵設定 Center -->
+                <div id="ruleTabAiCenter" class="rule-tab-content" style="display: block;">
+                    <!-- Master One-Click Setup Hero Banner -->
+                    <div style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(168, 85, 247, 0.2), rgba(14, 165, 233, 0.2)); border: 2px solid rgba(168, 85, 247, 0.4); padding: 18px 22px; border-radius: 14px; margin-bottom: 18px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                            <div>
+                                <h3 style="margin: 0; font-size: 1.15rem; color: #fff; display: flex; align-items: center; gap: 8px;">
+                                    <i class="fa-solid fa-wand-magic-sparkles" style="color: #fbbf24;"></i> 全校 AI 智慧一鍵建置精靈 (Master AI Preset Wizard)
+                                </h3>
+                                <p style="margin: 6px 0 0 0; font-size: 0.85rem; color: #cbd5e1; line-height: 1.5;">
+                                    第一次排課或新學期開辦？點選「全套 AI 一鍵建置」，系統將自動為您完成：<strong style="color: #38bdf8;">課程規劃 ➔ 智慧教師配課 ➔ 專用教室自動對接 ➔ 全校共同排課鎖定 ➔ CP-SAT 課表最佳化求解</strong>！
+                                </p>
+                            </div>
+                            <button type="button" id="masterAiOneClickBtn" class="solver-action-btn primary-btn" style="padding: 10px 24px; font-size: 0.95rem; background: linear-gradient(135deg, #a855f7, #6366f1); font-weight: 700; box-shadow: 0 4px 14px rgba(168, 85, 247, 0.4); cursor: pointer;" title="一鍵執行：範本匯入 ➔ 教師配課 ➔ 專用教室 ➔ 共同排課 ➔ CP-SAT 求解">
+                                <i class="fa-solid fa-bolt" style="color: #fbbf24;"></i> 🌟 點選執行【全校 AI 一鍵全套建置】
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Quick Action Cards Grid -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; margin-bottom: 16px;">
+                        <!-- Card 1: School Template Preset -->
+                        <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color); border-radius: 10px; padding: 14px;">
+                            <div style="font-weight: 600; color: #38bdf8; font-size: 0.92rem; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+                                <i class="fa-solid fa-school" style="color: #0284c7;"></i> Step 1. 全校學制與班級課程範本
+                            </div>
+                            <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px; min-height: 36px;">
+                                一鍵匯入教育部標準科目、每週節數、班級與教師名單範本：
+                            </div>
+                            <div style="display: flex; flex-direction: column; gap: 6px;">
+                                <button type="button" class="load-preset-btn solver-action-btn primary-btn" data-preset="junior_3" style="padding: 5px 10px; font-size: 0.8rem; background: #0284c7; justify-content: flex-start;">
+                                    <i class="fa-solid fa-graduation-cap"></i> 載入國中 3 班全套範本 (701~901)
+                                </button>
+                                <button type="button" class="load-preset-btn solver-action-btn primary-btn" data-preset="senior_3" style="padding: 5px 10px; font-size: 0.8rem; background: #4f46e5; justify-content: flex-start;">
+                                    <i class="fa-solid fa-building-columns"></i> 載入高中 3 班全套範本 (101~301)
+                                </button>
+                                <button type="button" class="load-preset-btn solver-action-btn primary-btn" data-preset="k12_6" style="padding: 5px 10px; font-size: 0.8rem; background: #059669; justify-content: flex-start;">
+                                    <i class="fa-solid fa-school"></i> 載入國中3班+高中3班全校範本 (共6班)
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Card 2: AI Teacher Auto-Assign -->
+                        <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color); border-radius: 10px; padding: 14px;">
+                            <div style="font-weight: 600; color: #a5b4fc; font-size: 0.92rem; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+                                <i class="fa-solid fa-user-check" style="color: #6366f1;"></i> Step 2. AI 智慧教師配課與平衡
+                            </div>
+                            <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px; min-height: 36px;">
+                                分析導師專長與專任教師授課額度，自動完成全校配課：
+                            </div>
+                            <button type="button" id="cardAiAutoAssignBtn" class="solver-action-btn primary-btn" style="padding: 8px 12px; font-size: 0.85rem; background: #6366f1; width: 100%;">
+                                <i class="fa-solid fa-robot"></i> 🤖 執行 AI 智慧自動配課 & 節數平衡
+                            </button>
+                        </div>
+
+                        <!-- Card 3: AI Special Venue Matcher -->
+                        <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color); border-radius: 10px; padding: 14px;">
+                            <div style="font-weight: 600; color: #34d399; font-size: 0.92rem; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+                                <i class="fa-solid fa-map-location-dot" style="color: #059669;"></i> Step 3. AI 專用教室自動對接
+                            </div>
+                            <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px; min-height: 36px;">
+                                自動綁定電腦教室、實驗室、音樂/美術/體育/生科場地上限：
+                            </div>
+                            <button type="button" id="cardAiMatchVenuesBtn" class="solver-action-btn primary-btn" style="padding: 8px 12px; font-size: 0.85rem; background: #059669; width: 100%;">
+                                <i class="fa-solid fa-wand-magic-sparkles"></i> 🤖 執行 AI 專用教室與場地上限自動對接
+                            </button>
+                        </div>
+
+                        <!-- Card 4: School-wide Common Scheduling -->
+                        <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color); border-radius: 10px; padding: 14px;">
+                            <div style="font-weight: 600; color: #c084fc; font-size: 0.92rem; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+                                <i class="fa-solid fa-people-roof" style="color: #a855f7;"></i> Step 4. 全校共同排課鎖定
+                            </div>
+                            <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px; min-height: 36px;">
+                                一鍵設定全校所有班級在同一時間上班會、社團或週會：
+                            </div>
+                            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                                <button type="button" id="cardSimClassMeetingBtn" class="solver-action-btn primary-btn" style="padding: 4px 8px; font-size: 0.78rem; background: #0284c7;">
+                                    <i class="fa-solid fa-people-roof"></i> 全校共同班會
+                                </button>
+                                <button type="button" id="cardSimClubBtn" class="solver-action-btn primary-btn" style="padding: 4px 8px; font-size: 0.78rem; background: #6366f1;">
+                                    <i class="fa-solid fa-masks-theater"></i> 全校共同社團
+                                </button>
+                                <button type="button" id="cardSimWeeklyBtn" class="solver-action-btn primary-btn" style="padding: 4px 8px; font-size: 0.78rem; background: #059669;">
+                                    <i class="fa-solid fa-bullhorn"></i> 全校共同週會
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Final Step: Solve & Verify -->
+                    <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(99, 102, 241, 0.3); padding: 14px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                        <div>
+                            <div style="font-weight: 600; color: #fff; font-size: 0.95rem;"><i class="fa-solid fa-play" style="color: #6366f1;"></i> Step 5. 全校 AI 智慧排課求解與驗證</div>
+                            <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 2px;">設定完畢後，點選「執行 AI 自動排課」即可於數秒內求解出全校零衝堂最佳課表！</div>
+                        </div>
+                        <div style="display: flex; gap: 8px;">
+                            <button type="button" id="cardRunSolverBtn" class="solver-action-btn primary-btn" style="padding: 8px 18px; font-size: 0.88rem; background: #6366f1;">
+                                <i class="fa-solid fa-play"></i> 執行全校 AI 自動排課
+                            </button>
+                            <button type="button" id="cardValidateSolverBtn" class="solver-action-btn secondary-btn" style="padding: 8px 16px; font-size: 0.88rem;">
+                                <i class="fa-solid fa-shield-halved"></i> 驗證課表衝突
+                            </button>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- Tab: School Basic Information & System Settings -->
                 <div id="ruleTabSchool" class="rule-tab-content" style="display: none;">
@@ -366,9 +476,17 @@
 
                             <div style="flex: 1; min-width: 280px;">
                                 <label style="display: block; font-weight: 500; margin-bottom: 6px; color: #fbbf24;">
-                                    <i class="fa-solid fa-folder-open"></i> 排課 DBF 資料庫搜尋路徑 (本機)：
+                                    <i class="fa-solid fa-folder-open"></i> 欣河 / SPV2000 排課 DBF 資料庫搜尋路徑：
                                 </label>
-                                <input type="text" id="dbfSearchDirInput" placeholder="例如: D:\土城高中 (留空則使用預設)" style="width: 100%; padding: 8px 12px; border-radius: 6px; background: rgba(15, 23, 42, 0.8); color: #fff; border: 1px solid var(--border-color);">
+                                <div style="display: flex; gap: 8px;">
+                                    <input type="text" id="dbfSearchDirInput" placeholder="點選右側按鈕選擇欣河 DBF 資料夾，或手動輸入" style="flex: 1; padding: 8px 12px; border-radius: 6px; background: rgba(15, 23, 42, 0.8); color: #fff; border: 1px solid var(--border-color);">
+                                    <button type="button" id="browseDbfDirBtn" class="solver-action-btn primary-btn" style="padding: 8px 14px; font-size: 0.85rem; background: #0284c7; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; cursor: pointer;">
+                                        <i class="fa-solid fa-folder-tree"></i> 瀏覽選擇資料夾...
+                                    </button>
+                                </div>
+                                <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 6px; line-height: 1.4;">
+                                    💡 <strong>指示說明</strong>：點擊「瀏覽選擇資料夾」可選擇欣河排課系統備份資料夾（含 <code style="color: #fbbf24;">class.dbf</code>、<code style="color: #fbbf24;">teacher.dbf</code>、<code style="color: #fbbf24;">claspv.dbf</code> 等），或選取解壓縮後的 <code style="color: #38bdf8;">.wdb</code> 資料夾。
+                                </div>
                             </div>
                         </div>
 
@@ -376,7 +494,7 @@
                             <h4 style="font-size: 0.95rem; color: #818cf8; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
                                 <i class="fa-solid fa-clock"></i> 每日 1~8 節節次名稱與上下課時間設定：
                             </h4>
-                            <div class="table-responsive glass" style="max-height: 250px; overflow-y: auto;">
+                            <div class="table-responsive glass" style="max-height: 250px; overflow-y. auto;">
                                 <table class="modal-setting-table" style="font-size: 0.85rem;">
                                     <thead>
                                         <tr>
@@ -429,6 +547,31 @@
                                         <!-- JS Generated -->
                                     </tbody>
                                 </table>
+                            </div>
+                        </div>
+
+                        <!-- System Backup, Restore & Multi-School Reset Box -->
+                        <div style="border-top: 1px dashed var(--border-color); padding-top: 14px; margin-top: 14px;">
+                            <h4 style="font-size: 0.95rem; color: #a855f7; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
+                                <span><i class="fa-solid fa-box-archive"></i> 全系統資料一鍵備份、還原與跨校清空移交</span>
+                                <span style="font-size: 0.8rem; color: var(--text-muted);">可隨時下載全站備份檔，或移交給新學校前一鍵清空舊資料</span>
+                            </h4>
+                            <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; background: rgba(168, 85, 247, 0.05); padding: 12px 16px; border-radius: 8px; border: 1px solid rgba(168, 85, 247, 0.2);">
+                                <!-- Backup Export Button -->
+                                <button id="systemBackupExportBtn" class="solver-action-btn primary-btn" style="padding: 8px 16px; font-size: 0.85rem; background: #059669;">
+                                    <i class="fa-solid fa-download"></i> 一鍵下載全站備份 (.zip)
+                                </button>
+
+                                <!-- Backup Import Button & Input -->
+                                <label for="systemBackupFileInput" class="solver-action-btn primary-btn" style="padding: 8px 16px; font-size: 0.85rem; background: #0284c7; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; margin: 0;">
+                                    <i class="fa-solid fa-upload"></i> 上傳並一鍵還原 (.zip / .json)
+                                </label>
+                                <input type="file" id="systemBackupFileInput" accept=".zip,.json" style="display: none;">
+
+                                <!-- System Reset / Clear for New School -->
+                                <button id="systemResetCleanBtn" class="solver-action-btn secondary-btn" style="padding: 8px 16px; font-size: 0.85rem; background: #dc2626; color: #fff; border: 1px solid #ef4444;">
+                                    <i class="fa-solid fa-trash-can"></i> 一鍵清空現有學校資料 (移交新學校範本)
+                                </button>
                             </div>
                         </div>
 
@@ -593,12 +736,18 @@
 
                 <!-- Tab 4: Course Assignments Management -->
                 <div id="ruleTabAssign" class="rule-tab-content" style="display: none;">
-                    <div style="display: flex; gap: 12px; margin-bottom: 12px; border-bottom: 1px dashed var(--border-color); padding-bottom: 8px;">
-                        <button id="assignModeClassBtn" class="solver-action-btn primary-btn" style="padding: 4px 12px; font-size: 0.85rem; background: #6366f1;">
-                            <i class="fa-solid fa-graduation-cap"></i> 按班級配課檢視
-                        </button>
-                        <button id="assignModeTeacherBtn" class="solver-action-btn secondary-btn" style="padding: 4px 12px; font-size: 0.85rem;">
-                            <i class="fa-solid fa-chalkboard-user"></i> 按教師配課檢視
+                    <div style="display: flex; gap: 12px; margin-bottom: 12px; border-bottom: 1px dashed var(--border-color); padding-bottom: 8px; flex-wrap: wrap; justify-content: space-between; align-items: center;">
+                        <div style="display: flex; gap: 8px;">
+                            <button id="assignModeClassBtn" class="solver-action-btn primary-btn" style="padding: 4px 12px; font-size: 0.85rem; background: #6366f1;">
+                                <i class="fa-solid fa-graduation-cap"></i> 按班級配課檢視
+                            </button>
+                            <button id="assignModeTeacherBtn" class="solver-action-btn secondary-btn" style="padding: 4px 12px; font-size: 0.85rem;">
+                                <i class="fa-solid fa-chalkboard-user"></i> 按教師配課檢視
+                            </button>
+                        </div>
+                        
+                        <button id="aiAutoAssignBtn" class="solver-action-btn primary-btn" style="padding: 5px 14px; font-size: 0.85rem; background: linear-gradient(135deg, #a855f7, #6366f1); border: none; box-shadow: 0 2px 8px rgba(168, 85, 247, 0.3); color: #fff;" title="分析全校課程規劃、導師班級與教師授課額度，一鍵自動 AI 配課">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> 🤖 執行 AI 智慧自動配課
                         </button>
                     </div>
 
@@ -663,6 +812,29 @@
 
                 <!-- Tab 5: Master Subject Catalog & Grade Curriculum Plan -->
                 <div id="ruleTabCatalog" class="rule-tab-content" style="display: none;">
+                    <!-- Quick Load Standard Preset Banner -->
+                    <div style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(14, 165, 233, 0.12)); border: 1px solid rgba(99, 102, 241, 0.3); padding: 12px 16px; border-radius: 10px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                        <div>
+                            <div style="font-weight: 600; color: #a5b4fc; font-size: 0.95rem; display: flex; align-items: center; gap: 6px;">
+                                <i class="fa-solid fa-wand-magic-sparkles" style="color: #fbbf24;"></i> 一鍵載入全國國中 / 高中標準科目、週節數與專用教室範本
+                            </div>
+                            <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 2px;">
+                                首次使用的新學校可一鍵匯入教育部標準科目、每週節數、專用教室（電腦教室、理化實驗室、體育場）與連堂限制！
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <button type="button" class="load-preset-btn solver-action-btn primary-btn" data-preset="junior_3" style="padding: 6px 12px; font-size: 0.82rem; background: #0284c7; cursor: pointer;" title="載入 701, 801, 901 班級名單、科目、教師與每週配課">
+                                <i class="fa-solid fa-graduation-cap"></i> 載入國中 3 班全套示範檔 (701-901)
+                            </button>
+                            <button type="button" class="load-preset-btn solver-action-btn primary-btn" data-preset="senior_3" style="padding: 6px 12px; font-size: 0.82rem; background: #4f46e5; cursor: pointer;" title="載入 101, 201, 301 班級名單、科目、教師與每週配課">
+                                <i class="fa-solid fa-school"></i> 載入高中 3 班全套示範檔 (101-301)
+                            </button>
+                            <button type="button" class="load-preset-btn solver-action-btn primary-btn" data-preset="k12_6" style="padding: 6px 12px; font-size: 0.82rem; background: #059669; cursor: pointer;" title="載入國中3班+高中3班共6班完整全校示範檔">
+                                <i class="fa-solid fa-building-columns"></i> 載入國中3班+高中3班全校範本 (共6班)
+                            </button>
+                        </div>
+                    </div>
+
                     <div style="display: flex; gap: 12px; margin-bottom: 12px; border-bottom: 1px dashed var(--border-color); padding-bottom: 8px;">
                         <button id="catalogModeMasterBtn" class="solver-action-btn primary-btn" style="padding: 4px 12px; font-size: 0.85rem; background: #6366f1;">
                             <i class="fa-solid fa-book"></i> 全校學科總目錄
@@ -848,6 +1020,21 @@
                         <h4 style="font-size: 0.95rem; color: #34d399; margin-bottom: 8px;"><i class="fa-solid fa-map-location-dot"></i> 科目與專用教室 / 場地指派對應 (例如 程式設計 ➔ 電腦教室)</h4>
                         <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;">設定哪些科目在上課時必須前往哪間專用教室。AI 自動排課時將自動將該科目分配至對應教室，並控管該場地的容量上限：</p>
                         
+                        <!-- AI Smart Preset Banner -->
+                        <div style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(14, 165, 233, 0.12)); border: 1px solid rgba(52, 211, 153, 0.3); padding: 12px 16px; border-radius: 10px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                            <div>
+                                <div style="font-weight: 600; color: #34d399; font-size: 0.95rem; display: flex; align-items: center; gap: 6px;">
+                                    <i class="fa-solid fa-wand-magic-sparkles" style="color: #fbbf24;"></i> 🤖 AI 智慧專用教室自動對接與預設範本
+                                </div>
+                                <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 2px;">
+                                    一鍵分析全校科目（資訊、理化、生物、音樂、美術、體育、家政、生科），自動對接專用教室與容量控管：
+                                </div>
+                            </div>
+                            <button type="button" id="autoAiMatchVenuesBtn" class="solver-action-btn primary-btn" style="padding: 6px 14px; font-size: 0.85rem; background: #059669; cursor: pointer;" title="一鍵自動分析並綁定全校專用教室對應表">
+                                <i class="fa-solid fa-bolt"></i> 🤖 一鍵 AI 智慧自動對接專用教室
+                            </button>
+                        </div>
+
                         <!-- Subject Venue Add Form -->
                         <div style="background: rgba(15,23,42,0.6); padding: 10px; border-radius: 6px; border: 1px solid rgba(52, 211, 153, 0.3); margin-bottom: 10px;">
                             <div style="font-size: 0.85rem; color: #34d399; margin-bottom: 8px; font-weight: 600;"><i class="fa-solid fa-circle-plus"></i> 手動建立【科目 ➔ 專用教室】指派關係：</div>
@@ -899,13 +1086,58 @@
 
                 <!-- Tab 7: Simultaneous Groups Manager -->
                 <div id="ruleTabSim" class="rule-tab-content" style="display: none;">
+                    <!-- Quick Preset School-wide Common Scheduling Banner -->
+                    <div style="background: linear-gradient(135deg, rgba(14, 165, 233, 0.12), rgba(99, 102, 241, 0.12)); border: 1px solid rgba(56, 189, 248, 0.3); padding: 12px 16px; border-radius: 10px; margin-bottom: 16px;">
+                        <div style="font-weight: 600; color: #38bdf8; font-size: 0.95rem; margin-bottom: 6px; display: flex; align-items: center; gap: 8px;">
+                            <i class="fa-solid fa-users-rectangle" style="color: #38bdf8;"></i> ⚡ 全校共同排課一鍵設定 (班會 / 社團活動 / 週會同步)
+                        </div>
+                        <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 10px;">
+                            一鍵將全校所有班級的特定科目（如班會、社團活動、週會或彈性學習）設為同日同節次全校同步排課：
+                        </div>
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <button type="button" id="presetSimClassMeetingBtn" class="solver-action-btn primary-btn" style="padding: 5px 12px; font-size: 0.82rem; background: #0284c7;" title="一鍵設定全校所有班級班會課在同一時段同步上課">
+                                <i class="fa-solid fa-people-roof"></i> 一鍵設定【全校共同班會】(全校同步)
+                            </button>
+                            <button type="button" id="presetSimClubBtn" class="solver-action-btn primary-btn" style="padding: 5px 12px; font-size: 0.82rem; background: #6366f1;" title="一鍵設定全校所有班級社團活動在同一時段同步上課">
+                                <i class="fa-solid fa-masks-theater"></i> 一鍵設定【全校共同社團】(全校同步)
+                            </button>
+                            <button type="button" id="presetSimWeeklyBtn" class="solver-action-btn primary-btn" style="padding: 5px 12px; font-size: 0.82rem; background: #059669;" title="一鍵設定全校所有班級週會或彈性學習在同一時段同步上課">
+                                <i class="fa-solid fa-bullhorn"></i> 一鍵設定【全校共同週會】(全校同步)
+                            </button>
+                        </div>
+                    </div>
+
                     <div style="background: rgba(255, 255, 255, 0.03); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 16px;">
                         <h4 style="font-size: 0.9rem; color: #38bdf8; margin-bottom: 8px;"><i class="fa-solid fa-link"></i> 建立同時排課 / 跨班分組群組 (強制同日同節)</h4>
                         <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px;">此功能用於設定如體育男女分組、跨班選修、合班等課程。加入的成員將在 AI 自動排課時強制安排在同一時間！</p>
                         
-                        <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 12px;">
-                            <label style="font-size: 0.85rem; min-width: 80px;">群組名稱：</label>
-                            <input type="text" id="simGroupNameInput" placeholder="例如：七年級體育男女分組A / 高一多元選修群" style="flex: 1; padding: 6px 10px; border-radius: 6px; background: rgba(15,23,42,0.8); color: #fff; border: 1px solid var(--border-color); font-size: 0.85rem;">
+                        <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 12px; flex-wrap: wrap;">
+                            <div style="display: flex; gap: 8px; align-items: center; flex: 1; min-width: 240px;">
+                                <label style="font-size: 0.85rem; min-width: 80px;">群組名稱：</label>
+                                <input type="text" id="simGroupNameInput" placeholder="例如：七年級體育男女分組A / 高一多元選修群" style="flex: 1; padding: 6px 10px; border-radius: 6px; background: rgba(15,23,42,0.8); color: #fff; border: 1px solid var(--border-color); font-size: 0.85rem;">
+                            </div>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <label style="font-size: 0.85rem; color: #38bdf8; font-weight: bold;"><i class="fa-solid fa-clock"></i> 手動指定固定時間：</label>
+                                <select id="simGroupDayInput" style="padding: 6px 8px; border-radius: 6px; background: rgba(15,23,42,0.8); color: #38bdf8; border: 1px solid #38bdf8; font-size: 0.85rem; font-weight: bold;">
+                                    <option value="">-- 不指定 (同日同節即可) --</option>
+                                    <option value="1">星期一</option>
+                                    <option value="2">星期二</option>
+                                    <option value="3">星期三</option>
+                                    <option value="4">星期四</option>
+                                    <option value="5">星期五</option>
+                                </select>
+                                <select id="simGroupPeriodInput" style="padding: 6px 8px; border-radius: 6px; background: rgba(15,23,42,0.8); color: #38bdf8; border: 1px solid #38bdf8; font-size: 0.85rem; font-weight: bold;">
+                                    <option value="">-- 不指定節次 --</option>
+                                    <option value="1">第 1 節 (08:10-08:55)</option>
+                                    <option value="2">第 2 節 (09:05-09:50)</option>
+                                    <option value="3">第 3 節 (10:00-10:45)</option>
+                                    <option value="4">第 4 節 (10:55-11:40)</option>
+                                    <option value="5">第 5 節 (13:15-14:00)</option>
+                                    <option value="6">第 6 節 (14:10-14:55)</option>
+                                    <option value="7">第 7 節 (15:05-15:50)</option>
+                                    <option value="8">第 8 節 (16:00-16:45)</option>
+                                </select>
+                            </div>
                         </div>
 
                         <!-- Dynamic Member Pair Inputs -->
@@ -942,49 +1174,110 @@
                     </div>
                 </div>
 
-                <!-- Tab 6: Restore Points Checkpoint Manager -->
-                <!-- Tab: Single-File Semester Management -->
+                <!-- Tab: Single-File Semester Management & Restore Points -->
                 <div id="ruleTabSemester" class="rule-tab-content" style="display: none;">
-                    <div style="display: flex; gap: 12px; align-items: center; background: rgba(255, 255, 255, 0.03); padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 16px; flex-wrap: wrap;">
-                        <div style="flex: 1;">
-                            <span style="font-size: 0.9rem; color: #c084fc; font-weight: 600;"><i class="fa-solid fa-calendar-check"></i> 目前啟用的學期單一檔：</span>
-                            <span id="activeSemesterBadge" style="font-size: 1rem; font-weight: 700; color: #fff; background: rgba(168, 85, 247, 0.25); padding: 2px 10px; border-radius: 6px; border: 1px solid rgba(168, 85, 247, 0.4); margin-left: 6px;">114-1 學期</span>
+                    <!-- Section 1: Semester Switching & One-Click Creation -->
+                    <div style="background: rgba(255, 255, 255, 0.03); padding: 14px; border-radius: 10px; border: 1px solid var(--border-color); margin-bottom: 16px;">
+                        <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 12px;">
+                            <div style="flex: 1; min-width: 240px;">
+                                <span style="font-size: 0.9rem; color: #c084fc; font-weight: 600;"><i class="fa-solid fa-calendar-check"></i> 目前啟用的學期檔案：</span>
+                                <span id="activeSemesterBadge" style="font-size: 1rem; font-weight: 700; color: #fff; background: rgba(168, 85, 247, 0.25); padding: 3px 12px; border-radius: 6px; border: 1px solid rgba(168, 85, 247, 0.4); margin-left: 6px;">114-1 學期</span>
+                            </div>
+                            
+                            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                                <span style="font-size: 0.85rem; color: #a5b4fc; font-weight: 500;"><i class="fa-solid fa-circle-plus"></i> 選擇欲繼承開辦的新學期：</span>
+                                <select id="newSemesterIdSelect" style="padding: 6px 12px; border-radius: 6px; background: rgba(15, 23, 42, 0.8); color: #fff; border: 1px solid var(--border-color); font-size: 0.85rem; font-weight: 600;">
+                                    <option value="114-2">114學年度 第 2 學期 (114-2)</option>
+                                    <option value="115-1">115學年度 第 1 學期 (115-1)</option>
+                                    <option value="115-2">115學年度 第 2 學期 (115-2)</option>
+                                    <option value="116-1">116學年度 第 1 學期 (116-1)</option>
+                                    <option value="116-2">116學年度 第 2 學期 (116-2)</option>
+                                </select>
+                                <button id="createNewSemesterBtn" class="solver-action-btn primary-btn" style="padding: 6px 14px; font-size: 0.85rem; background: #a855f7;">
+                                    <i class="fa-solid fa-plus-circle"></i> 點選一鍵開辦此學期
+                                </button>
+                            </div>
                         </div>
-                        
-                        <div style="display: flex; gap: 8px; align-items: center;">
-                            <input type="text" id="newSemesterIdInput" placeholder="新學期名稱 (如 114-2)" style="width: 140px; padding: 6px 12px; border-radius: 6px; background: rgba(15, 23, 42, 0.8); color: #fff; border: 1px solid var(--border-color);">
-                            <button id="createNewSemesterBtn" class="solver-action-btn primary-btn" style="padding: 6px 14px; font-size: 0.85rem; background: #a855f7;">
-                                <i class="fa-solid fa-plus-circle"></i> 繼承開辦新學期
+
+                        <!-- Quick Preset Buttons for Creation -->
+                        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; background: rgba(15, 23, 42, 0.4); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(168, 85, 247, 0.2);">
+                            <span style="font-size: 0.8rem; color: var(--text-muted);">⚡ 快速點選開辦：</span>
+                            <button type="button" class="quick-add-sem-btn solver-action-btn secondary-btn" data-sem="114-2" style="padding: 3px 10px; font-size: 0.78rem; background: rgba(168, 85, 247, 0.15); border-color: rgba(168, 85, 247, 0.3); color: #c084fc;">
+                                ➕ 點選開辦 114-2
+                            </button>
+                            <button type="button" class="quick-add-sem-btn solver-action-btn secondary-btn" data-sem="115-1" style="padding: 3px 10px; font-size: 0.78rem; background: rgba(168, 85, 247, 0.15); border-color: rgba(168, 85, 247, 0.3); color: #c084fc;">
+                                ➕ 點選開辦 115-1
+                            </button>
+                            <button type="button" class="quick-add-sem-btn solver-action-btn secondary-btn" data-sem="115-2" style="padding: 3px 10px; font-size: 0.78rem; background: rgba(168, 85, 247, 0.15); border-color: rgba(168, 85, 247, 0.3); color: #c084fc;">
+                                ➕ 點選開辦 115-2
                             </button>
                         </div>
                     </div>
 
-                    <div style="display: flex; gap: 8px; align-items: center; background: rgba(255, 255, 255, 0.03); padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 16px;">
-                        <span style="font-size: 0.85rem; color: #38bdf8; font-weight: 500;"><i class="fa-solid fa-file-export"></i> 單一學期 `.json` 檔案匯出與匯入：</span>
-                        <button id="exportCurrentSemesterBtn" class="solver-action-btn primary-btn" style="padding: 6px 14px; font-size: 0.85rem; background: #0284c7;">
-                            <i class="fa-solid fa-file-download"></i> 匯出本學期單一 JSON 存檔
-                        </button>
-                        <label for="importSemesterFileInput" class="solver-action-btn secondary-btn" style="padding: 6px 14px; font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; background: rgba(168, 85, 247, 0.2); border-color: rgba(168, 85, 247, 0.4); color: #c084fc;">
-                            <i class="fa-solid fa-file-upload"></i> 匯入學期 JSON 存檔
-                        </label>
-                        <input type="file" id="importSemesterFileInput" accept=".json" style="display: none;">
+                    <!-- Section 2: Semester List & One-Click Switching Table -->
+                    <div style="background: rgba(255, 255, 255, 0.03); padding: 14px; border-radius: 10px; border: 1px solid var(--border-color); margin-bottom: 16px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <h4 style="font-size: 0.95rem; color: #a5b4fc; margin: 0;"><i class="fa-solid fa-list-check"></i> 全校歷史學期檔案一覽表 (點選按鈕即可一鍵切換)</h4>
+                            <div style="display: flex; gap: 8px;">
+                                <button id="exportCurrentSemesterBtn" class="solver-action-btn primary-btn" style="padding: 4px 12px; font-size: 0.8rem; background: #0284c7;">
+                                    <i class="fa-solid fa-file-download"></i> 匯出本學期 JSON
+                                </button>
+                                <label for="importSemesterFileInput" class="solver-action-btn secondary-btn" style="padding: 4px 12px; font-size: 0.8rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; background: rgba(168, 85, 247, 0.2); border-color: rgba(168, 85, 247, 0.4); color: #c084fc;">
+                                    <i class="fa-solid fa-file-upload"></i> 匯入學期 JSON
+                                </label>
+                                <input type="file" id="importSemesterFileInput" accept=".json" style="display: none;">
+                            </div>
+                        </div>
+
+                        <div class="table-responsive glass" style="max-height: 220px; overflow-y: auto;">
+                            <table class="modal-setting-table" style="font-size: 0.85rem;">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 20%;">學期名稱</th>
+                                        <th style="width: 25%;">學校名稱</th>
+                                        <th style="width: 22%;">最後更新時間</th>
+                                        <th style="width: 15%;">已排課節數</th>
+                                        <th style="width: 18%; text-align: center;">點選切換與操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="semestersTableBody">
+                                    <!-- JS Generated -->
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
 
-                    <div class="table-responsive glass" style="max-height: 380px; overflow-y: auto;">
-                        <table class="modal-setting-table" style="font-size: 0.85rem;">
-                            <thead>
-                                <tr>
-                                    <th style="width: 25%;">學期名稱</th>
-                                    <th style="width: 25%;">學校名稱</th>
-                                    <th style="width: 20%;">最後更新時間</th>
-                                    <th style="width: 15%;">已排課節數</th>
-                                    <th style="width: 15%;">狀態與操作</th>
-                                </tr>
-                            </thead>
-                            <tbody id="semestersTableBody">
-                                <!-- JS Generated -->
-                            </tbody>
-                        </table>
+                    <!-- Section 3: History Restore Points & One-Click Snapshots -->
+                    <div style="background: rgba(255, 255, 255, 0.03); padding: 14px; border-radius: 10px; border: 1px solid var(--border-color);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+                            <h4 style="font-size: 0.95rem; color: #38bdf8; margin: 0;"><i class="fa-solid fa-clock-rotate-left"></i> 歷史版本還原快照 (點選按鈕即可一鍵還原)</h4>
+                            
+                            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                                <button type="button" id="quickSnapshotPreBtn" class="solver-action-btn primary-btn" style="padding: 4px 10px; font-size: 0.78rem; background: #0284c7;">
+                                    📸 點選拍攝【排課前規則快照】
+                                </button>
+                                <button type="button" id="quickSnapshotPostBtn" class="solver-action-btn primary-btn" style="padding: 4px 10px; font-size: 0.78rem; background: #6366f1;">
+                                    📸 點選拍攝【排課後成果快照】
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive glass" style="max-height: 200px; overflow-y: auto;">
+                            <table class="modal-setting-table" style="font-size: 0.85rem;">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 15%;">快照編號</th>
+                                        <th style="width: 25%;">備份時間</th>
+                                        <th style="width: 30%;">快照說明</th>
+                                        <th style="width: 15%;">備份內容</th>
+                                        <th style="width: 15%; text-align: center;">點選還原與操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="restorePointsTableBody">
+                                    <!-- JS Generated -->
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
 
@@ -1323,7 +1616,9 @@
                                 <th style="width: 20%;">指定代課教師</th>
                             </tr>
                         </thead>
-                        <tbody id="subHistoryTableBody"></tbody>
+                        <tbody id="subHistoryTableBody">
+                            <tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding: 15px;">尚無歷史調代課紀錄</td></tr>
+                        </tbody>
                     </table>
                 </div>
 
@@ -1426,6 +1721,77 @@
     <!-- Toast Notification -->
     <div id="toast" class="toast">
         <i class="fa-solid fa-circle-check"></i> <span id="toastText">已複製分享連結！</span>
+    </div>
+
+    <!-- Floating Conversational AI Assistant Widget -->
+    <div id="aiChatTriggerBtn" style="position: fixed; bottom: 24px; right: 24px; z-index: 9999; background: linear-gradient(135deg, #a855f7, #6366f1); color: #fff; border: none; padding: 12px 20px; border-radius: 30px; font-weight: bold; font-size: 0.95rem; cursor: pointer; box-shadow: 0 8px 24px rgba(168, 85, 247, 0.4); display: flex; align-items: center; gap: 8px; transition: transform 0.2s;" title="點擊開啟【舟歌 AI 自然語言對談排課助手】">
+        <i class="fa-solid fa-comments" style="font-size: 1.2rem; color: #fbbf24;"></i>
+        <span>💬 舟歌 AI 對談助手</span>
+    </div>
+
+    <!-- AI Chat Drawer Window -->
+    <div id="aiChatDrawer" style="display: none; position: fixed; bottom: 85px; right: 24px; z-index: 9999; width: 380px; height: 520px; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(16px); border: 1px solid rgba(168, 85, 247, 0.4); border-radius: 16px; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6); flex-direction: column; overflow: hidden;">
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, rgba(168, 85, 247, 0.3), rgba(99, 102, 241, 0.3)); padding: 10px 16px; border-bottom: 1px solid rgba(168, 85, 247, 0.3); display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 8px; color: #fff; font-weight: bold; font-size: 0.95rem;">
+                <i class="fa-solid fa-robot" style="color: #fbbf24; font-size: 1.1rem;"></i>
+                <span>舟歌 AI 自然語言排課助手</span>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <button id="toggleGroqSettingsBtn" style="background: rgba(16, 185, 129, 0.2); border: 1px solid #10b981; color: #34d399; border-radius: 6px; padding: 2px 8px; font-size: 0.75rem; cursor: pointer;" title="設定 Groq API Key (Llama 3.3 超高速大模型)">
+                    <i class="fa-solid fa-bolt"></i> Groq API
+                </button>
+                <button id="closeAiChatBtn" style="background: transparent; border: none; color: #94a3b8; cursor: pointer; font-size: 1.1rem;">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Groq Settings Panel (Collapsible) -->
+        <div id="groqSettingsPanel" style="display: none; padding: 10px 14px; background: rgba(30, 41, 59, 0.95); border-bottom: 1px solid rgba(168, 85, 247, 0.3); font-size: 0.8rem;">
+            <div style="color: #34d399; font-weight: bold; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
+                <span>⚡ Groq Cloud API 超高速模型設定</span>
+                <span id="groqStatusBadge" style="font-size: 0.7rem; color: #94a3b8;">載入中...</span>
+            </div>
+            <div style="display: flex; gap: 6px; margin-bottom: 6px;">
+                <input type="password" id="groqApiKeyInput" placeholder="請貼上 Groq API Key (gsk_...)" style="flex: 1; padding: 4px 8px; border-radius: 4px; background: rgba(15, 23, 42, 0.8); color: #fff; border: 1px solid var(--border-color); font-size: 0.78rem;">
+                <button id="saveGroqKeyBtn" style="background: #10b981; color: #fff; border: none; border-radius: 4px; padding: 4px 10px; cursor: pointer; font-weight: bold; font-size: 0.75rem;">儲存</button>
+            </div>
+            <div style="font-size: 0.72rem; color: #94a3b8;">
+                支援免費 Groq Key，預設呼叫 <code style="color: #c084fc;">llama-3.3-70b-versatile</code> 超高速語意模型。
+            </div>
+        </div>
+
+        <!-- Chat Message Log -->
+        <div id="aiChatMessages" style="flex: 1; padding: 14px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; font-size: 0.85rem;">
+            <!-- Initial AI Welcome Message -->
+            <div style="display: flex; gap: 8px; align-items: flex-start;">
+                <div style="width: 28px; height: 28px; border-radius: 50%; background: #a855f7; display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0; font-size: 0.75rem;">AI</div>
+                <div style="background: rgba(30, 41, 59, 0.9); color: #e2e8f0; padding: 10px 14px; border-radius: 12px; border-top-left-radius: 2px; border: 1px solid rgba(168, 85, 247, 0.2); line-height: 1.5;">
+                    👋 您好！我是 **舟歌 AI 自然語言對談排課助手**！您可以直接用對話的方式告訴我您的排課需求，例如：<br>
+                    • 「幫全校排共同班會與社團」<br>
+                    • 「執行全校 AI 一鍵自動排課」<br>
+                    • 「對接電腦教室與實驗室專用教室」<br>
+                    • 「開辦 114-2 新學期」
+                </div>
+            </div>
+        </div>
+
+        <!-- Suggestion Quick Chips -->
+        <div style="padding: 6px 12px; background: rgba(15, 23, 42, 0.6); border-top: 1px solid rgba(255, 255, 255, 0.05); display: flex; gap: 6px; overflow-x: auto; white-space: nowrap;">
+            <button class="ai-chip-btn" style="background: linear-gradient(135deg, rgba(168, 85, 247, 0.3), rgba(99, 102, 241, 0.3)); color: #fff; font-weight: bold; border: 1px solid rgba(168, 85, 247, 0.5); border-radius: 12px; padding: 3px 10px; font-size: 0.75rem; cursor: pointer;">🚀 全部一次 AI 自動設定</button>
+            <button class="ai-chip-btn" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 12px; padding: 3px 10px; font-size: 0.75rem; cursor: pointer;">幫全校排共同班會與社團</button>
+            <button class="ai-chip-btn" style="background: rgba(52, 211, 153, 0.15); color: #34d399; border: 1px solid rgba(52, 211, 153, 0.3); border-radius: 12px; padding: 3px 10px; font-size: 0.75rem; cursor: pointer;">一鍵對接專用教室</button>
+            <button class="ai-chip-btn" style="background: rgba(251, 191, 36, 0.15); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 12px; padding: 3px 10px; font-size: 0.75rem; cursor: pointer;">開辦 114-2 學期</button>
+        </div>
+
+        <!-- Chat Input Bar -->
+        <div style="padding: 10px; border-top: 1px solid rgba(255, 255, 255, 0.1); display: flex; gap: 8px; background: rgba(15, 23, 42, 0.8);">
+            <input type="text" id="aiChatInput" placeholder="請輸入對話需求 (如: 幫全校排共同班會)..." style="flex: 1; padding: 8px 12px; border-radius: 8px; background: rgba(30, 41, 59, 0.9); color: #fff; border: 1px solid var(--border-color); font-size: 0.85rem; outline: none;">
+            <button id="sendAiChatBtn" style="background: #6366f1; color: #fff; border: none; border-radius: 8px; padding: 8px 14px; cursor: pointer; font-size: 0.85rem; font-weight: bold;">
+                <i class="fa-solid fa-paper-plane"></i>
+            </button>
+        </div>
     </div>
 
     <!-- JS Scripts -->
