@@ -5262,6 +5262,13 @@ async function openDualViewModal(classCode, teacherCode) {
         return;
     }
 
+    if (typeof allClasses !== 'undefined' && allClasses.length > 0) {
+        metadata.classes = allClasses;
+    }
+    if (typeof allTeachers !== 'undefined' && allTeachers.length > 0) {
+        metadata.teachers = allTeachers;
+    }
+
     if (!metadata || !metadata.classes || metadata.classes.length === 0) {
         try { await fetchMetadata(); } catch (e) {}
     }
@@ -5310,13 +5317,18 @@ async function loadDualViewData() {
     const classSelect = document.getElementById('dualViewClassSelect');
     const teacherSelect = document.getElementById('dualViewTeacherSelect');
 
-    if (classSelect) dualViewCurrentClass = classSelect.value;
-    if (teacherSelect) dualViewCurrentTeacher = teacherSelect.value;
+    if (classSelect && classSelect.value) dualViewCurrentClass = classSelect.value;
+    if (teacherSelect && teacherSelect.value) dualViewCurrentTeacher = teacherSelect.value;
+
+    if (!dualViewCurrentClass || !dualViewCurrentTeacher) {
+        console.warn("loadDualViewData skipped due to empty class/teacher code:", dualViewCurrentClass, dualViewCurrentTeacher);
+        return;
+    }
 
     try {
         const [clsRes, tRes] = await Promise.all([
-            fetch(`/api/schedule/class/${encodeURIComponent(dualViewCurrentClass)}`).then(r => r.json()),
-            fetch(`/api/schedule/teacher/${encodeURIComponent(dualViewCurrentTeacher)}`).then(r => r.json())
+            fetch(`/api/schedule/class/${encodeURIComponent(dualViewCurrentClass)}`).then(r => r.ok ? r.json() : []),
+            fetch(`/api/schedule/teacher/${encodeURIComponent(dualViewCurrentTeacher)}`).then(r => r.ok ? r.json() : [])
         ]);
 
         dualClassSlotsData = Array.isArray(clsRes) ? clsRes : (clsRes.slots || clsRes.data || []);
