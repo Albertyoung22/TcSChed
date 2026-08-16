@@ -5479,10 +5479,9 @@ function renderDualClassGrid() {
             }
 
             td.addEventListener('click', () => {
+                highlightDualSlotSync(d, p);
                 if (lessons.length > 0 && (lessons[0].teacher_code || lessons[0].teacher_name)) {
                     switchDualRightTeacher(lessons[0].teacher_code || lessons[0].teacher_name, d, p);
-                } else {
-                    highlightDualSlotSync(d, p);
                 }
             });
             tr.appendChild(td);
@@ -5537,10 +5536,9 @@ function renderDualTeacherGrid() {
             }
 
             td.addEventListener('click', () => {
+                highlightDualSlotSync(d, p);
                 if (lessons.length > 0 && (lessons[0].class_code || lessons[0].class_name)) {
                     switchDualLeftClass(lessons[0].class_code || lessons[0].class_name, d, p);
-                } else {
-                    highlightDualSlotSync(d, p);
                 }
             });
             tr.appendChild(td);
