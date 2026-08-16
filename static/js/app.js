@@ -5606,7 +5606,7 @@ function updateDualSwapAssistant(d, p) {
                         <span style="color:#e2e8f0; font-weight:bold;">${tch.name}</span>
                         <span style="font-size:0.7rem; color:#34d399; margin-left:4px;">🟢 當節空堂</span>
                     </div>
-                    <button class="solver-action-btn primary-btn" style="padding:2px 8px; font-size:0.72rem; background:#0284c7; border-radius:4px;" onclick="showToast('已成功指定【${tch.name} 老師】為 ${clsName} ${daysMap[d]}第${p}節 (${subjName}) 之請假代課教師！')">選為代課</button>
+                    <button class="solver-action-btn primary-btn" style="padding:2px 8px; font-size:0.72rem; background:#0284c7; border-radius:4px; cursor:pointer;" onclick="executeAssignSubstitute('${tch.name}', '${tch.code}', ${d}, ${p}, '${subjName}')">選為代課</button>
                  </div>`
             ).join('') || '<div style="color:#64748b;">該時段無同科空堂教師</div>';
         } else {
@@ -5615,14 +5615,22 @@ function updateDualSwapAssistant(d, p) {
     }
 
     if (col2) {
-        const otherSlots = dualClassSlotsData.filter(s => !(parseInt(s.day) === d && parseInt(s.period) === p));
-        if (otherSlots.length > 0) {
-            col2.innerHTML = otherSlots.slice(0, 5).map(s => 
-                `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; padding:4px 8px; background:rgba(255,255,255,0.03); border-radius:6px; border:1px solid rgba(255,255,255,0.06);">
-                    <span><strong style="color:#fbbf24;">${daysMap[s.day]}第${s.period}節</strong> ${s.subject_name} (${s.teacher_name})</span>
-                    <button class="solver-action-btn primary-btn" style="padding:2px 8px; font-size:0.72rem; background:#d97706; border-radius:4px;" onclick="showToast('已建議將 ${daysMap[d]}第${p}節 與 ${daysMap[s.day]}第${s.period}節 (${s.subject_name}) 進行兩節對調！')">對調此節</button>
-                 </div>`
-            ).join('');
+        if (classLessons.length > 0) {
+            const activeLesson = classLessons[0];
+            const subj1 = activeLesson.subject_name || '課程';
+            const tch1 = activeLesson.teacher_name || activeLesson.teacher_code || '';
+            const otherSlots = dualClassSlotsData.filter(s => !(parseInt(s.day) === d && parseInt(s.period) === p));
+            
+            if (otherSlots.length > 0) {
+                col2.innerHTML = otherSlots.slice(0, 5).map(s => 
+                    `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; padding:4px 8px; background:rgba(255,255,255,0.03); border-radius:6px; border:1px solid rgba(255,255,255,0.06);">
+                        <span><strong style="color:#fbbf24;">${daysMap[s.day]}第${s.period}節</strong> ${s.subject_name} (${s.teacher_name})</span>
+                        <button class="solver-action-btn primary-btn" style="padding:2px 8px; font-size:0.72rem; background:#d97706; border-radius:4px; cursor:pointer;" onclick="executePerformSlotSwap(${d}, ${p}, ${s.day}, ${s.period}, '${subj1}', '${tch1}', '${s.subject_name}', '${s.teacher_name}')">對調此節</button>
+                     </div>`
+                ).join('');
+            } else {
+                col2.innerHTML = '<div style="color:#64748b;">無可對調節次</div>';
+            }
         } else {
             col2.innerHTML = '<div style="color:#64748b;">無可對調節次</div>';
         }
@@ -5636,13 +5644,96 @@ function updateDualSwapAssistant(d, p) {
                 ${allRoomsList.map(r => {
                     const rName = typeof r === 'object' ? (r.name || r.code) : r;
                     const rCode = typeof r === 'object' ? (r.code || r.name) : r;
-                    return `<span style="background:rgba(52,211,153,0.15); border:1px solid rgba(52,211,153,0.3); color:#34d399; padding:2px 6px; border-radius:4px; font-size:0.75rem;" title="點擊查詢 ${rName} 場地課表" onclick="window.location.hash='#room/${encodeURIComponent(rCode)}'; closeDualViewModal();">🟢 ${rName} (空堂)</span>`;
+                    return `<span style="background:rgba(52,211,153,0.15); border:1px solid rgba(52,211,153,0.3); color:#34d399; padding:2px 6px; border-radius:4px; font-size:0.75rem; cursor:pointer;" title="點擊查詢 ${rName} 場地課表" onclick="window.location.hash='#room/${encodeURIComponent(rCode)}'; closeDualViewModal();">🟢 ${rName} (空堂)</span>`;
                 }).join('') || '<span style="color:#64748b;">無多間專用教室紀錄</span>'}
             </div>
             <div style="color:#a78bfa; font-size:0.75rem;"><i class="fa-solid fa-user-clock"></i> 當節全校空堂備用教師：${(metadata.teachers || []).slice(0, 5).map(x=>x.name||x.code).join('、 ')} 老師</div>
         `;
     }
 }
+
+async function executeAssignSubstitute(tchName, tchCode, day, period, subjName) {
+    const daysMap = ['', '一', '二', '三', '四', '五'];
+    const dayStr = daysMap[day] || day;
+    const confirmMsg = `📋 【請假代課登記確認】\n\n確定要將【週${dayStr} 第${period}節 (${subjName})】\n指定由 【${tchName} 老師】進行請假代課嗎？`;
+    
+    if (!confirm(confirmMsg)) return;
+
+    const key = `class_${dualViewCurrentClass}_${day}_${period}`;
+    const note_type = "代課";
+    const note_text = `由 ${tchName} 老師代課 (${subjName})`;
+    const author = "教務處代課登記";
+
+    try {
+        const resp = await fetch('/api/notes/save', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ key, note_type, note_text, author })
+        });
+        const data = await resp.json();
+        if (data.status === 'success') {
+            lessonNotes = data.notes || {};
+            showToast(`🎉 成功指派【${tchName} 老師】為週${dayStr}第${period}節代課教師！已自動於課表添加代課標籤！`, 'success');
+            await loadDualViewData();
+            handleHashChange();
+        } else {
+            alert("代課登記失敗: " + data.message);
+        }
+    } catch (e) {
+        alert("代課登記過程發生錯誤: " + e.message);
+    }
+}
+
+async function executePerformSlotSwap(d1, p1, d2, p2, subj1, tch1, subj2, tch2) {
+    const daysMap = ['', '一', '二', '三', '四', '五'];
+    const confirmMsg = `🔁 【課程對調確認】\n\n確定將以下兩節課程進行線上對調嗎？\n\n1. 週${daysMap[d1]} 第${p1}節：${subj1} (${tch1})\n2. 週${daysMap[d2]} 第${p2}節：${subj2} (${tch2})`;
+    
+    if (!confirm(confirmMsg)) return;
+
+    const key1 = `class_${dualViewCurrentClass}_${d1}_${p1}`;
+    const key2 = `class_${dualViewCurrentClass}_${d2}_${p2}`;
+    
+    const note1 = {
+        key: key1,
+        note_type: "調課",
+        note_text: `與週${daysMap[d2]}第${p2}節 (${subj2}) 對調`,
+        author: "教務處調課登記"
+    };
+
+    const note2 = {
+        key: key2,
+        note_type: "調課",
+        note_text: `與週${daysMap[d1]}第${p1}節 (${subj1}) 對調`,
+        author: "教務處調課登記"
+    };
+
+    try {
+        await fetch('/api/notes/save', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(note1)
+        });
+        const resp2 = await fetch('/api/notes/save', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(note2)
+        });
+        const data2 = await resp2.json();
+        if (data2.status === 'success') {
+            lessonNotes = data2.notes || {};
+            showToast(`🎉 已成功將 週${daysMap[d1]}第${p1}節 與 週${daysMap[d2]}第${p2}節 兩節課程完成對調並標記調課註記！`, 'success');
+            await loadDualViewData();
+            handleHashChange();
+        } else {
+            alert("對調登記失敗");
+        }
+    } catch (e) {
+        alert("對調登記過程發生錯誤: " + e.message);
+    }
+}
+
+window.executeAssignSubstitute = executeAssignSubstitute;
+window.executePerformSlotSwap = executePerformSlotSwap;
 
 function toggleModalMaximize(modalId) {
     const modal = document.getElementById(modalId);
