@@ -647,28 +647,32 @@
             if (currentMode === 'teacher') {
                 const list = filteredList || allTeachers;
                 select.innerHTML = '<option value="">-- 請選擇教師 --</option>';
-                const sorted = [...list].sort((a, b) => (a.code || '').localeCompare(b.code || ''));
-                sorted.forEach(t => {
+                list.forEach(t => {
+                    const code = typeof t === 'object' ? (t.code || t.name) : t;
+                    const name = typeof t === 'object' ? (t.name || t.code) : t;
+                    const role = typeof t === 'object' && t.role ? t.role : '教師';
                     const opt = document.createElement('option');
-                    opt.value = t.code;
-                    opt.textContent = `${t.name} (${t.code}) - ${t.role || '教師'}`;
+                    opt.value = code;
+                    opt.textContent = `${name} (${code}) - ${role}`;
                     select.appendChild(opt);
                 });
             } else if (currentMode === 'class') {
                 const list = filteredList || allClasses;
                 select.innerHTML = '<option value="">-- 請選擇班級 --</option>';
-                const sorted = [...list].sort((a, b) => (a.code || '').localeCompare(b.code || ''));
-                sorted.forEach(c => {
+                list.forEach(c => {
+                    const code = typeof c === 'object' ? (c.code || c.name) : c;
+                    const name = typeof c === 'object' ? (c.name || c.code) : c;
+                    const tutor = typeof c === 'object' && c.tutor ? c.tutor : '未指派';
                     const opt = document.createElement('option');
-                    opt.value = c.code;
-                    opt.textContent = `${c.name} (導師: ${c.tutor || '未指派'})`;
+                    opt.value = code;
+                    opt.textContent = `${name} (導師: ${tutor})`;
                     select.appendChild(opt);
                 });
             } else {
                 const list = filteredList || allRooms;
                 select.innerHTML = '<option value="">-- 請選擇專用教室 --</option>';
                 list.forEach(r => {
-                    const rname = typeof r === 'string' ? r : r.name;
+                    const rname = typeof r === 'string' ? r : (r.name || r.code);
                     const opt = document.createElement('option');
                     opt.value = rname;
                     opt.textContent = rname;
@@ -680,13 +684,24 @@
         function filterDropdownOptions() {
             const query = document.getElementById('teacherSearchInput').value.trim().toLowerCase();
             if (currentMode === 'teacher') {
-                const filtered = allTeachers.filter(t => (t.name || '').toLowerCase().includes(query) || (t.code || '').toLowerCase().includes(query));
+                const filtered = allTeachers.filter(t => {
+                    const code = typeof t === 'object' ? (t.code || t.name) : t;
+                    const name = typeof t === 'object' ? (t.name || t.code) : t;
+                    return String(name).toLowerCase().includes(query) || String(code).toLowerCase().includes(query);
+                });
                 populateDropdown(filtered);
             } else if (currentMode === 'class') {
-                const filtered = allClasses.filter(c => (c.name || '').toLowerCase().includes(query) || (c.code || '').toLowerCase().includes(query));
+                const filtered = allClasses.filter(c => {
+                    const code = typeof c === 'object' ? (c.code || c.name) : c;
+                    const name = typeof c === 'object' ? (c.name || c.code) : c;
+                    return String(name).toLowerCase().includes(query) || String(code).toLowerCase().includes(query);
+                });
                 populateDropdown(filtered);
             } else {
-                const filtered = allRooms.filter(r => r.toLowerCase().includes(query));
+                const filtered = allRooms.filter(r => {
+                    const rname = typeof r === 'string' ? r : (r.name || r.code);
+                    return String(rname).toLowerCase().includes(query);
+                });
                 populateDropdown(filtered);
             }
         }
@@ -709,8 +724,16 @@
             let schedules = [];
             try {
                 const resp = await fetch(apiUrl);
-                schedules = await resp.json();
-                if (!Array.isArray(schedules)) schedules = [];
+                const respData = await resp.json();
+                if (Array.isArray(respData)) {
+                    schedules = respData;
+                } else if (respData && Array.isArray(respData.slots)) {
+                    schedules = respData.slots;
+                } else if (respData && Array.isArray(respData.data)) {
+                    schedules = respData.data;
+                } else {
+                    schedules = [];
+                }
             } catch (e) {
                 console.error("Fetch schedule failed:", e);
             }
@@ -720,17 +743,34 @@
             card.style.display = 'flex';
 
             if (currentMode === 'teacher') {
-                const teacherObj = allTeachers.find(t => String(t.code).trim() === String(queryVal).trim()) || { name: queryVal, code: queryVal, role: '教師' };
+                const teacherObj = allTeachers.find(t => {
+                    const code = typeof t === 'object' ? (t.code || t.name) : t;
+                    const name = typeof t === 'object' ? (t.name || t.code) : t;
+                    return String(code).trim() === String(queryVal).trim() || String(name).trim() === String(queryVal).trim();
+                }) || { name: queryVal, code: queryVal, role: '教師' };
+
+                const tName = typeof teacherObj === 'object' ? (teacherObj.name || teacherObj.code) : teacherObj;
+                const tCode = typeof teacherObj === 'object' ? (teacherObj.code || teacherObj.name) : teacherObj;
+                const tRole = typeof teacherObj === 'object' && teacherObj.role ? teacherObj.role : '專任教師';
+
                 document.getElementById('profAvatarIcon').innerHTML = '<i class="fa-solid fa-user-tie"></i>';
-                document.getElementById('profTeacherName').innerText = teacherObj.name;
-                document.getElementById('profTeacherCode').innerText = teacherObj.code;
-                document.getElementById('profTeacherRole').innerText = teacherObj.role || '專任教師';
+                document.getElementById('profTeacherName').innerText = tName;
+                document.getElementById('profTeacherCode').innerText = tCode;
+                document.getElementById('profTeacherRole').innerText = tRole;
                 document.getElementById('profStatLabel').innerText = '每週授課總節數';
             } else if (currentMode === 'class') {
-                const classObj = allClasses.find(c => String(c.code).trim() === String(queryVal).trim()) || { name: queryVal, code: queryVal, tutor: '班導師' };
+                const classObj = allClasses.find(c => {
+                    const code = typeof c === 'object' ? (c.code || c.name) : c;
+                    const name = typeof c === 'object' ? (c.name || c.code) : c;
+                    return String(code).trim() === String(queryVal).trim() || String(name).trim() === String(queryVal).trim();
+                }) || { name: queryVal, code: queryVal, tutor: '班導師' };
+
+                const cName = typeof classObj === 'object' ? (classObj.name || classObj.code) : classObj;
+                const cTutor = typeof classObj === 'object' && classObj.tutor ? classObj.tutor : '未指派';
+
                 document.getElementById('profAvatarIcon').innerHTML = '<i class="fa-solid fa-graduation-cap"></i>';
-                document.getElementById('profTeacherName').innerText = classObj.name;
-                document.getElementById('profTeacherCode').innerText = `導師: ${classObj.tutor || '未指派'}`;
+                document.getElementById('profTeacherName').innerText = cName;
+                document.getElementById('profTeacherCode').innerText = `導師: ${cTutor}`;
                 document.getElementById('profTeacherRole').innerText = '全班課表';
                 document.getElementById('profStatLabel').innerText = '全班每週總課節數';
             } else {
