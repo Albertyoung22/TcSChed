@@ -44,20 +44,26 @@ function setupEventListeners() {
     window.addEventListener('hashchange', handleHashChange);
 
     // Back Button
-    backBtn.addEventListener('click', () => {
-        window.location.hash = '';
-    });
+    if (backBtn) {
+        backBtn.addEventListener('click', () => {
+            window.location.hash = '';
+        });
+    }
 
     // Share Button
-    shareBtn.addEventListener('click', copyShareLink);
+    if (shareBtn) {
+        shareBtn.addEventListener('click', copyShareLink);
+    }
 
     // Print Button
-    printBtn.addEventListener('click', () => {
-        // Set current date for printing
-        const today = new Date();
-        printDateSpan.textContent = `${today.getFullYear()}/${today.getMonth() + 1}/${today.getDate()}`;
-        window.print();
-    });
+    if (printBtn) {
+        printBtn.addEventListener('click', () => {
+            // Set current date for printing
+            const today = new Date();
+            if (printDateSpan) printDateSpan.textContent = `${today.getFullYear()}/${today.getMonth() + 1}/${today.getDate()}`;
+            window.print();
+        });
+    }
 
     // Open Web Browser Button
     const openWebBrowserBtn = document.getElementById('openWebBrowserBtn');
