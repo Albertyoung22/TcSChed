@@ -5252,6 +5252,10 @@ async function openDualViewModal(classCode, teacherCode) {
     const modal = document.getElementById('dualViewModal');
     if (!modal) return;
 
+    if (!metadata || !metadata.classes || metadata.classes.length === 0) {
+        try { await fetchMetadata(); } catch (e) {}
+    }
+
     modal.style.display = 'flex';
 
     const classSelect = document.getElementById('dualViewClassSelect');
@@ -5488,12 +5492,22 @@ function updateDualSwapAssistant(d, p) {
     }
 }
 
+window.openDualViewModal = openDualViewModal;
+
 document.addEventListener('DOMContentLoaded', () => {
     const closeBtn = document.getElementById('closeDualViewBtn');
     const modal = document.getElementById('dualViewModal');
     const classSelect = document.getElementById('dualViewClassSelect');
     const teacherSelect = document.getElementById('dualViewTeacherSelect');
     const printBtn = document.getElementById('dualViewPrintBtn');
+    const dualBtn = document.getElementById('dualViewModalBtn');
+
+    if (dualBtn) {
+        dualBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            openDualViewModal('', '');
+        });
+    }
 
     if (closeBtn && modal) {
         closeBtn.addEventListener('click', () => {
