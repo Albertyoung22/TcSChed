@@ -5562,7 +5562,26 @@ function updateDualSwapAssistant(d, p) {
     }
 }
 
-window.openDualViewModal = openDualViewModal;
+function toggleModalMaximize(modalId) {
+    const modal = document.getElementById(modalId);
+    if (!modal) return;
+    const modalContent = modal.querySelector('.modal-content');
+    if (!modalContent) return;
+
+    modalContent.classList.toggle('fullscreen-modal');
+    const isFullscreen = modalContent.classList.contains('fullscreen-modal');
+    
+    const icon = modal.querySelector('.maximize-modal-btn i');
+    if (icon) {
+        if (isFullscreen) {
+            icon.className = 'fa-solid fa-compress';
+        } else {
+            icon.className = 'fa-solid fa-expand';
+        }
+    }
+}
+
+window.toggleModalMaximize = toggleModalMaximize;
 
 let dualEventsInitialized = false;
 function initDualViewEvents() {
