@@ -170,11 +170,12 @@ async function fetchMetadata() {
             const parts = data.dbf_dir.split(/[\\/]/);
             const dbfFolder = parts.find(p => p.toLowerCase().startsWith('spv') && p.toLowerCase().endsWith('.wdb'));
             dbPathText.textContent = dbfFolder || "SPV2000 資料庫";
+        } else {
+            dbPathText.textContent = "未載入 (移交空白範本)";
         }
         if (data.local_ip && dbBadge) {
-            dbBadge.title = `資料庫: ${data.dbf_dir}\n局域網連線網址: http://${data.local_ip}:5000`;
+            dbBadge.title = `資料庫: ${data.dbf_dir || '未設定'}\n局域網連線網址: http://${data.local_ip}:5000`;
         }
-
 
         renderQuickSelectGrids();
     } catch (e) {
@@ -194,6 +195,22 @@ function renderQuickSelectGrids() {
     juniorHighGrid.innerHTML = '';
     teachersGrid.innerHTML = '';
     roomsGrid.innerHTML = '';
+
+    if (!metadata.classes || metadata.classes.length === 0) {
+        const emptyMsg = `
+        <div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 32px 16px; background: rgba(15, 23, 42, 0.4); border-radius: 12px; border: 1px dashed var(--border-color);">
+            <i class="fa-solid fa-folder-open" style="font-size: 2.5rem; color: #38bdf8; margin-bottom: 12px; display: block;"></i>
+            <div style="font-size: 1.1rem; font-weight: 600; color: #f8fafc; margin-bottom: 8px;">系統現已重置為全新空白學校範本</div>
+            <div style="font-size: 0.88rem; color: #94a3b8; max-width: 580px; margin: 0 auto; line-height: 1.6;">
+                請點擊右上角 <strong style="color: #fbbf24;">「⚙️ 排課規則與系統設定」</strong> ➔ <strong style="color: #38bdf8;">「學校基本資料與系統設定」</strong><br>
+                點擊 <strong style="color: #0284c7; background: rgba(2, 132, 199, 0.2); padding: 2px 8px; border-radius: 4px;">「📁 瀏覽選擇資料夾...」</strong> 選擇欣河 (SPV2000) DBF 資料庫資料夾即可自動讀取全校班級、教師與授課資料！
+            </div>
+        </div>`;
+        highSchoolGrid.innerHTML = emptyMsg;
+        teachersGrid.innerHTML = emptyMsg;
+        roomsGrid.innerHTML = emptyMsg;
+        return;
+    }
 
     // 1. Classes
     metadata.classes.forEach(cls => {
@@ -221,13 +238,17 @@ function renderQuickSelectGrids() {
     });
 
     // 3. Classrooms
-    metadata.classrooms.forEach(room => {
-        const item = document.createElement('a');
-        item.href = `#room/${room.code}`;
-        item.className = 'grid-item';
-        item.innerHTML = `${room.name}`;
-        roomsGrid.appendChild(item);
-    });
+    if (Array.isArray(metadata.classrooms)) {
+        metadata.classrooms.forEach(room => {
+            const item = document.createElement('a');
+            const rcode = typeof room === 'string' ? room : (room.code || room.name);
+            const rname = typeof room === 'string' ? room : (room.name || room.code);
+            item.href = `#room/${encodeURIComponent(rcode)}`;
+            item.className = 'grid-item';
+            item.innerHTML = `${rname}`;
+            roomsGrid.appendChild(item);
+        });
+    }
 }
 
 // Switch between Quick Select Tab views
@@ -275,11 +296,15 @@ function handleSearchInput(e) {
     });
 
     // Filter classrooms
-    metadata.classrooms.forEach(room => {
-        if (room.name.toLowerCase().includes(query) || room.code.toLowerCase().includes(query)) {
-            matches.push({ type: 'room', label: `${room.name} (教室)`, code: room.code, sub: '' });
-        }
-    });
+    if (Array.isArray(metadata.classrooms)) {
+        metadata.classrooms.forEach(room => {
+            const rcode = typeof room === 'string' ? room : (room.code || room.name);
+            const rname = typeof room === 'string' ? room : (room.name || room.code);
+            if (rname.toLowerCase().includes(query) || rcode.toLowerCase().includes(query)) {
+                matches.push({ type: 'room', label: `${rname} (教室)`, code: rcode, sub: '' });
+            }
+        });
+    }
 
     // Render Dropdown
     searchDropdown.innerHTML = '';
@@ -326,7 +351,7 @@ function handleHashChange() {
         return;
     }
 
-    const match = hash.match(/^#(class|teacher|room)\/([a-zA-Z0-9%_-]+)$/);
+    const match = hash.match(/^#(class|teacher|room)\/(.+)$/);
     if (!match) {
         window.location.hash = '';
         return;
@@ -348,7 +373,7 @@ async function loadSchedule(type, code) {
     scheduleBody.innerHTML = '<tr><td colspan="6" style="padding: 3rem; text-align: center;"><i class="fa-solid fa-spinner fa-spin fa-2xl" style="color:var(--primary);"></i></td></tr>';
 
     try {
-        const response = await fetch(`/api/schedule/${type}/${code}`);
+        const response = await fetch(`/api/schedule/${type}/${encodeURIComponent(code)}`);
         const slots = await response.json();
         
         if (slots.error) {
@@ -387,12 +412,13 @@ function renderScheduleGrid(type, code, slots) {
         printTutorInfo.textContent = subtitle;
         document.title = `${t ? t.name : code} 老師課表 - 土城高中課表查詢`;
     } else if (type === 'room') {
-        const room = metadata.classrooms.find(r => r.code === code);
-        title = `${room ? room.name : code} 教室課表`;
-        subtitle = `專科教室課表`;
+        const room = Array.isArray(metadata.classrooms) ? metadata.classrooms.find(r => (typeof r === 'object' ? (r.code === code || r.name === code) : r === code)) : null;
+        const roomName = room ? (typeof room === 'object' ? room.name : room) : code;
+        title = `${roomName} 教室課表`;
+        subtitle = `專科教室 / 專用場地課表`;
         printScheduleTitle.textContent = title;
         printTutorInfo.textContent = subtitle;
-        document.title = `${room ? room.name : code} 教室課表 - 土城高中課表查詢`;
+        document.title = `${roomName} 教室課表 - 土城高中課表查詢`;
     }
 
     scheduleTitle.textContent = title;
@@ -504,16 +530,16 @@ function renderScheduleGrid(type, code, slots) {
 
                     if (type === 'class') {
                         // Class view: link to teacher and classroom
-                        targetLink = lesson.teacher_code ? `<a href="#teacher/${lesson.teacher_code}" class="meta-link">${lesson.teacher_name}</a>` : '';
-                        roomLink = lesson.room_code ? `<a href="#room/${lesson.room_code}" class="room-lbl meta-link"><i class="fa-solid fa-location-dot"></i> ${lesson.room_name}</a>` : '';
+                        targetLink = lesson.teacher_name ? `<a href="#teacher/${encodeURIComponent(lesson.teacher_code || lesson.teacher_name)}" class="meta-link"><i class="fa-solid fa-chalkboard-user"></i> ${lesson.teacher_name}</a>` : '';
+                        roomLink = lesson.room_name ? `<a href="#room/${encodeURIComponent(lesson.room_code || lesson.room_name)}" class="room-lbl meta-link"><i class="fa-solid fa-location-dot"></i> ${lesson.room_name}</a>` : '';
                     } else if (type === 'teacher') {
                         // Teacher view: link to class and classroom
-                        targetLink = lesson.class_code ? `<a href="#class/${lesson.class_code}" class="meta-link">${lesson.class_name}</a>` : '';
-                        roomLink = lesson.room_code ? `<a href="#room/${lesson.room_code}" class="room-lbl meta-link"><i class="fa-solid fa-location-dot"></i> ${lesson.room_name}</a>` : '';
+                        targetLink = lesson.class_name ? `<a href="#class/${encodeURIComponent(lesson.class_code || lesson.class_name)}" class="meta-link"><i class="fa-solid fa-users"></i> ${lesson.class_name}</a>` : '';
+                        roomLink = lesson.room_name ? `<a href="#room/${encodeURIComponent(lesson.room_code || lesson.room_name)}" class="room-lbl meta-link"><i class="fa-solid fa-location-dot"></i> ${lesson.room_name}</a>` : '';
                     } else if (type === 'room') {
                         // Room view: link to class and teacher
-                        targetLink = lesson.class_code ? `<a href="#class/${lesson.class_code}" class="meta-link">${lesson.class_name}</a>` : '';
-                        roomLink = lesson.teacher_code ? `<span class="room-lbl" style="font-size:0.85rem;"><a href="#teacher/${lesson.teacher_code}" class="meta-link">${lesson.teacher_name}</a></span>` : '';
+                        targetLink = lesson.class_name ? `<a href="#class/${encodeURIComponent(lesson.class_code || lesson.class_name)}" class="meta-link"><i class="fa-solid fa-users"></i> ${lesson.class_name}</a>` : '';
+                        roomLink = lesson.teacher_name ? `<span class="room-lbl" style="font-size:0.85rem;"><a href="#teacher/${encodeURIComponent(lesson.teacher_code || lesson.teacher_name)}" class="meta-link"><i class="fa-solid fa-chalkboard-user"></i> ${lesson.teacher_name}</a></span>` : '';
                     }
 
                     // Week Mode Banner
@@ -861,7 +887,7 @@ function setupSettingsPanel() {
     settingsModalBtn.addEventListener('click', () => {
         settingsModal.style.display = 'flex';
         initSettingsModal();
-        switchRuleTab('school');
+        window.switchRuleTab('school');
     });
 
 
@@ -888,6 +914,12 @@ function setupSettingsPanel() {
     const ruleTabRestore = document.getElementById('ruleTabRestore');
 
     function switchRuleTab(tabName) {
+        const settingsModal = document.getElementById('settingsModal');
+        if (settingsModal && settingsModal.style.display !== 'flex') {
+            settingsModal.style.display = 'flex';
+            initSettingsModal();
+        }
+
         document.querySelectorAll('.rule-tab-btn').forEach(b => {
             b.classList.remove('active');
             b.style.background = 'transparent';
@@ -898,7 +930,19 @@ function setupSettingsPanel() {
             c.classList.remove('active');
         });
 
-        if (tabName === 'school') {
+        if (tabName === 'aicenter') {
+            const tabRuleAiCenterBtn = document.getElementById('tabRuleAiCenterBtn');
+            const ruleTabAiCenter = document.getElementById('ruleTabAiCenter');
+            if (tabRuleAiCenterBtn) {
+                tabRuleAiCenterBtn.classList.add('active');
+                tabRuleAiCenterBtn.style.background = 'linear-gradient(135deg, rgba(168, 85, 247, 0.3), rgba(99, 102, 241, 0.3))';
+                tabRuleAiCenterBtn.style.color = '#fff';
+            }
+            if (ruleTabAiCenter) {
+                ruleTabAiCenter.style.display = 'block';
+                ruleTabAiCenter.classList.add('active');
+            }
+        } else if (tabName === 'school') {
             const tabRuleSchoolBtn = document.getElementById('tabRuleSchoolBtn');
             const ruleTabSchool = document.getElementById('ruleTabSchool');
             if (tabRuleSchoolBtn) {
@@ -1004,7 +1048,7 @@ function setupSettingsPanel() {
                 ruleTabSim.classList.add('active');
             }
             loadSimultaneousGroups();
-        } else if (tabName === 'semester') {
+        } else if (tabName === 'semester' || tabName === 'restore') {
             const tabRuleSemesterBtn = document.getElementById('tabRuleSemesterBtn');
             const ruleTabSemester = document.getElementById('ruleTabSemester');
             if (tabRuleSemesterBtn) {
@@ -1016,7 +1060,8 @@ function setupSettingsPanel() {
                 ruleTabSemester.style.display = 'block';
                 ruleTabSemester.classList.add('active');
             }
-            loadSemestersList();
+            if (typeof loadSemesters === 'function') loadSemesters();
+            if (typeof loadRestorePoints === 'function') loadRestorePoints();
         } else if (tabName === 'moecode') {
             const tabRuleMoeCodeBtn = document.getElementById('tabRuleMoeCodeBtn');
             const ruleTabMoeCode = document.getElementById('ruleTabMoeCode');
@@ -1053,9 +1098,21 @@ function setupSettingsPanel() {
                 ruleTabRestore.style.display = 'block';
                 ruleTabRestore.classList.add('active');
             }
-            loadRestorePoints();
         }
     }
+
+    window.switchRuleTab = switchRuleTab;
+
+    function openDebugModal() {
+        const dataDebugModal = document.getElementById('dataDebugModal');
+        if (dataDebugModal) {
+            dataDebugModal.style.display = 'flex';
+            if (typeof loadDataDebugReport === 'function') {
+                loadDataDebugReport();
+            }
+        }
+    }
+    window.openDebugModal = openDebugModal;
 
 
     // Unified Rule Tab Click Listener Binding
@@ -1067,6 +1124,9 @@ function setupSettingsPanel() {
             }
         });
     });
+
+    const tabRuleAiCenterBtn = document.getElementById('tabRuleAiCenterBtn');
+    if (tabRuleAiCenterBtn) tabRuleAiCenterBtn.addEventListener('click', () => switchRuleTab('aicenter'));
 
     const tabRuleTeacherMaintainBtn = document.getElementById('tabRuleTeacherMaintainBtn');
     if (tabRuleTeacherMaintainBtn) tabRuleTeacherMaintainBtn.addEventListener('click', () => switchRuleTab('teachermaintain'));
@@ -1091,6 +1151,118 @@ function setupSettingsPanel() {
     if (tabRuleVenuesBtn) tabRuleVenuesBtn.addEventListener('click', () => switchRuleTab('venues'));
     if (tabRuleSimBtn) tabRuleSimBtn.addEventListener('click', () => switchRuleTab('sim'));
     if (tabRuleRestoreBtn) tabRuleRestoreBtn.addEventListener('click', () => switchRuleTab('restore'));
+
+    // Master AI One Click Wizard Button
+    const masterAiOneClickBtn = document.getElementById('masterAiOneClickBtn');
+    if (masterAiOneClickBtn && masterAiOneClickBtn.dataset.listener !== 'true') {
+        masterAiOneClickBtn.dataset.listener = 'true';
+        masterAiOneClickBtn.addEventListener('click', async () => {
+            if (!confirm("確定要執行【全校 AI 一鍵全套建置】嗎？\n系統將為您連續執行：\n1. AI 智慧教師配課 & 節數平衡\n2. AI 專用教室自動對接\n3. 全校共同班會排課鎖定\n4. CP-SAT 課表最佳化求解 & 衝突驗證！")) {
+                return;
+            }
+
+            try {
+                showToast("🤖 步驟 1/4：正在執行 AI 智慧全校教師配課與平衡...");
+                await fetch('/api/auto-assign', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ overwrite: true })
+                });
+
+                showToast("🪄 步驟 2/4：正在自動對接全校專用教室與容量控管...");
+                const matchBtn = document.getElementById('autoAiMatchVenuesBtn');
+                if (matchBtn) matchBtn.click();
+
+                showToast("👥 步驟 3/4：正在一鍵設定全校共同班會鎖定...");
+                const simBtn = document.getElementById('presetSimClassMeetingBtn');
+                if (simBtn) simBtn.click();
+
+                showToast("🧠 步驟 4/4：正在啟動 Google OR-Tools CP-SAT 求解器進行最佳化排課...");
+                const runBtn = document.getElementById('runSolverBtn');
+                if (runBtn) runBtn.click();
+
+                setTimeout(() => {
+                    showToast("🎉 全校 AI 一鍵全套建置完成！零衝突課表已產生。");
+                }, 3500);
+            } catch (e) {
+                console.error(e);
+                showToast("全套建置過程發生異常，請重試。");
+            }
+        });
+    }
+
+    // AI Center Card Shortcuts
+    const cardAiAutoAssignBtn = document.getElementById('cardAiAutoAssignBtn');
+    if (cardAiAutoAssignBtn) cardAiAutoAssignBtn.addEventListener('click', () => {
+        const btn = document.getElementById('aiAutoAssignBtn');
+        if (btn) btn.click();
+    });
+
+    const cardAiMatchVenuesBtn = document.getElementById('cardAiMatchVenuesBtn');
+    if (cardAiMatchVenuesBtn) cardAiMatchVenuesBtn.addEventListener('click', () => {
+        const btn = document.getElementById('autoAiMatchVenuesBtn');
+        if (btn) btn.click();
+    });
+
+    const cardSimClassMeetingBtn = document.getElementById('cardSimClassMeetingBtn');
+    if (cardSimClassMeetingBtn) cardSimClassMeetingBtn.addEventListener('click', () => {
+        const btn = document.getElementById('presetSimClassMeetingBtn');
+        if (btn) btn.click();
+    });
+
+    const cardSimClubBtn = document.getElementById('cardSimClubBtn');
+    if (cardSimClubBtn) cardSimClubBtn.addEventListener('click', () => {
+        const btn = document.getElementById('presetSimClubBtn');
+        if (btn) btn.click();
+    });
+
+    const cardSimWeeklyBtn = document.getElementById('cardSimWeeklyBtn');
+    if (cardSimWeeklyBtn) cardSimWeeklyBtn.addEventListener('click', () => {
+        const btn = document.getElementById('presetSimWeeklyBtn');
+        if (btn) btn.click();
+    });
+
+    const cardRunSolverBtn = document.getElementById('cardRunSolverBtn');
+    if (cardRunSolverBtn) cardRunSolverBtn.addEventListener('click', () => {
+        const btn = document.getElementById('runSolverBtn');
+        if (btn) btn.click();
+    });
+
+    const cardValidateSolverBtn = document.getElementById('cardValidateSolverBtn');
+    if (cardValidateSolverBtn) cardValidateSolverBtn.addEventListener('click', () => {
+        const btn = document.getElementById('validateSolverBtn');
+        if (btn) btn.click();
+    });
+
+    const aiAutoAssignBtn = document.getElementById('aiAutoAssignBtn');
+    if (aiAutoAssignBtn && aiAutoAssignBtn.dataset.listener !== 'true') {
+        aiAutoAssignBtn.dataset.listener = 'true';
+        aiAutoAssignBtn.addEventListener('click', async () => {
+            if (!confirm("確定要執行 AI 智慧自動配課嗎？\n系統將分析全校年級課程規劃、班導師與教師授課額度，自動一鍵匹配並指派教師！")) {
+                return;
+            }
+            try {
+                showToast("正在執行 AI 智慧自動配課分析中...");
+                const resp = await fetch('/api/auto-assign', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ overwrite: true })
+                });
+                const res = await resp.json();
+                if (res.status === 'success') {
+                    showToast(res.message);
+                    if (typeof loadCourseAssignments === 'function') {
+                        loadCourseAssignments();
+                    }
+                } else {
+                    showToast("AI 自動配課失敗：" + res.message);
+                }
+            } catch (e) {
+                console.error(e);
+                showToast("伺服器連線異常。");
+            }
+        });
+    }
 
 
 
@@ -1529,6 +1701,35 @@ async function loadCourseAssignments() {
             allCourseAssignmentsData = data.assignments || [];
             allTeacherAssignmentsData = data.teacher_assignments || [];
 
+            // Populate assignClassSelect with classes from allCourseAssignmentsData or metadata
+            if (assignClassSelect) {
+                const currentVal = assignClassSelect.value;
+                assignClassSelect.innerHTML = '<option value="">-- 請選擇班級檢視/調整配課 --</option>';
+                
+                const classList = (allCourseAssignmentsData.length > 0) ? 
+                    allCourseAssignmentsData.map(c => ({ code: c.class_code, name: c.class_name })) :
+                    (metadata.classes || []);
+
+                classList.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c.code;
+                    opt.textContent = `${c.name} (${c.code})`;
+                    if (c.code === currentVal) opt.selected = true;
+                    assignClassSelect.appendChild(opt);
+                });
+
+                if (assignClassSelect.dataset.listener !== 'true') {
+                    assignClassSelect.dataset.listener = 'true';
+                    assignClassSelect.addEventListener('change', () => {
+                        renderCourseAssignTable();
+                    });
+                }
+
+                if (!assignClassSelect.value && assignClassSelect.options.length > 1) {
+                    assignClassSelect.selectedIndex = 1;
+                }
+            }
+
             // Populate assignTeacherSelect with all available teachers
             if (assignTeacherSelect && allTeacherAssignmentsData.length > 0) {
                 const currentVal = assignTeacherSelect.value;
@@ -1578,7 +1779,7 @@ function renderCourseAssignTable() {
 
     const classInfo = allCourseAssignmentsData.find(c => c.class_code === selectedClass);
     if (!classInfo || !classInfo.subjects || classInfo.subjects.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">此班級暫無配課資料</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 16px;">此班級暫無配課資料。您可以點擊上方【🤖 執行 AI 智慧自動配課】一鍵產生全校配課！</td></tr>';
         container.style.display = 'block';
         return;
     }
@@ -2195,6 +2396,43 @@ async function loadRestorePoints() {
         });
     }
 
+    // Quick Snapshot Buttons
+    const quickSnapshotPreBtn = document.getElementById('quickSnapshotPreBtn');
+    if (quickSnapshotPreBtn && quickSnapshotPreBtn.dataset.listener !== 'true') {
+        quickSnapshotPreBtn.dataset.listener = 'true';
+        quickSnapshotPreBtn.addEventListener('click', async () => {
+            await doCreateSnapshot("排課前規則快照");
+        });
+    }
+
+    const quickSnapshotPostBtn = document.getElementById('quickSnapshotPostBtn');
+    if (quickSnapshotPostBtn && quickSnapshotPostBtn.dataset.listener !== 'true') {
+        quickSnapshotPostBtn.dataset.listener = 'true';
+        quickSnapshotPostBtn.addEventListener('click', async () => {
+            await doCreateSnapshot("排課後成果快照");
+        });
+    }
+
+    async function doCreateSnapshot(note) {
+        try {
+            showToast(`正在拍攝【${note}】...`);
+            const resp = await fetch('/api/create-restore-point', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ note })
+            });
+            const res = await resp.json();
+            if (res.status === 'success') {
+                showToast(res.message);
+                await loadRestorePoints();
+            } else {
+                showToast("建立失敗：" + res.message);
+            }
+        } catch (e) {
+            showToast("伺服器連線異常。");
+        }
+    }
+
     try {
         const resp = await fetch('/api/restore-points');
         const data = await resp.json();
@@ -2205,6 +2443,200 @@ async function loadRestorePoints() {
     } catch (e) {
         console.error("Load restore points failed:", e);
     }
+}
+
+let semestersData = [];
+
+async function loadSemesters() {
+    const createBtn = document.getElementById('createNewSemesterBtn');
+    if (createBtn && createBtn.dataset.listener !== 'true') {
+        createBtn.dataset.listener = 'true';
+        createBtn.addEventListener('click', async () => {
+            const semSelect = document.getElementById('newSemesterIdSelect');
+            const semId = semSelect ? semSelect.value : '114-2';
+            await doCreateSemester(semId);
+        });
+    }
+
+    document.querySelectorAll('.quick-add-sem-btn').forEach(btn => {
+        if (btn.dataset.listener !== 'true') {
+            btn.dataset.listener = 'true';
+            btn.addEventListener('click', (e) => {
+                const semId = e.currentTarget.getAttribute('data-sem');
+                const semSelect = document.getElementById('newSemesterIdSelect');
+                if (semSelect) semSelect.value = semId;
+                doCreateSemester(semId);
+            });
+        }
+    });
+
+    try {
+        const resp = await fetch('/api/semesters');
+        const data = await resp.json();
+        if (data.status === 'success') {
+            semestersData = data.semesters || [];
+            renderSemestersTable(data.active_id || data.active_semester_id);
+            const activeBadge = document.getElementById('activeSemesterBadge');
+            if (activeBadge) activeBadge.textContent = `${data.active_id || data.active_semester_id || '114-1'} 學期`;
+
+            // Populate top navbar semester dropdown
+            const headerSel = document.getElementById('headerSemesterSelect');
+            if (headerSel) {
+                headerSel.innerHTML = '';
+                const activeSem = data.active_id || data.active_semester_id;
+                semestersData.forEach(s => {
+                    const sid = s.id || s.semester_id;
+                    const opt = document.createElement('option');
+                    opt.value = sid;
+                    opt.style.background = '#0f172a';
+                    opt.style.color = '#fff';
+                    opt.textContent = `${sid} 學期 (${s.school_name || '學校'})`;
+                    if (s.is_active || sid === activeSem) {
+                        opt.selected = true;
+                    }
+                    headerSel.appendChild(opt);
+                });
+                const optManage = document.createElement('option');
+                optManage.value = '__manage__';
+                optManage.style.background = '#1e1b4b';
+                optManage.style.color = '#c084fc';
+                optManage.textContent = '⚙️ 點此開啟【全校歷史學期一覽表】...';
+                headerSel.appendChild(optManage);
+
+                if (headerSel.dataset.listener !== 'true') {
+                    headerSel.dataset.listener = 'true';
+                    headerSel.addEventListener('change', async (e) => {
+                        const val = e.target.value;
+                        if (val === '__manage__') {
+                            const modal = document.getElementById('solverModal');
+                            if (modal) modal.style.display = 'flex';
+                            if (typeof switchRuleTab === 'function') switchRuleTab('semester');
+                        } else if (val) {
+                            try {
+                                showToast(`正在切換至【${val}】學期...`);
+                                const resp = await fetch('/api/semesters/switch', {
+                                    method: 'POST',
+                                    headers: {'Content-Type': 'application/json'},
+                                    body: JSON.stringify({ semester_id: val })
+                                });
+                                const res = await resp.json();
+                                if (res.status === 'success') {
+                                    showToast(res.message);
+                                    setTimeout(() => window.location.reload(), 1000);
+                                } else {
+                                    showToast("切換失敗：" + res.message);
+                                }
+                            } catch (err) {
+                                showToast("伺服器連線異常。");
+                            }
+                        }
+                    });
+                }
+            }
+        }
+    } catch (e) {
+        console.error("Load semesters failed:", e);
+    }
+}
+
+async function doCreateSemester(semId) {
+    if (!confirm(`確定要繼承現有全校資料並開辦【${semId}】新學期嗎？`)) return;
+    try {
+        showToast(`正在開辦【${semId}】學期...`);
+        const resp = await fetch('/api/semesters/create', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ semester_id: semId })
+        });
+        const res = await resp.json();
+        if (res.status === 'success') {
+            showToast(res.message);
+            await loadSemesters();
+        } else {
+            showToast("開辦失敗：" + res.message);
+        }
+    } catch (e) {
+        showToast("伺服器連線異常。");
+    }
+}
+
+function renderSemestersTable(activeId) {
+    const tbody = document.getElementById('semestersTableBody');
+    if (!tbody) return;
+
+    tbody.innerHTML = '';
+    if (semestersData.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">尚無歷史學期檔案</td></tr>';
+        return;
+    }
+
+    semestersData.forEach(s => {
+        const semId = s.semester_id || s.id || '114-1';
+        const isCurrent = s.is_active || semId === activeId;
+        const tr = document.createElement('tr');
+        if (isCurrent) {
+            tr.style.background = 'rgba(168, 85, 247, 0.12)';
+        }
+
+        const tdId = document.createElement('td');
+        tdId.style.fontWeight = 'bold';
+        tdId.style.color = '#c084fc';
+        tdId.textContent = `${semId} 學期`;
+        tr.appendChild(tdId);
+
+        const tdSchool = document.createElement('td');
+        tdSchool.textContent = s.school_name || '學校檔案';
+        tr.appendChild(tdSchool);
+
+        const tdTime = document.createElement('td');
+        tdTime.style.color = 'var(--text-muted)';
+        tdTime.style.fontSize = '0.8rem';
+        tdTime.textContent = s.updated_at || '系統預設';
+        tr.appendChild(tdTime);
+
+        const tdCount = document.createElement('td');
+        tdCount.style.color = '#38bdf8';
+        tdCount.style.fontWeight = 'bold';
+        const slotsCount = s.slots_count !== undefined ? s.slots_count : (s.solved_count || 0);
+        tdCount.textContent = `${slotsCount} 節`;
+        tr.appendChild(tdCount);
+
+        const tdAct = document.createElement('td');
+        tdAct.style.textAlign = 'center';
+
+        if (isCurrent) {
+            tdAct.innerHTML = '<span style="color:#34d399; font-weight:bold; font-size:0.82rem;"><i class="fa-solid fa-circle-check"></i> 目前啟用中</span>';
+        } else {
+            const switchBtn = document.createElement('button');
+            switchBtn.className = 'solver-action-btn primary-btn';
+            switchBtn.style.padding = '4px 10px';
+            switchBtn.style.fontSize = '0.78rem';
+            switchBtn.style.background = '#a855f7';
+            switchBtn.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> 點選切換啟用';
+            switchBtn.addEventListener('click', async () => {
+                try {
+                    showToast(`正在切換至【${semId}】學期檔案...`);
+                    const resp = await fetch('/api/semesters/switch', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ semester_id: semId })
+                    });
+                    const res = await resp.json();
+                    if (res.status === 'success') {
+                        showToast(res.message);
+                        setTimeout(() => window.location.reload(), 1000);
+                    } else {
+                        showToast("切換失敗：" + res.message);
+                    }
+                } catch (e) {
+                    showToast("伺服器連線異常。");
+                }
+            });
+            tdAct.appendChild(switchBtn);
+        }
+        tr.appendChild(tdAct);
+        tbody.appendChild(tr);
+    });
 }
 
 function renderRestorePointsTable() {
@@ -2456,6 +2888,121 @@ async function loadVenueCapacities() {
         });
     }
 
+    // AI Smart Auto Match Venues Button
+    const autoAiMatchVenuesBtn = document.getElementById('autoAiMatchVenuesBtn');
+    if (autoAiMatchVenuesBtn && autoAiMatchVenuesBtn.dataset.listener !== 'true') {
+        autoAiMatchVenuesBtn.dataset.listener = 'true';
+        autoAiMatchVenuesBtn.addEventListener('click', async () => {
+            let targetSubjects = [];
+            if (metadata.subjects && metadata.subjects.length > 0) {
+                targetSubjects = metadata.subjects;
+            } else if (typeof masterSubjectCatalogData !== 'undefined' && masterSubjectCatalogData.length > 0) {
+                targetSubjects = masterSubjectCatalogData;
+            } else {
+                targetSubjects = [
+                    { code: "J104", name: "理化" },
+                    { code: "J105", name: "生物" },
+                    { code: "J110", name: "體育" },
+                    { code: "J112", name: "音樂" },
+                    { code: "J113", name: "視覺藝術" },
+                    { code: "J115", name: "資訊科技" },
+                    { code: "J116", name: "生活科技" },
+                    { code: "J117", name: "家政" },
+                    { code: "H104", name: "物理" },
+                    { code: "H105", name: "化學" },
+                    { code: "H110", name: "體育" },
+                    { code: "104", name: "物理" },
+                    { code: "105", name: "化學" },
+                    { code: "110", name: "程式設計" }
+                ];
+            }
+
+            const caps = {
+                "電腦教室": 2,
+                "理化實驗室": 2,
+                "生物實驗室": 1,
+                "音樂教室": 1,
+                "美術教室": 1,
+                "體育場/館": 3,
+                "家政教室": 1,
+                "生活科技教室": 1
+            };
+
+            const mappings = [];
+            targetSubjects.forEach(s => {
+                const sn = s.name || '';
+                let room = null;
+                if (sn.includes("資訊") || sn.includes("程式") || sn.includes("電腦")) room = "電腦教室";
+                else if (sn.includes("理化") || sn.includes("化學")) room = "理化實驗室";
+                else if (sn.includes("生物")) room = "生物實驗室";
+                else if (sn.includes("音樂")) room = "音樂教室";
+                else if (sn.includes("視覺") || sn.includes("美術") || sn.includes("藝術")) room = "美術教室";
+                else if (sn.includes("體育")) room = "體育場/館";
+                else if (sn.includes("家政")) room = "家政教室";
+                else if (sn.includes("生活科技") || sn.includes("生科")) room = "生活科技教室";
+
+                if (room) {
+                    mappings.push({
+                        subject_code: s.code,
+                        subject_name: `${s.name} (${s.code})`,
+                        room_name: room
+                    });
+                }
+            });
+
+            subjectVenueMappings = mappings;
+
+            // Render custom venues container
+            const container = document.getElementById('customVenuesContainer');
+            if (container) {
+                container.innerHTML = '';
+                Object.keys(caps).forEach(vname => {
+                    const icon = vname.includes("電腦") ? "💻" : vname.includes("實驗") ? "🧪" : vname.includes("音樂") ? "🎵" : vname.includes("體育") ? "🏀" : "🏫";
+                    const item = document.createElement('div');
+                    item.style.display = 'flex';
+                    item.style.alignItems = 'center';
+                    item.style.gap = '8px';
+                    item.style.background = 'rgba(15,23,42,0.4)';
+                    item.style.padding = '6px 10px';
+                    item.style.borderRadius = '6px';
+                    item.innerHTML = `
+                        <label style="font-size: 0.85rem; min-width: 90px;">${icon} ${vname}：</label>
+                        <input type="number" class="venue-cap-input" data-vname="${vname}" min="1" max="10" value="${caps[vname]}" style="width: 55px; padding: 4px; border-radius: 4px; background: rgba(15,23,42,0.8); color: #fff; border: 1px solid var(--border-color);"> 班
+                        <button type="button" onclick="this.parentElement.remove()" style="background: rgba(239,68,68,0.2); color: #ef4444; border: 1px solid rgba(239,68,68,0.4); border-radius: 4px; padding: 2px 6px; font-size: 0.75rem; cursor: pointer;">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    `;
+                    container.appendChild(item);
+                });
+            }
+
+            renderSubjectVenueTable();
+
+            // Auto save to backend
+            try {
+                showToast("正在一鍵儲存 AI 智慧專用教室對接資料...");
+                const resp = await fetch('/api/save-venue-capacities', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        venue_capacities: caps,
+                        consecutive_subjects: ["J104", "J115", "104", "105"],
+                        class_consecutive_rules: classConsecutiveRules,
+                        subject_venue_mappings: mappings
+                    })
+                });
+                const res = await resp.json();
+                if (res.status === 'success') {
+                    showToast(`🎉 成功完成 AI 智慧專用教室對接！已自動綁定 ${mappings.length} 門專用科目與對應教室容量上限。`);
+                } else {
+                    showToast("AI 對接儲存失敗：" + res.message);
+                }
+            } catch (e) {
+                showToast("伺服器連線異常。");
+            }
+        });
+    }
+
     // Save All Button
     if (saveVenueCapacitiesBtn && saveVenueCapacitiesBtn.dataset.listener !== 'true') {
         saveVenueCapacitiesBtn.dataset.listener = 'true';
@@ -2671,15 +3218,22 @@ function createSimMemberRow(index) {
     subSel.style.color = '#fff';
     subSel.style.border = '1px solid var(--border-color)';
     subSel.style.fontSize = '0.82rem';
-    subSel.innerHTML = '<option value="">-- 選擇科目 --</option>';
-    if (metadata.subjects) {
-        metadata.subjects.forEach(s => {
+    function populateSubjects(selectedClassCode = '') {
+        subSel.innerHTML = '<option value="">-- 選擇科目 --</option>';
+        const subList = metadata.subjects || [];
+        subList.forEach(s => {
             const opt = document.createElement('option');
             opt.value = s.code;
             opt.textContent = `${s.name} (${s.code})`;
             subSel.appendChild(opt);
         });
     }
+
+    classSel.addEventListener('change', (e) => {
+        populateSubjects(e.target.value);
+    });
+
+    populateSubjects();
     row.appendChild(subSel);
 
     // Remove Row Button
@@ -2766,19 +3320,29 @@ async function loadSimultaneousGroups() {
                 return;
             }
 
+            const fixedDay = document.getElementById('simGroupDayInput')?.value || null;
+            const fixedPeriod = document.getElementById('simGroupPeriodInput')?.value || null;
+
             try {
                 const resp = await fetch('/api/save-simultaneous-group', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ name, members })
+                    body: JSON.stringify({ name, members, fixed_day: fixedDay, fixed_period: fixedPeriod })
                 });
                 const res = await resp.json();
                 if (res.status === 'success') {
                     showToast(res.message);
                     if (nameInput) nameInput.value = '';
+                    const daySel = document.getElementById('simGroupDayInput');
+                    const periodSel = document.getElementById('simGroupPeriodInput');
+                    if (daySel) daySel.value = '';
+                    if (periodSel) periodSel.value = '';
                     currentSimGroupsData = res.simultaneous_groups || [];
                     renderSimGroupsTable();
                     initSimMemberRows();
+                    if (typeof currentType !== 'undefined' && currentType && typeof currentCode !== 'undefined' && currentCode) {
+                        loadSchedule(currentType, currentCode);
+                    }
                 } else {
                     showToast("建立失敗：" + res.message);
                 }
@@ -2786,6 +3350,73 @@ async function loadSimultaneousGroups() {
                 showToast("伺服器連線異常。");
             }
         });
+    }
+
+    async function createPresetSimGroup(groupName, subjectKeyword, defaultSubCode, fixedDay = null, fixedPeriod = null) {
+        if (!metadata.classes || metadata.classes.length < 2) {
+            showToast("尚無足夠班級資料可供全校共同排課。");
+            return;
+        }
+
+        const members = [];
+        metadata.classes.forEach(c => {
+            let subCode = defaultSubCode;
+            let subName = groupName;
+            if (metadata.subjects) {
+                const found = metadata.subjects.find(s => s.name.includes(subjectKeyword));
+                if (found) {
+                    subCode = found.code;
+                    subName = found.name;
+                }
+            }
+            members.push({
+                class_code: c.code,
+                class_name: c.name,
+                subject_code: subCode,
+                subject_name: subName
+            });
+        });
+
+        try {
+            const slotText = fixedDay && fixedPeriod ? ` (固定於 週${fixedDay} 第${fixedPeriod}節)` : '';
+            showToast(`正在一鍵建立【${groupName}】全校共同排課群組${slotText}...`);
+            const resp = await fetch('/api/save-simultaneous-group', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ name: groupName, members, fixed_day: fixedDay, fixed_period: fixedPeriod })
+            });
+            const res = await resp.json();
+            if (res.status === 'success') {
+                showToast(res.message);
+                currentSimGroupsData = res.simultaneous_groups || [];
+                renderSimGroupsTable();
+                if (typeof currentType !== 'undefined' && currentType && typeof currentCode !== 'undefined' && currentCode) {
+                    loadSchedule(currentType, currentCode);
+                }
+            } else {
+                showToast("設定失敗：" + res.message);
+            }
+        } catch (e) {
+            showToast("伺服器連線異常。");
+        }
+    }
+
+    const presetClassMeetingBtn = document.getElementById('presetSimClassMeetingBtn');
+    if (presetClassMeetingBtn && presetClassMeetingBtn.dataset.listener !== 'true') {
+        presetClassMeetingBtn.dataset.listener = 'true';
+        presetClassMeetingBtn.addEventListener('click', () => createPresetSimGroup('全校共同班會', '班會', 'J109', '1', '7'));
+    }
+
+    const presetClubBtn = document.getElementById('presetSimClubBtn');
+    if (presetClubBtn && presetClubBtn.dataset.listener !== 'true') {
+        presetClubBtn.dataset.listener = 'true';
+        presetClubBtn.addEventListener('click', () => createPresetSimGroup('全校共同社團活動', '社團', 'J110', '3', '6'));
+    }
+
+    const presetWeeklyBtn = document.getElementById('presetSimWeeklyBtn');
+    if (presetWeeklyBtn && presetWeeklyBtn.dataset.listener !== 'true') {
+        presetWeeklyBtn.dataset.listener = 'true';
+        presetWeeklyBtn.addEventListener('click', () => createPresetSimGroup('全校共同週會/彈性學習', '彈性', 'J116', '5', '7'));
     }
 
     try {
@@ -2806,10 +3437,11 @@ function renderSimGroupsTable() {
 
     tbody.innerHTML = '';
     if (!currentSimGroupsData || currentSimGroupsData.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 16px;">尚未建立自訂同時排課群組。輸入名稱並挑選班級科目即可建立！</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 16px;">尚未建立自訂同時排課群組。輸入名稱與固定時段即可建立！</td></tr>';
         return;
     }
 
+    const dayNames = { "1": "一", "2": "二", "3": "三", "4": "四", "5": "五" };
     currentSimGroupsData.forEach(grp => {
         if (!grp || typeof grp !== 'object') return;
         const tr = document.createElement('tr');
@@ -2827,10 +3459,15 @@ function renderSimGroupsTable() {
         tdMembers.innerHTML = membersList.join(' <i class="fa-solid fa-link" style="color:#818cf8; font-size:0.8rem;"></i> ');
         tr.appendChild(tdMembers);
 
-        // Status
+        // Status (Fixed Slot vs Dynamic Simultaneous)
         const tdStatus = document.createElement('td');
         tdStatus.style.textAlign = 'center';
-        tdStatus.innerHTML = '<span style="color:#34d399; font-size:0.8rem; font-weight:bold;"><i class="fa-solid fa-lock"></i> 同日同節束縛</span>';
+        if (grp.fixed_day && grp.fixed_period) {
+            const dName = dayNames[grp.fixed_day] || grp.fixed_day;
+            tdStatus.innerHTML = `<span style="color:#34d399; font-size:0.8rem; font-weight:bold; background:rgba(52, 211, 153, 0.15); padding:4px 8px; border-radius:6px;"><i class="fa-solid fa-calendar-check"></i> 固定 週${dName} 第${grp.fixed_period}節</span>`;
+        } else {
+            tdStatus.innerHTML = '<span style="color:#38bdf8; font-size:0.8rem; font-weight:bold; background:rgba(56, 189, 248, 0.15); padding:4px 8px; border-radius:6px;"><i class="fa-solid fa-lock"></i> 同日同節束縛</span>';
+        }
         tr.appendChild(tdStatus);
 
         // Action Delete
@@ -2857,6 +3494,9 @@ function renderSimGroupsTable() {
                 if (res.status === 'success') {
                     showToast(res.message);
                     await loadSimultaneousGroups();
+                    if (typeof currentType !== 'undefined' && currentType && typeof currentCode !== 'undefined' && currentCode) {
+                        loadSchedule(currentType, currentCode);
+                    }
                 } else {
                     showToast("刪除失敗：" + res.message);
                 }
@@ -3036,26 +3676,29 @@ async function loadSubstituteHistory() {
     try {
         const resp = await fetch('/api/substitute/list');
         const data = await resp.json();
-        if (data.status === 'success') {
+        if (data && data.status === 'success') {
             tbody.innerHTML = '';
-            if (data.records.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-muted);">尚無歷史調代課紀錄</td></tr>';
+            if (!Array.isArray(data.records) || data.records.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:15px;">尚無歷史調代課紀錄</td></tr>';
                 return;
             }
             data.records.forEach(r => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td style="color:#818cf8; font-size:0.8rem;">${r.date || r.id}</td>
+                    <td style="color:#818cf8; font-size:0.8rem;">${r.date || r.id || '最新'}</td>
                     <td>週${r.day} 第${r.period}節</td>
                     <td>${r.class_name || ''} ${r.subject_name || ''}</td>
-                    <td>${r.absent_teacher}</td>
-                    <td style="color:#34d399; font-weight:bold;">${r.sub_teacher}</td>
+                    <td>${r.absent_teacher || ''}</td>
+                    <td style="color:#34d399; font-weight:bold;">${r.sub_teacher || ''}</td>
                 `;
                 tbody.appendChild(tr);
             });
+        } else {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:15px;">尚無歷史調代課紀錄</td></tr>';
         }
     } catch (e) {
         console.error(e);
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:15px;">尚無歷史調代課紀錄</td></tr>';
     }
 }
 
@@ -3822,6 +4465,134 @@ document.addEventListener('DOMContentLoaded', () => {
     if (saveSystemInfoBtn) {
         saveSystemInfoBtn.addEventListener('click', saveSystemInfo);
     }
+
+    // Backup Export (.zip)
+    const backupExportBtn = document.getElementById('systemBackupExportBtn');
+    if (backupExportBtn) {
+        backupExportBtn.addEventListener('click', () => {
+            window.location.href = '/api/backup/export';
+        });
+    }
+
+    // Backup Import (.zip / .json)
+    const backupFileInput = document.getElementById('systemBackupFileInput');
+    if (backupFileInput) {
+        backupFileInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const resp = await fetch('/api/backup/import', {
+                    method: 'POST',
+                    body: formData
+                });
+                const res = await resp.json();
+                if (res.status === 'success') {
+                    alert(res.message);
+                    window.location.reload();
+                } else {
+                    alert('還原失敗: ' + res.message);
+                }
+            } catch (err) {
+                alert('還原發生錯誤: ' + err);
+            }
+            backupFileInput.value = '';
+        });
+    }
+
+    // System Reset / Clear for New School
+    const resetCleanBtn = document.getElementById('systemResetCleanBtn');
+    if (resetCleanBtn) {
+        resetCleanBtn.addEventListener('click', async () => {
+            const confirm1 = confirm('⚠️ 確定要一鍵清空現有學校的原始資料，並轉換為新學校範本嗎？\n\n系統會在清空前自動建立安全備份至 restore_points 資料夾，確保原本的資料隨時可以還原。');
+            if (!confirm1) return;
+
+            const confirm2 = confirm('🚨 再次確認：這將會重置學校名稱、配課規則與現有排課結果，並轉為空白學校範本。\n\n您準備好進行移交與重置了嗎？');
+            if (!confirm2) return;
+
+            try {
+                const resp = await fetch('/api/backup/reset', { method: 'POST' });
+                const res = await resp.json();
+                if (res.status === 'success') {
+                    alert(res.message);
+                    window.location.reload();
+                } else {
+                    alert('重置失敗: ' + res.message);
+                }
+            } catch (err) {
+                alert('重置發生錯誤: ' + err);
+            }
+        });
+    }
+
+    // Browse & Select DBF Search Directory
+    const browseDbfDirBtn = document.getElementById('browseDbfDirBtn');
+    if (browseDbfDirBtn) {
+        browseDbfDirBtn.addEventListener('click', async () => {
+            browseDbfDirBtn.disabled = true;
+            const originalHtml = browseDbfDirBtn.innerHTML;
+            browseDbfDirBtn.innerHTML = '<i class="fa-solid fa-circle-notch console-spinner"></i> 選擇中...';
+            try {
+                const resp = await fetch('/api/select-folder', { method: 'POST' });
+                const data = await resp.json();
+                if (data.status === 'success' && data.path) {
+                    const dbfSearchDirInput = document.getElementById('dbfSearchDirInput');
+                    if (dbfSearchDirInput) {
+                        dbfSearchDirInput.value = data.path;
+                    }
+                    showToast(`已成功選擇資料夾：${data.path}`, 'success');
+                } else if (data.status === 'cancel') {
+                    showToast('已取消選擇資料夾', 'info');
+                } else {
+                    showToast(`選擇資料夾失敗: ${data.message || ''}`, 'error');
+                }
+            } catch (err) {
+                console.error('Select folder error:', err);
+                showToast('選擇資料夾時發生錯誤', 'error');
+            } finally {
+                browseDbfDirBtn.disabled = false;
+                browseDbfDirBtn.innerHTML = originalHtml;
+            }
+        });
+    }
+
+    // Load Standard Preset (Junior High, Senior High, Combined)
+    document.querySelectorAll('.load-preset-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const presetType = e.currentTarget.getAttribute('data-preset');
+            let typeName = "國中 3 班示範檔 (701~901)";
+            if (presetType === "senior_3") typeName = "高中 3 班示範檔 (101~301)";
+            if (presetType === "k12_6" || presetType === "combined") typeName = "國中3班+高中3班全校範本 (共6班)";
+            if (presetType === "junior") typeName = "國中部標準課綱";
+            if (presetType === "senior") typeName = "高中部標準課綱";
+
+            if (!confirm(`⚡ 確定要載入【${typeName}】嗎？\n\n這將會自動設定常見班級名單、授課教師、每週節數與專用教室對應。`)) {
+                return;
+            }
+
+            try {
+                const resp = await fetch('/api/presets/load', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ preset_type: presetType })
+                });
+                const res = await resp.json();
+                if (res.status === 'success') {
+                    showToast(res.message, 'success');
+                    if (typeof loadSubjectCatalog === 'function') await loadSubjectCatalog();
+                    if (typeof loadVenueCapacities === 'function') await loadVenueCapacities();
+                    if (typeof fetchMetadata === 'function') await fetchMetadata();
+                } else {
+                    alert('載入範本失敗：' + res.message);
+                }
+            } catch (err) {
+                console.error('Load preset error:', err);
+                alert('載入範本發生錯誤：' + err);
+            }
+        });
+    });
 });
 
 // --- 108 CURRICULUM MOE COURSE CODE LOGIC (WINST-23) ---
@@ -4274,6 +5045,196 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
     });
+
+    // Conversational AI Assistant UI Logic
+    const aiChatTriggerBtn = document.getElementById('aiChatTriggerBtn');
+    const aiChatDrawer = document.getElementById('aiChatDrawer');
+    const closeAiChatBtn = document.getElementById('closeAiChatBtn');
+    const sendAiChatBtn = document.getElementById('sendAiChatBtn');
+    const aiChatInput = document.getElementById('aiChatInput');
+    const aiChatMessages = document.getElementById('aiChatMessages');
+
+    if (aiChatTriggerBtn && aiChatDrawer) {
+        aiChatTriggerBtn.addEventListener('click', () => {
+            const isHidden = aiChatDrawer.style.display === 'none';
+            aiChatDrawer.style.display = isHidden ? 'flex' : 'none';
+            if (isHidden && aiChatInput) aiChatInput.focus();
+        });
+    }
+
+    if (closeAiChatBtn && aiChatDrawer) {
+        closeAiChatBtn.addEventListener('click', () => {
+            aiChatDrawer.style.display = 'none';
+        });
+    }
+
+    async function sendAiMessage(msgText) {
+        const text = (msgText || aiChatInput.value || '').trim();
+        if (!text) return;
+
+        if (aiChatInput) aiChatInput.value = '';
+
+        // Append User Message
+        const userMsgDiv = document.createElement('div');
+        userMsgDiv.style.display = 'flex';
+        userMsgDiv.style.gap = '8px';
+        userMsgDiv.style.justifyContent = 'flex-end';
+        userMsgDiv.style.alignItems = 'flex-start';
+        userMsgDiv.innerHTML = `
+            <div style="background: #6366f1; color: #fff; padding: 8px 12px; border-radius: 12px; border-top-right-radius: 2px; max-width: 80%; line-height: 1.4;">${text}</div>
+            <div style="width: 28px; height: 28px; border-radius: 50%; background: #3b82f6; display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0; font-size: 0.75rem;">您</div>
+        `;
+        aiChatMessages.appendChild(userMsgDiv);
+        aiChatMessages.scrollTop = aiChatMessages.scrollHeight;
+
+        // Append AI Thinking Indicator
+        const thinkingDiv = document.createElement('div');
+        thinkingDiv.id = 'aiThinkingMsg';
+        thinkingDiv.style.display = 'flex';
+        thinkingDiv.style.gap = '8px';
+        thinkingDiv.style.alignItems = 'center';
+        thinkingDiv.innerHTML = `
+            <div style="width: 28px; height: 28px; border-radius: 50%; background: #a855f7; display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0; font-size: 0.75rem;">AI</div>
+            <div style="color: #94a3b8; font-style: italic;"><i class="fa-solid fa-spinner fa-spin"></i> AI 正在分析您的排課意圖中...</div>
+        `;
+        aiChatMessages.appendChild(thinkingDiv);
+        aiChatMessages.scrollTop = aiChatMessages.scrollHeight;
+
+        try {
+            const resp = await fetch('/api/ai-chat', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ message: text })
+            });
+            const res = await resp.json();
+
+            const tDiv = document.getElementById('aiThinkingMsg');
+            if (tDiv) tDiv.remove();
+
+            if (res.status === 'success') {
+                const aiReplyDiv = document.createElement('div');
+                aiReplyDiv.style.display = 'flex';
+                aiReplyDiv.style.gap = '8px';
+                aiReplyDiv.style.alignItems = 'flex-start';
+                const formattedReply = (res.reply || '').replace(/\n/g, '<br>');
+                aiReplyDiv.innerHTML = `
+                    <div style="width: 28px; height: 28px; border-radius: 50%; background: #a855f7; display: flex; align-items: center; justify-content: center; color: #fff; flex-shrink: 0; font-size: 0.75rem;">AI</div>
+                    <div style="background: rgba(30, 41, 59, 0.9); color: #e2e8f0; padding: 10px 14px; border-radius: 12px; border-top-left-radius: 2px; border: 1px solid rgba(168, 85, 247, 0.2); max-width: 85%; line-height: 1.5;">${formattedReply}</div>
+                `;
+                aiChatMessages.appendChild(aiReplyDiv);
+                aiChatMessages.scrollTop = aiChatMessages.scrollHeight;
+
+                // Handle Actions
+                if (res.action === 'run_full_auto') {
+                    const masterBtn = document.getElementById('masterAiOneClickBtn');
+                    if (masterBtn) masterBtn.click();
+                } else if (res.action === 'create_sim_preset') {
+                    const type = res.payload?.type;
+                    if (type === '全校共同社團') {
+                        const b = document.getElementById('presetSimClubBtn');
+                        if (b) b.click();
+                    } else if (type === '全校共同週會') {
+                        const b = document.getElementById('presetSimWeeklyBtn');
+                        if (b) b.click();
+                    } else {
+                        const b = document.getElementById('presetSimClassMeetingBtn');
+                        if (b) b.click();
+                    }
+                } else if (res.action === 'match_venues') {
+                    const b = document.getElementById('autoAiMatchVenuesBtn');
+                    if (b) b.click();
+                } else if (res.action === 'switch_semester' && res.payload?.semester_id) {
+                    doCreateSemester(res.payload.semester_id);
+                } else if (res.action === 'show_class_schedule' && res.payload?.code) {
+                    window.location.hash = `#class/${res.payload.code}`;
+                } else if (res.action === 'show_teacher_schedule' && res.payload?.code) {
+                    window.location.hash = `#teacher/${res.payload.code}`;
+                } else if (res.action === 'show_room_schedule' && res.payload?.code) {
+                    window.location.hash = `#room/${encodeURIComponent(res.payload.code)}`;
+                } else if (res.action === 'update_no_teach') {
+                    showToast("已成功自動套用並儲存教師不排課約束！");
+                    if (typeof loadConfigRules === 'function') loadConfigRules();
+                }
+            } else {
+                showToast("AI 對談失敗：" + res.message);
+            }
+        } catch (e) {
+            const tDiv = document.getElementById('aiThinkingMsg');
+            if (tDiv) tDiv.remove();
+            showToast("伺服器連線異常。");
+        }
+    }
+
+    if (sendAiChatBtn) {
+        sendAiChatBtn.addEventListener('click', () => sendAiMessage());
+    }
+    if (aiChatInput) {
+        aiChatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendAiMessage();
+        });
+    }
+
+    document.querySelectorAll('.ai-chip-btn').forEach(chip => {
+        chip.addEventListener('click', () => {
+            sendAiMessage(chip.textContent.trim());
+        });
+    });
+
+    // Groq Settings UI Handlers
+    const toggleGroqSettingsBtn = document.getElementById('toggleGroqSettingsBtn');
+    const groqSettingsPanel = document.getElementById('groqSettingsPanel');
+    const saveGroqKeyBtn = document.getElementById('saveGroqKeyBtn');
+    const groqApiKeyInput = document.getElementById('groqApiKeyInput');
+    const groqStatusBadge = document.getElementById('groqStatusBadge');
+
+    if (toggleGroqSettingsBtn && groqSettingsPanel) {
+        toggleGroqSettingsBtn.addEventListener('click', () => {
+            const isHidden = groqSettingsPanel.style.display === 'none';
+            groqSettingsPanel.style.display = isHidden ? 'block' : 'none';
+        });
+        loadGroqConfigStatus();
+    }
+
+    async function loadGroqConfigStatus() {
+        try {
+            const resp = await fetch('/api/config/groq');
+            const data = await resp.json();
+            if (data.status === 'success' && groqStatusBadge) {
+                if (data.has_key) {
+                    groqStatusBadge.innerHTML = `<span style="color:#34d399;"><i class="fa-solid fa-circle-check"></i> 已連結 (${data.model})</span>`;
+                    if (groqApiKeyInput && data.masked_key) groqApiKeyInput.placeholder = data.masked_key;
+                } else {
+                    groqStatusBadge.innerHTML = `<span style="color:#94a3b8;">未設定 (使用內建 AI 語意引擎)</span>`;
+                }
+            }
+        } catch (e) {
+            console.error("Load Groq config status error:", e);
+        }
+    }
+
+    if (saveGroqKeyBtn) {
+        saveGroqKeyBtn.addEventListener('click', async () => {
+            const apiKey = (groqApiKeyInput.value || '').trim();
+            try {
+                const resp = await fetch('/api/config/groq', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ groq_api_key: apiKey, groq_model: 'llama-3.3-70b-versatile' })
+                });
+                const res = await resp.json();
+                if (res.status === 'success') {
+                    showToast(res.message);
+                    groqApiKeyInput.value = '';
+                    await loadGroqConfigStatus();
+                    if (groqSettingsPanel) groqSettingsPanel.style.display = 'none';
+                } else {
+                    showToast("Groq 設定失敗: " + res.message);
+                }
+            } catch (e) {
+                showToast("連線異常，無法儲存 Groq 設定。");
+            }
+        });
+    }
 });
 
 
