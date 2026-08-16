@@ -5313,8 +5313,8 @@ async function loadDualViewData() {
             fetch(`/api/schedule/teacher/${encodeURIComponent(dualViewCurrentTeacher)}`).then(r => r.json())
         ]);
 
-        dualClassSlotsData = clsRes.status === 'success' ? (clsRes.slots || clsRes.data || []) : [];
-        dualTeacherSlotsData = tRes.status === 'success' ? (tRes.slots || tRes.data || []) : [];
+        dualClassSlotsData = Array.isArray(clsRes) ? clsRes : (clsRes.slots || clsRes.data || []);
+        dualTeacherSlotsData = Array.isArray(tRes) ? tRes : (tRes.slots || tRes.data || []);
 
         renderDualClassGrid();
         renderDualTeacherGrid();
