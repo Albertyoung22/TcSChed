@@ -18,7 +18,7 @@ a = Analysis(
     ['desktop_app.py'],
     pathex=[],
     binaries=[],
-    datas=[('templates', 'templates'), ('static', 'static'), ('config_rules.json', '.')],
+    datas=[('templates', 'templates'), ('static', 'static'), ('config_rules.json', '.'), ('dbf_data', 'dbf_data')],
     hiddenimports=['dbfread', 'ortools.sat.python.cp_model', 'waitress', 'flask', 'jinja2'],
     hookspath=[],
     hooksconfig={},
