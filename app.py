@@ -1688,6 +1688,15 @@ def sync_to_github_cloud(filename, content_str, commit_message="Cloud Web UI Aut
 
             with urllib.request.urlopen(req_put) as resp:
                 print(f"Cloud Auto-Sync {filename} to GitHub: SUCCESS")
+                
+            # Trigger Render Deploy Hook
+            try:
+                render_hook = "https://api.render.com/deploy/srv-d9sr1lqfngtc73fspco0?key=fPNTvxZ36mw"
+                hook_req = urllib.request.Request(render_hook, method="POST")
+                with urllib.request.urlopen(hook_req) as r_resp:
+                    print("Render Deploy Hook Triggered Successfully:", r_resp.read().decode('utf-8'))
+            except Exception as e_hook:
+                print("Render Deploy Hook Error:", e_hook)
         except Exception as e:
             print("GitHub Cloud Sync Error:", e)
 
