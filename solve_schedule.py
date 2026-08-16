@@ -5,30 +5,19 @@ import pandas as pd
 from dbfread import DBF
 from ortools.sat.python import cp_model
 
-sys.stdout.reconfigure(encoding='utf-8')
+if sys.stdout and hasattr(sys.stdout, 'reconfigure'):
+    try:
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    except Exception:
+        pass
 
 def find_latest_dbf_dir():
     try:
         from app import get_latest_dbf_dir
         path = get_latest_dbf_dir()
-        if path and os.path.exists(path):
-            return path
+        return path
     except Exception:
         pass
-
-    search_dir = r"D:\土城高中"
-    if os.path.exists(search_dir):
-        candidates = []
-        for root, dirs, files in os.walk(search_dir):
-            if "class.dbf" in [f.lower() for f in files] and "claspv.dbf" in [f.lower() for f in files]:
-                candidates.append((os.path.getmtime(os.path.join(root, "class.dbf")), root))
-        if candidates:
-            candidates.sort(key=lambda x: x[0], reverse=True)
-            return candidates[0][1]
-
-    local_dbf = os.path.join(os.path.dirname(__file__), "dbf_data")
-    if os.path.isdir(local_dbf):
-        return local_dbf
     return None
 
 def run_solver():
@@ -38,21 +27,23 @@ def run_solver():
         logs.append(str(msg))
         
     dbf_dir = find_latest_dbf_dir()
-    if not dbf_dir:
-        return {"status": "error", "message": "Could not find SPV2000 DBF directory in D:\\土城高中", "logs": logs}
-        
-    log(f"Reading database from: {dbf_dir}")
-    
-    try:
-        db_claspv_base = list(DBF(os.path.join(dbf_dir, "claspv_base.dbf"), ignore_missing_memofile=True))
-        db_no_teach = list(DBF(os.path.join(dbf_dir, "no_teach.dbf"), ignore_missing_memofile=True))
-        db_no_sub = list(DBF(os.path.join(dbf_dir, "no_sub.dbf"), ignore_missing_memofile=True))
-        db_class = list(DBF(os.path.join(dbf_dir, "class.dbf"), ignore_missing_memofile=True))
-    except Exception as e:
-        return {"status": "error", "message": f"Failed to read DBF files: {str(e)}", "logs": logs}
-    
-    log(f"Loaded {len(db_claspv_base)} course items to schedule.")
-    
+    db_claspv_base = []
+    db_no_teach = []
+    db_no_sub = []
+    db_class = []
+
+    if dbf_dir and os.path.exists(dbf_dir):
+        log(f"Reading database from: {dbf_dir}")
+        try:
+            db_claspv_base = list(DBF(os.path.join(dbf_dir, "claspv_base.dbf"), ignore_missing_memofile=True))
+            db_no_teach = list(DBF(os.path.join(dbf_dir, "no_teach.dbf"), ignore_missing_memofile=True))
+            db_no_sub = list(DBF(os.path.join(dbf_dir, "no_sub.dbf"), ignore_missing_memofile=True))
+            db_class = list(DBF(os.path.join(dbf_dir, "class.dbf"), ignore_missing_memofile=True))
+        except Exception as e:
+            log(f"Warning reading DBF files: {e}")
+    else:
+        log("No external DBF database found. Running CP-SAT solver in Custom / AI-Assignments mode.")
+
     # Identify virtual classes
     virtual_class_codes = set()
     for r in db_class:
@@ -65,7 +56,8 @@ def run_solver():
         if is_virt or "跨班" in r.get("CLASS_NAME", ""):
             virtual_class_codes.add(r.get("CLASS_NO", "").strip())
             
-    log(f"Identified virtual class codes: {list(virtual_class_codes)}")
+    if virtual_class_codes:
+        log(f"Identified virtual class codes: {list(virtual_class_codes)}")
 
     # Load custom rules
     custom_rules = {}
@@ -80,92 +72,141 @@ def run_solver():
     ca = custom_rules.get("custom_assignments", {})
     da = set(custom_rules.get("deleted_assignments", []))
 
-    # Build unique lesson units (collapse multiple teacher records for same slot)
     unique_units = {}
     raw_item_unit_map = {}
 
-    for idx, r in enumerate(db_claspv_base):
-        cc = r.get("班級", "").strip()
-        cn = r.get("班級名稱", "").strip()
-        sc = r.get("科目", "").strip()
-        sn = r.get("科目名稱", "").strip()
-        tc = r.get("教師", "").strip()
-        tn = r.get("教師名稱", "").strip()
-        rc = r.get("教室", "").strip()
-        rn = r.get("教室名稱", "").strip()
+    if db_claspv_base:
+        log(f"Loaded {len(db_claspv_base)} course items to schedule from DBF.")
+        for idx, r in enumerate(db_claspv_base):
+            cc = str(r.get("班級", "")).strip()
+            cn = str(r.get("班級名稱", "")).strip()
+            sc = str(r.get("科目", "")).strip()
+            sn = str(r.get("科目名稱", "")).strip()
+            tc = str(r.get("教師", "")).strip()
+            tn = str(r.get("教師名稱", "")).strip()
+            rc = str(r.get("教室", "")).strip()
+            rn = str(r.get("教室名稱", "")).strip()
 
-        # Check custom assignment overrides
-        ckey = f"{cc}|{sc}"
-        if ckey in da and ckey not in ca:
-            continue
-        if ckey in ca:
-            tc = ca[ckey].get("teacher_code", tc)
-            tn = ca[ckey].get("teacher_name", tn)
+            ckey = f"{cc}|{sc}"
+            if ckey in da and ckey not in ca:
+                continue
+            if ckey in ca:
+                tc = ca[ckey].get("teacher_code", tc)
+                tn = ca[ckey].get("teacher_name", tn)
 
-        w = r.get("星期", "").strip()
-        s = r.get("節次", "").strip()
-        pre_d = int(w) if w else None
-        pre_p = int(s) if s else None
+            w = r.get("星期", "").strip()
+            s = r.get("節次", "").strip()
+            pre_d = int(w) if w else None
+            pre_p = int(s) if s else None
 
-        wm_val = r.get("週別設定")
-        week_mode = int(wm_val) if wm_val is not None and not pd.isna(wm_val) else 0
+            wm_val = r.get("週別設定")
+            week_mode = int(wm_val) if wm_val is not None and not pd.isna(wm_val) else 0
 
-        ud_val = r.get("上下修")
-        ud = int(ud_val) if ud_val is not None and not pd.isna(ud_val) else 0
+            ud_val = r.get("上下修")
+            ud = int(ud_val) if ud_val is not None and not pd.isna(ud_val) else 0
 
-        arr_val = r.get("排列")
-        arr = int(arr_val) if arr_val is not None and not pd.isna(arr_val) else 1
+            arr_val = r.get("排列")
+            arr = int(arr_val) if arr_val is not None and not pd.isna(arr_val) else 1
 
-        sub_val = r.get("細項")
-        sub_idx = int(sub_val) if sub_val is not None and not pd.isna(sub_val) else 1
+            sub_val = r.get("細項")
+            sub_idx = int(sub_val) if sub_val is not None and not pd.isna(sub_val) else 1
 
-        tot_val = r.get("總節數")
-        total_hours = int(tot_val) if tot_val is not None and not pd.isna(tot_val) else 1
+            tot_val = r.get("總節數")
+            total_hours = int(tot_val) if tot_val is not None and not pd.isna(tot_val) else 1
 
-        sim_group = r.get("同時群", "").strip()
-        desc = r.get("說明", "").strip()
+            sim_group = str(r.get("同時群", "")).strip()
+            desc = str(r.get("說明", "")).strip()
 
-        unit_key = (cc, sc, arr, sub_idx)
-        if unit_key not in unique_units:
-            unique_units[unit_key] = {
-                "unit_id": len(unique_units),
-                "unit_key": unit_key,
-                "class_code": cc,
-                "class_name": cn,
-                "subject_code": sc,
-                "subject_name": sn,
-                "teachers": set(),
-                "teacher_names": set(),
-                "room_code": rc,
-                "room_name": rn,
-                "prefilled_day": pre_d,
-                "prefilled_period": pre_p,
-                "week_mode": week_mode,
-                "ud": ud,
-                "arr": arr,
-                "sub_idx": sub_idx,
-                "total_hours": total_hours,
-                "sim_group": sim_group,
-                "desc": desc,
-                "raw_records": []
-            }
+            unit_key = (cc, sc, arr, sub_idx)
+            if unit_key not in unique_units:
+                unique_units[unit_key] = {
+                    "unit_id": len(unique_units),
+                    "unit_key": unit_key,
+                    "class_code": cc,
+                    "class_name": cn,
+                    "subject_code": sc,
+                    "subject_name": sn,
+                    "teachers": set(),
+                    "teacher_names": set(),
+                    "room_code": rc,
+                    "room_name": rn,
+                    "prefilled_day": pre_d,
+                    "prefilled_period": pre_p,
+                    "week_mode": week_mode,
+                    "ud": ud,
+                    "arr": arr,
+                    "sub_idx": sub_idx,
+                    "total_hours": total_hours,
+                    "sim_group": sim_group,
+                    "desc": desc,
+                    "raw_records": []
+                }
 
-        u = unique_units[unit_key]
-        if tc:
-            u["teachers"].add(tc)
-        if tn:
-            u["teacher_names"].add(tn)
-        if pre_d is not None and u["prefilled_day"] is None:
-            u["prefilled_day"] = pre_d
-            u["prefilled_period"] = pre_p
+            u = unique_units[unit_key]
+            if tc:
+                u["teachers"].add(tc)
+            if tn:
+                u["teacher_names"].add(tn)
+            if pre_d is not None and u["prefilled_day"] is None:
+                u["prefilled_day"] = pre_d
+                u["prefilled_period"] = pre_p
 
-        u["raw_records"].append({
-            "raw_idx": idx,
-            "teacher_code": tc,
-            "teacher_name": tn,
-            "record": r
-        })
-        raw_item_unit_map[idx] = u
+            u["raw_records"].append({
+                "raw_idx": idx,
+                "teacher_code": tc,
+                "teacher_name": tn,
+                "record": r
+            })
+            raw_item_unit_map[idx] = u
+    else:
+        log(f"Loaded {len(ca)} custom assignments for AI CP-SAT Timetable Solver.")
+        idx = 0
+        for ckey, assign in ca.items():
+            cc = str(assign.get("class_code", "")).strip()
+            cn = str(assign.get("class_name", cc)).strip()
+            sc = str(assign.get("subject_code", "")).strip()
+            sn = str(assign.get("subject_name", sc)).strip()
+            tc = str(assign.get("teacher_code", "")).strip()
+            tn = str(assign.get("teacher_name", tc)).strip()
+            hours = int(assign.get("hours", 2))
+
+            if not cc or not sc:
+                continue
+
+            for h in range(1, hours + 1):
+                unit_key = (cc, sc, h, 1)
+                unique_units[unit_key] = {
+                    "unit_id": len(unique_units),
+                    "unit_key": unit_key,
+                    "class_code": cc,
+                    "class_name": cn,
+                    "subject_code": sc,
+                    "subject_name": sn,
+                    "teachers": {tc} if tc else set(),
+                    "teacher_names": {tn} if tn else set(),
+                    "room_code": "",
+                    "room_name": "",
+                    "prefilled_day": None,
+                    "prefilled_period": None,
+                    "week_mode": 0,
+                    "ud": 0,
+                    "arr": h,
+                    "sub_idx": 1,
+                    "total_hours": hours,
+                    "sim_group": "",
+                    "desc": "",
+                    "raw_records": [{
+                        "raw_idx": idx,
+                        "teacher_code": tc,
+                        "teacher_name": tn,
+                        "record": {
+                            "班級": cc, "班級名稱": cn,
+                            "科目": sc, "科目名稱": sn,
+                            "教師": tc, "教師名稱": tn
+                        }
+                    }]
+                }
+                idx += 1
 
     units_list = list(unique_units.values())
     log(f"Collapsed into {len(units_list)} unique lesson units for CP-SAT solver.")
@@ -190,7 +231,9 @@ def run_solver():
         model.Add(period_vars[uid] == sum(p * x[uid, d, p] for d in days for p in periods))
         model.Add(sum(x[uid, d, p] for d in days for p in periods) == 1)
 
-        if u["prefilled_day"] is not None and u["prefilled_period"] is not None:
+        # Only enforce prefilled_day/prefilled_period if explicitly marked as manual_locked!
+        # Otherwise, allow CP-SAT solver to reschedule freely to honor all rules (simultaneous groups, no-teach, venue limits, etc.)
+        if u.get("manual_locked") and u["prefilled_day"] is not None and u["prefilled_period"] is not None:
             model.Add(day_vars[uid] == u["prefilled_day"])
             model.Add(period_vars[uid] == u["prefilled_period"])
 
@@ -211,18 +254,31 @@ def run_solver():
     # 2. Custom Simultaneous Groups (自訂同時上課/跨班分組)
     custom_sim_groups = custom_rules.get("custom_simultaneous_groups", [])
     for grp in custom_sim_groups:
+        members = grp if isinstance(grp, list) else (grp.get("members", []) if isinstance(grp, dict) else [])
+        fixed_day = grp.get("fixed_day") if isinstance(grp, dict) else None
+        fixed_period = grp.get("fixed_period") if isinstance(grp, dict) else None
+        
         matched_uids = []
-        for target in grp:
+        for target in members:
+            if not isinstance(target, dict):
+                continue
             t_cc = str(target.get("class_code", "")).strip()
             t_sc = str(target.get("subject_code", "")).strip()
             for u in units_list:
                 if u["class_code"] == t_cc and u["subject_code"] == t_sc:
                     matched_uids.append(u["unit_id"])
-        if len(matched_uids) > 1:
-            f_uid = matched_uids[0]
-            for o_uid in matched_uids[1:]:
-                model.Add(day_vars[f_uid] == day_vars[o_uid])
-                model.Add(period_vars[f_uid] == period_vars[o_uid])
+        if matched_uids:
+            if len(matched_uids) > 1:
+                f_uid = matched_uids[0]
+                for o_uid in matched_uids[1:]:
+                    model.Add(day_vars[f_uid] == day_vars[o_uid])
+                    model.Add(period_vars[f_uid] == period_vars[o_uid])
+            if fixed_day is not None and fixed_period is not None and str(fixed_day).isdigit() and str(fixed_period).isdigit():
+                fd = int(fixed_day)
+                fp = int(fixed_period)
+                for uid in matched_uids:
+                    model.Add(day_vars[uid] == fd)
+                    model.Add(period_vars[uid] == fp)
 
     # 3. Class Conflicts (班級不衝堂)
     cls_units = {}
@@ -239,7 +295,7 @@ def run_solver():
             elif u["sim_group"]:
                 ckey = ("SIM", u["sim_group"])
             else:
-                ckey = ("SLOT", u["arr"], u["sub_idx"])
+                ckey = ("UNIT", u["unit_id"])
             if ckey not in grp_reps:
                 grp_reps[ckey] = u
         reps = list(grp_reps.values())
@@ -275,9 +331,9 @@ def run_solver():
                 model.AddAtMostOne(x[u["unit_id"], d, p] for u in reps if u["week_mode"] in (0, 1))
                 model.AddAtMostOne(x[u["unit_id"], d, p] for u in reps if u["week_mode"] in (0, 2))
 
-        # Enforce reasonable teacher daily max load (<= 6 periods per day)
+        # Enforce reasonable teacher daily max load (<= 8 periods per day)
         for d in days:
-            model.Add(sum(x[u["unit_id"], d, p] for u in reps for p in periods) <= 6)
+            model.Add(sum(x[u["unit_id"], d, p] for u in reps for p in periods) <= 8)
 
 
     # 5. Venue Capacity Constraints & Subject-to-Venue Mappings
@@ -467,13 +523,29 @@ def run_solver():
                     "說明": u["desc"]
                 })
 
-        output_path = r"D:\土城高中\School_Schedule_Solved.xlsx"
-        if not os.path.exists(r"D:\土城高中"):
-            output_path = os.path.join(os.path.dirname(__file__), "School_Schedule_Solved.xlsx")
+        base_dir = os.path.dirname(__file__)
+        if dbf_dir and "土城高中" in dbf_dir and os.path.exists(r"D:\土城高中"):
+            output_path = r"D:\土城高中\School_Schedule_Solved.xlsx"
+        else:
+            output_path = os.path.join(base_dir, "School_Schedule_Solved.xlsx")
 
         df_out = pd.DataFrame(solved_records)
         df_out.to_excel(output_path, index=False)
         log(f"Successfully wrote solved schedule to: {output_path}")
+
+        # Update config_rules.json with solved_schedules
+        if os.path.exists(config_rules_file):
+            try:
+                with open(config_rules_file, "r", encoding="utf-8") as f:
+                    cfg_to_update = json.load(f)
+            except Exception:
+                cfg_to_update = {}
+        else:
+            cfg_to_update = {}
+
+        cfg_to_update["solved_schedules"] = solved_records
+        with open(config_rules_file, "w", encoding="utf-8") as f:
+            json.dump(cfg_to_update, f, ensure_ascii=False, indent=2)
 
         return {
             "status": "success",
