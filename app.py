@@ -516,6 +516,73 @@ def teacher_portal():
     return render_template("teacher_portal.html")
 
 
+NOTES_FILE_PATH = os.path.join(BASE_DIR, "lesson_notes.json")
+
+def load_lesson_notes():
+    if os.path.exists(NOTES_FILE_PATH):
+        try:
+            with open(NOTES_FILE_PATH, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return {}
+    return {}
+
+def save_lesson_notes(notes):
+    try:
+        with open(NOTES_FILE_PATH, "w", encoding="utf-8") as f:
+            json.dump(notes, f, ensure_ascii=False, indent=2)
+        return True
+    except Exception as e:
+        print("Save lesson notes failed:", e)
+        return False
+
+@app.route("/api/notes", methods=["GET"])
+def api_get_notes():
+    notes = load_lesson_notes()
+    return jsonify({"status": "success", "notes": notes})
+
+@app.route("/api/notes/save", methods=["POST"])
+def api_save_note():
+    try:
+        req = request.get_json() or {}
+        key = req.get("key")
+        note_type = req.get("note_type", "調課")
+        note_text = req.get("note_text", "").strip()
+        author = req.get("author", "教務處")
+
+        if not key:
+            return jsonify({"status": "error", "message": "Missing note key"}), 400
+
+        notes = load_lesson_notes()
+        if not note_text:
+            notes.pop(key, None)
+        else:
+            notes[key] = {
+                "key": key,
+                "note_type": note_type,
+                "note_text": note_text,
+                "author": author,
+                "updated_at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+            }
+        save_lesson_notes(notes)
+        return jsonify({"status": "success", "message": "課表註記已成功儲存！", "notes": notes})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/notes/delete", methods=["POST"])
+def api_delete_note():
+    try:
+        req = request.get_json() or {}
+        key = req.get("key")
+        if not key:
+            return jsonify({"status": "error", "message": "Missing note key"}), 400
+        notes = load_lesson_notes()
+        notes.pop(key, None)
+        save_lesson_notes(notes)
+        return jsonify({"status": "success", "message": "課表註記已成功刪除！", "notes": notes})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 @app.route("/api/open-browser", methods=["POST"])
 def api_open_browser():
     try:
