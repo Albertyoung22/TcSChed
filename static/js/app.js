@@ -5372,6 +5372,67 @@ async function loadDualViewData() {
     }
 }
 
+async function switchDualRightTeacher(tCode, d, p) {
+    if (!tCode) return;
+    dualViewCurrentTeacher = tCode;
+    const teacherSelect = document.getElementById('dualViewTeacherSelect');
+    if (teacherSelect) {
+        let matchedOpt = false;
+        for (let i = 0; i < teacherSelect.options.length; i++) {
+            if (teacherSelect.options[i].value === tCode || teacherSelect.options[i].text.includes(tCode)) {
+                teacherSelect.selectedIndex = i;
+                dualViewCurrentTeacher = teacherSelect.options[i].value;
+                matchedOpt = true;
+                break;
+            }
+        }
+        if (!matchedOpt) {
+            teacherSelect.value = tCode;
+        }
+    }
+    
+    try {
+        const tRes = await fetch(`/api/schedule/teacher/${encodeURIComponent(dualViewCurrentTeacher)}`).then(r => r.ok ? r.json() : []);
+        dualTeacherSlotsData = Array.isArray(tRes) ? tRes : (tRes.slots || tRes.data || []);
+        renderDualTeacherGrid();
+        if (d && p) highlightDualSlotSync(d, p);
+    } catch (e) {
+        console.error("switchDualRightTeacher failed:", e);
+    }
+}
+
+async function switchDualLeftClass(cCode, d, p) {
+    if (!cCode) return;
+    dualViewCurrentClass = cCode;
+    const classSelect = document.getElementById('dualViewClassSelect');
+    if (classSelect) {
+        let matchedOpt = false;
+        for (let i = 0; i < classSelect.options.length; i++) {
+            if (classSelect.options[i].value === cCode || classSelect.options[i].text.includes(cCode)) {
+                classSelect.selectedIndex = i;
+                dualViewCurrentClass = classSelect.options[i].value;
+                matchedOpt = true;
+                break;
+            }
+        }
+        if (!matchedOpt) {
+            classSelect.value = cCode;
+        }
+    }
+
+    try {
+        const clsRes = await fetch(`/api/schedule/class/${encodeURIComponent(dualViewCurrentClass)}`).then(r => r.ok ? r.json() : []);
+        dualClassSlotsData = Array.isArray(clsRes) ? clsRes : (clsRes.slots || clsRes.data || []);
+        renderDualClassGrid();
+        if (d && p) highlightDualSlotSync(d, p);
+    } catch (e) {
+        console.error("switchDualLeftClass failed:", e);
+    }
+}
+
+window.switchDualRightTeacher = switchDualRightTeacher;
+window.switchDualLeftClass = switchDualLeftClass;
+
 function renderDualClassGrid() {
     const tbody = document.getElementById('dualClassBody');
     const titleEl = document.getElementById('dualClassTitle');
@@ -5408,13 +5469,22 @@ function renderDualClassGrid() {
             if (lessons.length === 0) {
                 td.innerHTML = '<span style="color:#64748b; font-size:0.7rem;">- 空堂 -</span>';
             } else {
-                td.innerHTML = lessons.map(l => 
-                    `<div style="font-weight:bold; color:#38bdf8;">${l.subject_name}</div>
-                     <div style="font-size:0.72rem; color:#94a3b8;">${l.teacher_name || ''} ${l.room_name ? '['+l.room_name+']' : ''}</div>`
-                ).join('<hr style="border:0; border-top:1px dashed rgba(255,255,255,0.1); margin:2px 0;">');
+                td.innerHTML = lessons.map(l => {
+                    const tCode = l.teacher_code || l.teacher_name || '';
+                    const tName = l.teacher_name || l.teacher_code || '';
+                    const tLink = tName ? `<span onclick="event.stopPropagation(); switchDualRightTeacher('${tCode}', ${d}, ${p});" style="color:#818cf8; font-weight:bold; cursor:pointer; text-decoration:underline;" title="👉 點擊讓右視窗切換顯示 ${tName} 老師課表"><i class="fa-solid fa-arrow-right" style="font-size:0.68rem;"></i> ${tName}</span>` : '';
+                    return `<div style="font-weight:bold; color:#38bdf8;">${l.subject_name}</div>
+                            <div style="font-size:0.72rem; margin-top:2px;">${tLink} ${l.room_name ? '<span style="color:#94a3b8;">['+l.room_name+']</span>' : ''}</div>`;
+                }).join('<hr style="border:0; border-top:1px dashed rgba(255,255,255,0.1); margin:2px 0;">');
             }
 
-            td.addEventListener('click', () => highlightDualSlotSync(d, p));
+            td.addEventListener('click', () => {
+                if (lessons.length > 0 && (lessons[0].teacher_code || lessons[0].teacher_name)) {
+                    switchDualRightTeacher(lessons[0].teacher_code || lessons[0].teacher_name, d, p);
+                } else {
+                    highlightDualSlotSync(d, p);
+                }
+            });
             tr.appendChild(td);
         }
         tbody.appendChild(tr);
@@ -5457,13 +5527,22 @@ function renderDualTeacherGrid() {
             if (lessons.length === 0) {
                 td.innerHTML = '<span style="color:#34d399; font-size:0.7rem; font-weight:bold;">🟢 空堂 (無課)</span>';
             } else {
-                td.innerHTML = lessons.map(l => 
-                    `<div style="font-weight:bold; color:#818cf8;">${l.class_name} ${l.subject_name}</div>
-                     <div style="font-size:0.72rem; color:#94a3b8;">${l.room_name ? '['+l.room_name+']' : ''}</div>`
-                ).join('<hr style="border:0; border-top:1px dashed rgba(255,255,255,0.1); margin:2px 0;">');
+                td.innerHTML = lessons.map(l => {
+                    const cCode = l.class_code || l.class_name || '';
+                    const cName = l.class_name || l.class_code || '';
+                    const cLink = cName ? `<span onclick="event.stopPropagation(); switchDualLeftClass('${cCode}', ${d}, ${p});" style="color:#38bdf8; font-weight:bold; cursor:pointer; text-decoration:underline;" title="👈 點擊讓左視窗切換顯示 ${cName} 班級課表"><i class="fa-solid fa-arrow-left" style="font-size:0.68rem;"></i> ${cName}</span>` : '';
+                    return `<div style="font-weight:bold; color:#818cf8;">${cLink} ${l.subject_name}</div>
+                            <div style="font-size:0.72rem; color:#94a3b8;">${l.room_name ? '['+l.room_name+']' : ''}</div>`;
+                }).join('<hr style="border:0; border-top:1px dashed rgba(255,255,255,0.1); margin:2px 0;">');
             }
 
-            td.addEventListener('click', () => highlightDualSlotSync(d, p));
+            td.addEventListener('click', () => {
+                if (lessons.length > 0 && (lessons[0].class_code || lessons[0].class_name)) {
+                    switchDualLeftClass(lessons[0].class_code || lessons[0].class_name, d, p);
+                } else {
+                    highlightDualSlotSync(d, p);
+                }
+            });
             tr.appendChild(td);
         }
         tbody.appendChild(tr);
