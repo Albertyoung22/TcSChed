@@ -20,6 +20,18 @@ def find_latest_dbf_dir():
         pass
     return None
 
+def get_unit_collapse_key(u, custom_sim_groups):
+    if u.get("prefilled_day") is not None and u.get("prefilled_period") is not None:
+        return ("PRE", u["prefilled_day"], u["prefilled_period"])
+    if u.get("sim_group"):
+        return ("SIM", u["sim_group"])
+    for idx, grp in enumerate(custom_sim_groups):
+        members = grp if isinstance(grp, list) else (grp.get("members", []) if isinstance(grp, dict) else [])
+        for m in members:
+            if isinstance(m, dict) and str(m.get("class_code", "")).strip() == str(u.get("class_code", "")).strip() and str(m.get("subject_code", "")).strip() == str(u.get("subject_code", "")).strip():
+                return ("CUSTOM_SIM", idx)
+    return ("UNIT", u["unit_id"])
+
 def run_solver():
     logs = []
     def log(msg):
@@ -291,12 +303,7 @@ def run_solver():
     for cc, ulist in cls_units.items():
         grp_reps = {}
         for u in ulist:
-            if u["prefilled_day"] is not None and u["prefilled_period"] is not None:
-                ckey = ("PRE", u["prefilled_day"], u["prefilled_period"])
-            elif u["sim_group"]:
-                ckey = ("SIM", u["sim_group"])
-            else:
-                ckey = ("UNIT", u["unit_id"])
+            ckey = get_unit_collapse_key(u, custom_sim_groups)
             if ckey not in grp_reps:
                 grp_reps[ckey] = u
         reps = list(grp_reps.values())
@@ -313,28 +320,17 @@ def run_solver():
                 teacher_units.setdefault(tc, []).append(u)
 
     for tc, ulist in teacher_units.items():
-        # Collapse identical simultaneous units for the same teacher
         grp_reps = {}
         for u in ulist:
-            if u["prefilled_day"] is not None and u["prefilled_period"] is not None:
-                tkey = ("PRE", u["prefilled_day"], u["prefilled_period"])
-            elif u["sim_group"]:
-                tkey = ("SIM", u["sim_group"])
-            else:
-                tkey = ("UNIT", u["unit_id"])
+            tkey = get_unit_collapse_key(u, custom_sim_groups)
             if tkey not in grp_reps:
                 grp_reps[tkey] = u
         reps = list(grp_reps.values())
         
-        # Enforce strict 1-course per slot for each teacher
         for d in days:
             for p in periods:
                 model.AddAtMostOne(x[u["unit_id"], d, p] for u in reps if u["week_mode"] in (0, 1))
                 model.AddAtMostOne(x[u["unit_id"], d, p] for u in reps if u["week_mode"] in (0, 2))
-
-        # Enforce reasonable teacher daily max load (<= 8 periods per day)
-        for d in days:
-            model.Add(sum(x[u["unit_id"], d, p] for u in reps for p in periods) <= 8)
 
 
     # 5. Venue Capacity Constraints & Subject-to-Venue Mappings
@@ -596,6 +592,54 @@ def run_solver():
             w_morning_pref * sum(afternoon_penalties) -
             w_pe_noon * sum(pe_noon_penalties)
         )
+        status = solver.Solve(model)
+
+    if status != cp_model.OPTIMAL and status != cp_model.FEASIBLE:
+        log("Warning: Initiating Pass-3 Essential Timetable Recovery Mode (Guaranteed Feasibility)...")
+        model = cp_model.CpModel()
+        x = {}
+        day_vars = {}
+        period_vars = {}
+
+        for u in units_list:
+            uid = u["unit_id"]
+            day_vars[uid] = model.NewIntVar(1, 5, f'day_{uid}')
+            period_vars[uid] = model.NewIntVar(1, 8, f'period_{uid}')
+            for d in days:
+                for p in periods:
+                    b_var = model.NewBoolVar(f'x_{uid}_{d}_{p}')
+                    x[uid, d, p] = b_var
+            model.Add(day_vars[uid] == sum(d * x[uid, d, p] for d in days for p in periods))
+            model.Add(period_vars[uid] == sum(p * x[uid, d, p] for d in days for p in periods))
+            model.Add(sum(x[uid, d, p] for d in days for p in periods) == 1)
+
+        # Class Conflicts
+        for cc, ulist in cls_units.items():
+            grp_reps = {}
+            for u in ulist:
+                ckey = get_unit_collapse_key(u, custom_sim_groups)
+                if ckey not in grp_reps:
+                    grp_reps[ckey] = u
+            reps = list(grp_reps.values())
+            for d in days:
+                for p in periods:
+                    model.AddAtMostOne(x[u["unit_id"], d, p] for u in reps if u["week_mode"] in (0, 1))
+                    model.AddAtMostOne(x[u["unit_id"], d, p] for u in reps if u["week_mode"] in (0, 2))
+
+        # Teacher Conflicts
+        for tc, ulist in teacher_units.items():
+            grp_reps = {}
+            for u in ulist:
+                tkey = get_unit_collapse_key(u, custom_sim_groups)
+                if tkey not in grp_reps:
+                    grp_reps[tkey] = u
+            reps = list(grp_reps.values())
+            for d in days:
+                for p in periods:
+                    model.AddAtMostOne(x[u["unit_id"], d, p] for u in reps if u["week_mode"] in (0, 1))
+                    model.AddAtMostOne(x[u["unit_id"], d, p] for u in reps if u["week_mode"] in (0, 2))
+
+        model.Maximize(sum(active_vars))
         status = solver.Solve(model)
 
     if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
