@@ -169,6 +169,7 @@ async function fetchMetadata() {
         }
 
         metadata = data;
+        await fetchLessonNotes();
         
         // Show database name/path & local LAN IP in badge
         const dbBadge = document.getElementById('dbBadge');
@@ -556,11 +557,34 @@ function renderScheduleGrid(type, code, slots) {
                         badge = '<span class="week-badge even">雙</span>';
                     }
 
+                    // Lesson Note Badge
+                    const noteKey = `${type}_${code}_${d}_${p}`;
+                    const noteObj = lessonNotes[noteKey] || (lesson.id ? lessonNotes[`lesson_${lesson.id}`] : null);
+                    let noteMarkup = '';
+                    if (noteObj) {
+                        const noteBg = getNoteTypeColorBg(noteObj.note_type);
+                        const noteBorder = getNoteTypeColorBorder(noteObj.note_type);
+                        const noteTextCol = getNoteTypeColorText(noteObj.note_type);
+                        noteMarkup = `
+                            <div class="slot-note-badge" onclick="event.stopPropagation(); openNoteModal('${noteKey}', '${mainText}', '${d}', '${p}');" style="background:${noteBg}; border:1px solid ${noteBorder}; color:${noteTextCol}; border-radius:4px; padding:2px 6px; font-size:0.75rem; font-weight:bold; cursor:pointer; margin-top:3px; display:flex; align-items:center; justify-content:space-between;" title="登錄人:${noteObj.author} (${noteObj.updated_at}): ${noteObj.note_text}">
+                                <span>📌 [${noteObj.note_type}] ${noteObj.note_text}</span>
+                                <i class="fa-solid fa-pen-to-square" style="font-size:0.7rem; opacity:0.8;"></i>
+                            </div>
+                        `;
+                    } else {
+                        noteMarkup = `
+                            <div style="margin-top: 2px; text-align: right;">
+                                <button onclick="event.stopPropagation(); openNoteModal('${noteKey}', '${mainText}', '${d}', '${p}');" style="background: transparent; border: none; color: rgba(255,255,255,0.35); font-size: 0.7rem; cursor: pointer;" title="新增課表/調課註記"><i class="fa-solid fa-pen-to-square"></i> 註記</button>
+                            </div>
+                        `;
+                    }
+
                     lessonDiv.innerHTML = `
                         <span class="subject-name" style="${lessons.length > 1 ? 'font-size: 0.82rem;' : ''}">${mainText}</span>
                         ${targetLink}
                         ${roomLink}
                         ${badge}
+                        ${noteMarkup}
                     `;
                     
                     cellContainer.appendChild(lessonDiv);
@@ -5579,6 +5603,154 @@ if (document.readyState === 'loading') {
 } else {
     initDualViewEvents();
 }
+
+// --- Lesson Notes System ---
+let lessonNotes = {};
+
+async function fetchLessonNotes() {
+    try {
+        const resp = await fetch('/api/notes');
+        const data = await resp.json();
+        if (data.status === 'success' && data.notes) {
+            lessonNotes = data.notes;
+        }
+    } catch (e) {
+        console.error("Fetch lesson notes failed:", e);
+    }
+}
+
+function openNoteModal(key, title, day, period) {
+    const modal = document.getElementById('noteModal');
+    if (!modal) return;
+
+    document.getElementById('noteTargetKey').value = key;
+    document.getElementById('noteModalTitle').innerText = `註記 - ${title} (週${['一','二','三','四','五'][parseInt(day)-1] || day} 第${period}節)`;
+    
+    const existing = lessonNotes[key];
+    const deleteBtn = document.getElementById('deleteNoteBtn');
+
+    if (existing) {
+        selectNoteType(existing.note_type || '調課');
+        document.getElementById('noteTextInput').value = existing.note_text || '';
+        document.getElementById('noteAuthorInput').value = existing.author || '教務處';
+        if (deleteBtn) deleteBtn.style.display = 'inline-block';
+    } else {
+        selectNoteType('調課');
+        document.getElementById('noteTextInput').value = '';
+        document.getElementById('noteAuthorInput').value = '教務處';
+        if (deleteBtn) deleteBtn.style.display = 'none';
+    }
+
+    modal.style.display = 'flex';
+}
+
+function closeNoteModal() {
+    const modal = document.getElementById('noteModal');
+    if (modal) modal.style.display = 'none';
+}
+
+function selectNoteType(type) {
+    document.getElementById('selectedNoteType').value = type;
+    const buttons = document.querySelectorAll('#noteTypeSelector .btn-note-tag');
+    buttons.forEach(btn => {
+        const t = btn.getAttribute('data-type');
+        if (t === type) {
+            btn.classList.add('active');
+            btn.style.background = getNoteTypeColorBg(type);
+            btn.style.borderColor = getNoteTypeColorBorder(type);
+            btn.style.color = getNoteTypeColorText(type);
+            btn.style.fontWeight = 'bold';
+        } else {
+            btn.classList.remove('active');
+            btn.style.background = 'transparent';
+            btn.style.borderColor = 'var(--border-color)';
+            btn.style.color = '#94a3b8';
+            btn.style.fontWeight = 'normal';
+        }
+    });
+}
+
+function getNoteTypeColorBg(type) {
+    if (type === '調課') return 'rgba(251, 191, 36, 0.25)';
+    if (type === '代課') return 'rgba(56, 189, 248, 0.25)';
+    if (type === '段考') return 'rgba(239, 68, 68, 0.25)';
+    if (type === '地點') return 'rgba(52, 211, 153, 0.25)';
+    return 'rgba(167, 139, 250, 0.25)';
+}
+
+function getNoteTypeColorBorder(type) {
+    if (type === '調課') return '#fbbf24';
+    if (type === '代課') return '#38bdf8';
+    if (type === '段考') return '#ef4444';
+    if (type === '地點') return '#34d399';
+    return '#a78bfa';
+}
+
+function getNoteTypeColorText(type) {
+    if (type === '調課') return '#fbbf24';
+    if (type === '代課') return '#38bdf8';
+    if (type === '段考') return '#ef4444';
+    if (type === '地點') return '#34d399';
+    return '#a78bfa';
+}
+
+async function saveLessonNote() {
+    const key = document.getElementById('noteTargetKey').value;
+    const note_type = document.getElementById('selectedNoteType').value || '調課';
+    const note_text = document.getElementById('noteTextInput').value.trim();
+    const author = document.getElementById('noteAuthorInput').value.trim() || '教務處';
+
+    if (!key) return;
+
+    try {
+        const resp = await fetch('/api/notes/save', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ key, note_type, note_text, author })
+        });
+        const data = await resp.json();
+        if (data.status === 'success') {
+            lessonNotes = data.notes || {};
+            showToast('課表註記已成功儲存！', 'success');
+            closeNoteModal();
+            handleHashChange();
+        } else {
+            alert('儲存失敗: ' + data.message);
+        }
+    } catch (e) {
+        alert('儲存發生錯誤: ' + e.message);
+    }
+}
+
+async function deleteLessonNote() {
+    const key = document.getElementById('noteTargetKey').value;
+    if (!key) return;
+
+    if (!confirm('確定要刪除此課表註記嗎？')) return;
+
+    try {
+        const resp = await fetch('/api/notes/delete', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ key })
+        });
+        const data = await resp.json();
+        if (data.status === 'success') {
+            lessonNotes = data.notes || {};
+            showToast('課表註記已成功刪除！', 'info');
+            closeNoteModal();
+            handleHashChange();
+        }
+    } catch (e) {
+        alert('刪除失敗: ' + e.message);
+    }
+}
+
+window.openNoteModal = openNoteModal;
+window.closeNoteModal = closeNoteModal;
+window.selectNoteType = selectNoteType;
+window.saveLessonNote = saveLessonNote;
+window.deleteLessonNote = deleteLessonNote;
 
 
 
