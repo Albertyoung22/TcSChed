@@ -520,33 +520,53 @@ def teacher_portal():
 def showcase():
     return render_template("showcase.html")
 
-@app.route("/api/tts")
+@app.route("/api/tts", methods=["GET", "POST"])
 def api_edge_tts():
-    text = request.args.get("text", "歡迎使用舟歌 AI 智慧排課系統").strip()
-    voice = request.args.get("voice", "zh-TW-HsiaoChenNeural").strip()
-    if not text:
-        return jsonify({"error": "No text provided"}), 400
+    import edge_tts, asyncio
     try:
-        import asyncio
-        import edge_tts
-        
+        if request.method == "POST":
+            data = request.json or {}
+            text = data.get("text", "").strip()
+            voice = data.get("voice", "").strip()
+            rate_val = data.get("rate", 0)
+            volume_val = data.get("volume", "+0%")
+        else:
+            text = request.args.get("text", "歡迎使用舟歌 AI 智慧排課系統").strip()
+            voice = request.args.get("voice", "").strip()
+            rate_val = request.args.get("rate", 0)
+            volume_val = request.args.get("volume", "+0%")
+
+        if not text:
+            return jsonify({"error": "No text provided"}), 400
+
+        if not voice:
+            voice = "zh-TW-HsiaoChenNeural"
+
+        # Format rate string matching RelayBell logic (e.g., "+0%", "+10%", "-5%")
+        try:
+            r_int = int(rate_val)
+            rate_str = f"{r_int:+d}%"
+        except Exception:
+            rate_str = "+0%"
+
         async def _gen_speech():
-            communicate = edge_tts.Communicate(text, voice)
-            data = b""
-            async for chunk in communicate.stream():
+            tts = edge_tts.Communicate(text, voice, rate=rate_str, volume=volume_val)
+            out = io.BytesIO()
+            async for chunk in tts.stream():
                 if chunk["type"] == "audio":
-                    data += chunk["data"]
-            return data
+                    out.write(chunk["data"])
+            out.seek(0)
+            return out
 
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
-            audio_bytes = loop.run_until_complete(_gen_speech())
+            audio_io = loop.run_until_complete(_gen_speech())
         finally:
             loop.close()
             
         return send_file(
-            io.BytesIO(audio_bytes),
+            audio_io,
             mimetype="audio/mpeg",
             as_attachment=False,
             download_name="speech.mp3"
@@ -555,6 +575,7 @@ def api_edge_tts():
         import traceback
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
+
 
 
 
