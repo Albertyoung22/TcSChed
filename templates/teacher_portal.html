@@ -935,61 +935,15 @@
                     td.innerHTML = '<span class="slot-empty">-</span>';
                 }
 
-                // Interactive Click Handler
-                td.addEventListener('click', async () => {
-                    if (!isManualEditMode) {
-                        const lesson = slotLessons[0];
-                        if (lesson) {
-                            let cCode = lesson.class_code || lesson.class_name || '';
-                            let tCode = lesson.teacher_code || lesson.teacher_name || '';
-                            if (currentMode === 'class') cCode = queryVal;
-                            if (currentMode === 'teacher') tCode = queryVal;
-                            openDualViewModal(cCode, tCode);
-                        }
-                        return;
-                    }
+                // Read-Only Click Handler: Open Dual View Comparison Modal
+                td.addEventListener('click', () => {
                     const lesson = slotLessons[0];
-                    if (!selectedSourceItem) {
-                        if (!lesson) {
-                            alert("請先點擊一門要移動的課程！");
-                            return;
-                        }
-                        selectedSourceItem = lesson;
-                        td.style.outline = '3px solid #fbbf24';
-                        td.style.background = 'rgba(251, 191, 36, 0.25)';
-                    } else {
-                        const sourceId = selectedSourceItem.id;
-                        const targetId = lesson ? lesson.id : null;
-                        const srcName = selectedSourceItem.subject_name || selectedSourceItem.subject_code;
-                        const tgtName = lesson ? (lesson.subject_name || lesson.subject_code) : '空白節次';
-                        
-                        if (confirm(`確定要將【${srcName}】與【${tgtName}】對調時段嗎？`)) {
-                            try {
-                                const resp = await fetch('/api/execute-swap', {
-                                    method: 'POST',
-                                    headers: {'Content-Type': 'application/json'},
-                                    body: JSON.stringify({
-                                        source_id: sourceId,
-                                        source_lesson: selectedSourceItem,
-                                        target_day: d,
-                                        target_period: p,
-                                        target_id: targetId,
-                                        target_lesson: lesson || null
-                                    })
-                                });
-                                const res = await resp.json();
-                                alert(res.message);
-                                selectedSourceItem = null;
-                                const queryVal = document.getElementById('teacherSelect').value;
-                                await renderScheduleMatrix(queryVal);
-                            } catch(e) {
-                                alert("調課失敗: " + e.message);
-                            }
-                        } else {
-                            selectedSourceItem = null;
-                            const queryVal = document.getElementById('teacherSelect').value;
-                            renderScheduleMatrix(queryVal);
-                        }
+                    if (lesson) {
+                        let cCode = lesson.class_code || lesson.class_name || '';
+                        let tCode = lesson.teacher_code || lesson.teacher_name || '';
+                        if (currentMode === 'class') cCode = queryVal;
+                        if (currentMode === 'teacher') tCode = queryVal;
+                        openDualViewModal(cCode, tCode);
                     }
                 });
 
