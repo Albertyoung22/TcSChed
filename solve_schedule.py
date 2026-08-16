@@ -495,7 +495,8 @@ def run_solver():
 
     log("Solving CSP Timetable Model using CP-SAT solver...")
     solver = cp_model.CpSolver()
-    solver.parameters.max_time_in_seconds = 30.0
+    solver.parameters.max_time_in_seconds = 10.0
+    solver.parameters.num_search_workers = 2
     status = solver.Solve(model)
 
     if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
