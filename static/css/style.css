@@ -914,76 +914,60 @@ body {
     border: 1px solid rgba(255, 255, 255, 0.12);
 }
 
-/* Rules Modal Tab Bar Styling */
+/* Rules Modal Tab Bar Styling - Premium Executive Design */
+/* Rules Modal Tab Bar Styling - Responsive Grid Navigation (No Scrollbar Needed) */
 .rules-tab-bar, .rule-tab-bar {
-    display: flex !important;
-    flex-wrap: nowrap !important;
-    align-items: center !important;
-    gap: 10px !important;
-    overflow-x: auto !important;
-    overflow-y: hidden !important;
-    padding: 14px 1.75rem 12px 1.75rem !important;
-    margin: -1.25rem -1.75rem 1.25rem -1.75rem !important;
-    background: rgba(15, 23, 42, 0.98) !important;
-    position: sticky !important;
-    top: -1.25rem !important;
-    z-index: 30 !important;
-    border-bottom: 1px solid var(--border-color) !important;
-    scroll-behavior: smooth;
-    -webkit-overflow-scrolling: touch;
-    backdrop-filter: blur(12px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-    min-height: 58px !important;
-}
-
-.rules-tab-bar::-webkit-scrollbar, .rule-tab-bar::-webkit-scrollbar {
-    height: 6px;
-}
-
-.rules-tab-bar::-webkit-scrollbar-track, .rule-tab-bar::-webkit-scrollbar-track {
-    background: rgba(15, 23, 42, 0.6);
-    border-radius: 3px;
-}
-
-.rules-tab-bar::-webkit-scrollbar-thumb, .rule-tab-bar::-webkit-scrollbar-thumb {
-    background: rgba(99, 102, 241, 0.4);
-    border-radius: 3px;
-}
-
-.rules-tab-bar::-webkit-scrollbar-thumb:hover, .rule-tab-bar::-webkit-scrollbar-thumb:hover {
-    background: rgba(99, 102, 241, 0.7);
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(155px, 1fr)) !important;
+    gap: 8px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    padding: 10px 12px !important;
+    margin: 0 0 16px 0 !important;
+    background: rgba(15, 23, 42, 0.85) !important;
+    border-radius: 14px !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    overflow: visible !important;
 }
 
 .rule-tab-btn {
     white-space: nowrap !important;
     writing-mode: horizontal-tb !important;
-    flex-shrink: 0 !important;
     display: inline-flex !important;
     align-items: center !important;
+    justify-content: center !important;
     gap: 6px !important;
-    padding: 8px 16px !important;
+    padding: 0 10px !important;
     height: 38px !important;
-    border-radius: 8px !important;
-    border: 1px solid var(--border-color) !important;
-    background: rgba(255, 255, 255, 0.05);
-    color: var(--text-secondary);
+    min-height: 38px !important;
+    line-height: 38px !important;
+    border-radius: 10px !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    background: rgba(30, 41, 59, 0.75) !important;
+    color: #cbd5e1 !important;
     cursor: pointer;
-    font-size: 0.85rem !important;
-    font-weight: 500 !important;
-    transition: all 0.2s ease !important;
+    font-size: 0.84rem !important;
+    font-weight: 600 !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    box-sizing: border-box !important;
+    text-overflow: ellipsis !important;
+    overflow: hidden !important;
 }
 
 .rule-tab-btn:hover {
-
-    background: rgba(255, 255, 255, 0.08) !important;
-    color: #fff !important;
+    background: rgba(99, 102, 241, 0.25) !important;
+    border-color: rgba(99, 102, 241, 0.5) !important;
+    color: #ffffff !important;
+    transform: translateY(-1px);
 }
 
 .rule-tab-btn.active {
-    background: rgba(99, 102, 241, 0.25) !important;
-    border-color: #818cf8 !important;
-    color: #fff !important;
-    font-weight: 600 !important;
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%) !important;
+    border-color: rgba(255, 255, 255, 0.3) !important;
+    color: #ffffff !important;
+    font-weight: 700 !important;
+    box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
+    transform: translateY(-1px);
 }
 
 .modal-body {
