@@ -909,11 +909,17 @@
 
                 if (slotLessons.length > 0) {
                     const lesson = slotLessons[0];
-                    let infoSecond = `<i class="fa-solid fa-users"></i> ${lesson.class_name || lesson.class_code}`;
+                    let cCode = lesson.class_code || lesson.class_name || '';
+                    let cName = lesson.class_name || lesson.class_code || '';
+                    let tCode = lesson.teacher_code || lesson.teacher_name || '';
+                    let tName = lesson.teacher_name || lesson.teacher_code || '';
+
+                    let infoSecond = `<i class="fa-solid fa-users"></i> <a href="#" onclick="event.stopPropagation(); openDualViewModal('${cCode}', '${tCode}'); return false;" style="color:#38bdf8; text-decoration:none;" title="開啟雙視窗對照與請假調課助手"><i class="fa-solid fa-columns" style="font-size:0.7rem; opacity:0.8;"></i> ${cName}</a>`;
+                    
                     if (currentMode === 'class') {
-                        infoSecond = `<i class="fa-solid fa-chalkboard-user"></i> ${lesson.teacher_name || lesson.teacher_code}`;
+                        infoSecond = `<i class="fa-solid fa-chalkboard-user"></i> <a href="#" onclick="event.stopPropagation(); openDualViewModal('${queryVal}', '${tCode}'); return false;" style="color:#818cf8; text-decoration:none;" title="開啟雙視窗對照與請假調課助手"><i class="fa-solid fa-columns" style="font-size:0.7rem; opacity:0.8;"></i> ${tName}</a>`;
                     } else if (currentMode === 'room') {
-                        infoSecond = `<i class="fa-solid fa-users"></i> ${lesson.class_name || lesson.class_code} (${lesson.teacher_name || ''})`;
+                        infoSecond = `<i class="fa-solid fa-users"></i> <a href="#" onclick="event.stopPropagation(); openDualViewModal('${cCode}', '${tCode}'); return false;" style="color:#34d399; text-decoration:none;" title="開啟雙視窗對照與請假調課助手"><i class="fa-solid fa-columns" style="font-size:0.7rem; opacity:0.8;"></i> ${cName} (${tName})</a>`;
                     }
 
                     td.innerHTML = `
@@ -927,9 +933,19 @@
                     td.innerHTML = '<span class="slot-empty">-</span>';
                 }
 
-                // Interactive Manual Swap Click Handler
+                // Interactive Click Handler
                 td.addEventListener('click', async () => {
-                    if (!isManualEditMode) return;
+                    if (!isManualEditMode) {
+                        const lesson = slotLessons[0];
+                        if (lesson) {
+                            let cCode = lesson.class_code || lesson.class_name || '';
+                            let tCode = lesson.teacher_code || lesson.teacher_name || '';
+                            if (currentMode === 'class') cCode = queryVal;
+                            if (currentMode === 'teacher') tCode = queryVal;
+                            openDualViewModal(cCode, tCode);
+                        }
+                        return;
+                    }
                     const lesson = slotLessons[0];
                     if (!selectedSourceItem) {
                         if (!lesson) {
