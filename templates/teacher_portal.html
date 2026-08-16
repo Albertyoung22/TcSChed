@@ -469,11 +469,17 @@
                     <p id="semesterSubHeader">教師個人課表專屬查詢門戶</p>
                 </div>
 
-            </div>
-
             <div class="action-btns">
+                <button class="btn btn-secondary" onclick="openDualViewModal('', '')" style="background: rgba(56, 189, 248, 0.15); border-color: rgba(56, 189, 248, 0.3); color: #38bdf8;">
+                    <i class="fa-solid fa-columns"></i> 雙視窗對照模式
+                </button>
                 <button class="btn btn-primary" onclick="window.print()">
-                    <i class="fa-solid fa-prin        <!-- Search Mode Tabs & Select Card -->
+                    <i class="fa-solid fa-print"></i> 列印本頁課表
+                </button>
+            </div>
+        </header>
+
+        <!-- Search Mode Tabs & Select Card -->
         <div class="search-card" style="flex-direction: column; align-items: stretch; gap: 14px;">
             <!-- Mode Switcher Tabs -->
             <div style="display: flex; gap: 8px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
@@ -999,6 +1005,6 @@
     }
     </script>
     <!-- Core App JS with Dual View Handlers -->
-    <script src="/static/js/app.js?v=20260816_v14"></script>
+    <script src="/static/js/app.js?v=20260816_v15"></script>
 </body>
 </html>
