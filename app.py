@@ -515,6 +515,49 @@ def index():
 def teacher_portal():
     return render_template("teacher_portal.html")
 
+@app.route("/showcase")
+@app.route("/intro")
+def showcase():
+    return render_template("showcase.html")
+
+@app.route("/api/tts")
+def api_edge_tts():
+    text = request.args.get("text", "歡迎使用舟歌 AI 智慧排課系統").strip()
+    voice = request.args.get("voice", "zh-TW-HsiaoChenNeural").strip()
+    if not text:
+        return jsonify({"error": "No text provided"}), 400
+    try:
+        import asyncio
+        import edge_tts
+        
+        async def _gen_speech():
+            communicate = edge_tts.Communicate(text, voice)
+            data = b""
+            async for chunk in communicate.stream():
+                if chunk["type"] == "audio":
+                    data += chunk["data"]
+            return data
+
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            audio_bytes = loop.run_until_complete(_gen_speech())
+        finally:
+            loop.close()
+            
+        return send_file(
+            io.BytesIO(audio_bytes),
+            mimetype="audio/mpeg",
+            as_attachment=False,
+            download_name="speech.mp3"
+        )
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+
+
 
 NOTES_FILE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "lesson_notes.json")
 
