@@ -5266,24 +5266,33 @@ async function openDualViewModal(classCode, teacherCode) {
     const classSelect = document.getElementById('dualViewClassSelect');
     const teacherSelect = document.getElementById('dualViewTeacherSelect');
 
-    // Populate classSelect dropdown if empty
+    // Populate classSelect dropdown safely
     if (classSelect && metadata.classes) {
-        classSelect.innerHTML = metadata.classes.map(c => 
-            `<option value="${c.code}" ${c.code === classCode ? 'selected' : ''}>${c.name} (導師：${c.tutor || '無'})</option>`
-        ).join('');
+        classSelect.innerHTML = metadata.classes.map(c => {
+            const code = typeof c === 'object' ? (c.code || c.name) : c;
+            const name = typeof c === 'object' ? (c.name || c.code) : c;
+            const tutor = typeof c === 'object' && c.tutor ? ` (導師：${c.tutor})` : '';
+            return `<option value="${code}" ${code === classCode ? 'selected' : ''}>${name}${tutor}</option>`;
+        }).join('');
     }
 
-    // Populate teacherSelect dropdown if empty
+    // Populate teacherSelect dropdown safely
     if (teacherSelect && metadata.teachers) {
-        teacherSelect.innerHTML = metadata.teachers.map(t => 
-            `<option value="${t.code}" ${t.code === teacherCode || t.name === teacherCode ? 'selected' : ''}>${t.name} ${t.role ? '(' + t.role + ')' : ''}</option>`
-        ).join('');
+        teacherSelect.innerHTML = metadata.teachers.map(t => {
+            const code = typeof t === 'object' ? (t.code || t.name) : t;
+            const name = typeof t === 'object' ? (t.name || t.code) : t;
+            const role = typeof t === 'object' && t.role ? ` (${t.role})` : '';
+            return `<option value="${code}" ${code === teacherCode || name === teacherCode ? 'selected' : ''}>${name}${role}</option>`;
+        }).join('');
     }
 
-    dualViewCurrentClass = classCode || (metadata.classes[0] ? metadata.classes[0].code : '');
+    const firstCls = metadata.classes && metadata.classes[0] ? (typeof metadata.classes[0] === 'object' ? metadata.classes[0].code : metadata.classes[0]) : '';
+    dualViewCurrentClass = classCode || firstCls;
     
-    let tMatch = metadata.teachers ? metadata.teachers.find(t => t.code === teacherCode || t.name === teacherCode) : null;
-    dualViewCurrentTeacher = tMatch ? tMatch.code : (teacherCode || (metadata.teachers[0] ? metadata.teachers[0].code : ''));
+    const firstTch = metadata.teachers && metadata.teachers[0] ? (typeof metadata.teachers[0] === 'object' ? metadata.teachers[0].code : metadata.teachers[0]) : '';
+    
+    let tMatch = metadata.teachers ? metadata.teachers.find(t => (typeof t === 'object' ? (t.code === teacherCode || t.name === teacherCode) : t === teacherCode)) : null;
+    dualViewCurrentTeacher = tMatch ? (typeof tMatch === 'object' ? tMatch.code : tMatch) : (teacherCode || firstTch);
 
     if (classSelect) classSelect.value = dualViewCurrentClass;
     if (teacherSelect) teacherSelect.value = dualViewCurrentTeacher;
@@ -5327,9 +5336,12 @@ function renderDualClassGrid() {
 
     if (!tbody) return;
 
-    const cls = metadata.classes ? metadata.classes.find(c => c.code === dualViewCurrentClass) : null;
-    if (titleEl) titleEl.innerHTML = `<span><i class="fa-solid fa-chalkboard"></i> ${cls ? cls.name : dualViewCurrentClass} 班級課表</span>`;
-    if (tutorEl) tutorEl.textContent = cls && cls.tutor ? `導師：${cls.tutor}` : '';
+    const cls = metadata.classes ? metadata.classes.find(c => typeof c === 'object' ? (c.code === dualViewCurrentClass || c.name === dualViewCurrentClass) : c === dualViewCurrentClass) : null;
+    const clsName = cls ? (typeof cls === 'object' ? cls.name : cls) : dualViewCurrentClass;
+    const clsTutor = cls && typeof cls === 'object' && cls.tutor ? cls.tutor : '';
+
+    if (titleEl) titleEl.innerHTML = `<span><i class="fa-solid fa-chalkboard"></i> ${clsName} 班級課表</span>`;
+    if (tutorEl) tutorEl.textContent = clsTutor ? `導師：${clsTutor}` : '';
 
     const grid = Array(8).fill(null).map(() => Array(5).fill(null).map(() => []));
     dualClassSlotsData.forEach(s => {
@@ -5373,9 +5385,12 @@ function renderDualTeacherGrid() {
 
     if (!tbody) return;
 
-    const t = metadata.teachers ? metadata.teachers.find(x => x.code === dualViewCurrentTeacher || x.name === dualViewCurrentTeacher) : null;
-    if (titleEl) titleEl.innerHTML = `<span><i class="fa-solid fa-user-graduate"></i> ${t ? t.name : dualViewCurrentTeacher} 老師課表</span>`;
-    if (roleEl) roleEl.textContent = t && t.role ? `職務：${t.role}` : '';
+    const t = metadata.teachers ? metadata.teachers.find(x => typeof x === 'object' ? (x.code === dualViewCurrentTeacher || x.name === dualViewCurrentTeacher) : x === dualViewCurrentTeacher) : null;
+    const tName = t ? (typeof t === 'object' ? t.name : t) : dualViewCurrentTeacher;
+    const tRole = t && typeof t === 'object' && t.role ? t.role : '';
+
+    if (titleEl) titleEl.innerHTML = `<span><i class="fa-solid fa-user-graduate"></i> ${tName} 老師課表</span>`;
+    if (roleEl) roleEl.textContent = tRole ? `職務：${tRole}` : '';
 
     const grid = Array(8).fill(null).map(() => Array(5).fill(null).map(() => []));
     dualTeacherSlotsData.forEach(s => {
