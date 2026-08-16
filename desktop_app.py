@@ -215,6 +215,8 @@ def main():
             time.sleep(0.1)
 
     url = f"http://127.0.0.1:{port}"
+    print(f"[資訊] 系統成功啟動！主頁面: {url}")
+    print(f"[資訊] 系統亮點與 AI 導覽 Showcase: {url}/showcase")
     cfg = {}
     try:
         if os.path.exists("config_rules.json"):
