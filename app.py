@@ -516,7 +516,7 @@ def teacher_portal():
     return render_template("teacher_portal.html")
 
 
-NOTES_FILE_PATH = os.path.join(BASE_DIR, "lesson_notes.json")
+NOTES_FILE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "lesson_notes.json")
 
 def load_lesson_notes():
     if os.path.exists(NOTES_FILE_PATH):
