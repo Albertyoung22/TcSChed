@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>舟歌 AI 智慧排課系統 - 系統亮點與 AI 導覽 (Microsoft Edge TTS)</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Noto+Sans+TC:wght@300;400;500;700;900&family=Fira+Code:wght@400;600&display=swap" rel="stylesheet">
+
+    <!-- FontAwesome icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --bg-dark: #080b14;
+            --bg-card: rgba(18, 26, 47, 0.7);
+            --bg-card-hover: rgba(30, 42, 74, 0.85);
+            --border-glow: rgba(0, 240, 255, 0.3);
+            --border-glow-active: rgba(0, 240, 255, 0.8);
+            --primary: #00f0ff;
+            --secondary: #7000ff;
+            --accent: #ff007f;
+            --text-main: #e2e8f0;
+            --text-muted: #94a3b8;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --font-main: 'Noto Sans TC', sans-serif;
+            --font-tech: 'Orbitron', sans-serif;
+            --font-code: 'Fira Code', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: var(--font-main);
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        /* Animated background canvas */
+        #bg-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        /* Sound Control Header Bar */
+        .audio-bar {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: rgba(8, 11, 20, 0.85);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border-glow);
+            padding: 10px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 20px rgba(0, 240, 255, 0.15);
+        }
+
+        .brand-logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-family: var(--font-tech);
+            font-weight: 900;
+            font-size: 1.25rem;
+            color: var(--primary);
+            text-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
+        }
+
+        .brand-logo i {
+            font-size: 1.5rem;
+            color: var(--accent);
+            animation: pulse-icon 2s infinite alternate;
+        }
+
+        @keyframes pulse-icon {
+            0% { transform: scale(1); filter: drop-shadow(0 0 5px var(--accent)); }
+            100% { transform: scale(1.15); filter: drop-shadow(0 0 15px var(--accent)); }
+        }
+
+        .audio-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .btn-audio {
+            background: rgba(112, 0, 255, 0.2);
+            border: 1px solid var(--secondary);
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 0.88rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-audio:hover {
+            background: var(--secondary);
+            box-shadow: 0 0 15px rgba(112, 0, 255, 0.6);
+            transform: translateY(-2px);
+        }
+
+        .btn-audio.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            box-shadow: 0 0 15px rgba(255, 0, 127, 0.6);
+        }
+
+        /* Container Layout */
+        .container {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        /* Hero Section */
+        .hero {
+            position: relative;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            align-items: center;
+            padding: 40px 0 80px;
+        }
+
+        @media (max-width: 992px) {
+            .hero { grid-template-columns: 1fr; }
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(0, 240, 255, 0.1);
+            border: 1px solid var(--primary);
+            color: var(--primary);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-family: var(--font-tech);
+            margin-bottom: 20px;
+        }
+
+        .hero-title {
+            font-size: 3rem;
+            font-weight: 900;
+            line-height: 1.2;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #ffffff 0%, var(--primary) 50%, var(--accent) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero-subtitle {
+            font-size: 1.15rem;
+            color: var(--text-muted);
+            margin-bottom: 30px;
+        }
+
+        .hero-btns {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .btn-glow {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: #000;
+            font-weight: 700;
+            padding: 14px 28px;
+            border-radius: 12px;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 0 25px rgba(0, 240, 255, 0.4);
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+
+        .btn-glow:hover {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 0 35px rgba(0, 240, 255, 0.7);
+        }
+
+        .btn-outline {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-main);
+            border: 1px solid var(--border-glow);
+            padding: 14px 28px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+
+        .btn-outline:hover {
+            border-color: var(--primary);
+            background: rgba(0, 240, 255, 0.1);
+            color: var(--primary);
+        }
+
+        .hero-image-wrapper {
+            position: relative;
+            border-radius: 20px;
+            overflow: hidden;
+            border: 1px solid var(--border-glow-active);
+            box-shadow: 0 0 40px rgba(0, 240, 255, 0.25);
+            transition: transform 0.5s ease;
+        }
+
+        .hero-image-wrapper:hover {
+            transform: scale(1.02) rotate(0.5deg);
+        }
+
+        .hero-image-wrapper img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        /* Metrics Counter Grid */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin: 40px 0 80px;
+        }
+
+        @media (max-width: 768px) {
+            .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        .metric-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-glow);
+            border-radius: 16px;
+            padding: 25px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .metric-card:hover {
+            border-color: var(--primary);
+            background: var(--bg-card-hover);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 240, 255, 0.2);
+        }
+
+        .metric-val {
+            font-family: var(--font-tech);
+            font-size: 2.5rem;
+            font-weight: 900;
+            color: var(--primary);
+            text-shadow: 0 0 15px rgba(0, 240, 255, 0.5);
+            margin-bottom: 5px;
+        }
+
+        .metric-label {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        /* Section Headings */
+        .section-header {
+            text-align: center;
+            margin-bottom: 50px;
+            position: relative;
+        }
+
+        .section-tag {
+            color: var(--accent);
+            font-family: var(--font-tech);
+            font-size: 0.9rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .section-title {
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: #fff;
+        }
+
+        .btn-read-section {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: var(--primary);
+            padding: 4px 12px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 0.78rem;
+            margin-left: 10px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-read-section:hover {
+            background: rgba(0, 240, 255, 0.2);
+            border-color: var(--primary);
+        }
+
+        /* Feature Cards Matrix */
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 30px;
+            margin-bottom: 80px;
+        }
+
+        @media (max-width: 992px) {
+            .features-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        @media (max-width: 600px) {
+            .features-grid { grid-template-columns: 1fr; }
+        }
+
+        .feature-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-glow);
+            border-radius: 20px;
+            padding: 30px;
+            backdrop-filter: blur(12px);
+            position: relative;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            border-color: var(--primary);
+            box-shadow: 0 15px 35px rgba(0, 240, 255, 0.25);
+            background: var(--bg-card-hover);
+        }
+
+        .feature-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, rgba(0, 240, 255, 0.2), rgba(112, 0, 255, 0.2));
+            border: 1px solid var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.6rem;
+            color: var(--primary);
+            margin-bottom: 20px;
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
+        }
+
+        .feature-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 12px;
+        }
+
+        .feature-desc {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+
+        /* Interactive Solver Showcase Box */
+        .solver-demo-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border-glow-active);
+            border-radius: 24px;
+            padding: 40px;
+            margin-bottom: 80px;
+            backdrop-filter: blur(16px);
+            box-shadow: 0 0 50px rgba(0, 240, 255, 0.15);
+        }
+
+        .solver-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .solver-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-family: var(--font-code);
+            font-size: 0.9rem;
+            background: rgba(0, 0, 0, 0.4);
+            padding: 8px 16px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .dot-pulse {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--success);
+            box-shadow: 0 0 10px var(--success);
+            animation: blink 1.5s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            height: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 25px;
+            position: relative;
+        }
+
+        .progress-bar-fill {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, var(--secondary), var(--primary), var(--accent));
+            border-radius: 10px;
+            transition: width 0.3s ease;
+            box-shadow: 0 0 15px var(--primary);
+        }
+
+        .log-console {
+            background: #04060c;
+            border: 1px solid rgba(0, 240, 255, 0.2);
+            border-radius: 12px;
+            padding: 20px;
+            font-family: var(--font-code);
+            font-size: 0.85rem;
+            color: #38bdf8;
+            height: 180px;
+            overflow-y: auto;
+            margin-bottom: 25px;
+            line-height: 1.6;
+        }
+
+        .log-line {
+            margin-bottom: 4px;
+        }
+
+        .log-line.success { color: var(--success); }
+        .log-line.highlight { color: var(--accent); font-weight: bold; }
+
+        /* Timetable Interactive Grid */
+        .timetable-preview {
+            overflow-x: auto;
+        }
+
+        .table-custom {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: center;
+            font-size: 0.88rem;
+        }
+
+        .table-custom th, .table-custom td {
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 12px 8px;
+        }
+
+        .table-custom th {
+            background: rgba(112, 0, 255, 0.2);
+            color: var(--primary);
+            font-family: var(--font-tech);
+        }
+
+        .slot-card {
+            background: rgba(0, 240, 255, 0.1);
+            border: 1px solid rgba(0, 240, 255, 0.3);
+            border-radius: 8px;
+            padding: 6px 4px;
+            transition: all 0.2s ease;
+        }
+
+        .slot-card:hover {
+            background: rgba(0, 240, 255, 0.25);
+            transform: scale(1.05);
+            box-shadow: 0 0 10px rgba(0, 240, 255, 0.4);
+        }
+
+        .slot-subject { font-weight: 700; color: #fff; }
+        .slot-teacher { font-size: 0.78rem; color: var(--text-muted); }
+        .slot-tag { font-size: 0.7rem; color: var(--accent); font-family: var(--font-code); }
+
+        /* Core Visual Double Column Section */
+        .core-visual-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            align-items: center;
+            margin-bottom: 80px;
+        }
+
+        @media (max-width: 992px) {
+            .core-visual-section { grid-template-columns: 1fr; }
+        }
+
+        .visual-card-wrapper {
+            border-radius: 20px;
+            overflow: hidden;
+            border: 1px solid var(--border-glow);
+            box-shadow: 0 0 35px rgba(112, 0, 255, 0.3);
+        }
+
+        .visual-card-wrapper img {
+            width: 100%;
+            display: block;
+        }
+
+        .tech-list {
+            list-style: none;
+        }
+
+        .tech-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+            margin-bottom: 20px;
+            background: rgba(255, 255, 255, 0.03);
+            padding: 15px 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .tech-item:hover {
+            background: rgba(0, 240, 255, 0.08);
+            border-color: var(--primary);
+            transform: translateX(5px);
+        }
+
+        .tech-item i {
+            color: var(--primary);
+            font-size: 1.3rem;
+            margin-top: 3px;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 40px 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        footer p {
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Background Canvas Matrix -->
+    <canvas id="bg-canvas"></canvas>
+
+    <!-- Top Audio Bar -->
+    <div class="audio-bar">
+        <div class="brand-logo">
+            <i class="fa-solid fa-ship"></i>
+            <span>BOAT SONG AI 舟歌排課</span>
+        </div>
+        <div class="audio-controls">
+            <div style="display: flex; align-items: center; gap: 6px; background: rgba(0, 240, 255, 0.1); border: 1px solid var(--primary); padding: 4px 10px; border-radius: 20px;">
+                <i class="fa-solid fa-microphone-lines" style="color: var(--primary); font-size: 0.85rem;"></i>
+                <select id="edge-voice-select" style="background: transparent; color: #fff; border: none; font-size: 0.82rem; font-weight: 600; outline: none; cursor: pointer;">
+                    <option value="zh-TW-HsiaoChenNeural" style="background: #080b14; color: #fff;">🎙️ Edge 曉臻 (台灣極致女聲)</option>
+                    <option value="zh-TW-YunJheNeural" style="background: #080b14; color: #fff;">🎙️ Edge 雲哲 (台灣極致男聲)</option>
+                    <option value="zh-TW-HsiaoYuNeural" style="background: #080b14; color: #fff;">🎙️ Edge 曉雨 (甜美自然女聲)</option>
+                </select>
+            </div>
+
+            <button class="btn-audio" id="btn-tts-all" onclick="toggleVoiceGuide()">
+                <i class="fa-solid fa-volume-high" id="tts-icon"></i>
+                <span id="tts-label">啟動 Edge TTS 語音導覽</span>
+            </button>
+            <button class="btn-audio" id="btn-ambient" onclick="toggleAmbientSound()">
+                <i class="fa-solid fa-music" id="ambient-icon"></i>
+                <span id="ambient-label">背景科幻音效：關閉</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="container">
+
+        <!-- Hero Section -->
+        <section class="hero">
+            <div>
+                <div class="hero-badge">
+                    <i class="fa-solid fa-bolt"></i> GOOGLE OR-TOOLS CP-SAT 核心驅動
+                </div>
+                <h1 class="hero-title">舟歌 AI 智慧排課系統</h1>
+                <p class="hero-subtitle">
+                    聲色俱佳、運算極速、精準解決全校課表衝突。專為高級中學與國中小學量身打造的下一代 AI 智慧排課與教師請假調課全方位解決方案。
+                </p>
+                <div class="hero-btns">
+                    <button class="btn-glow" onclick="runSimulatedSolver()">
+                        <i class="fa-solid fa-play"></i> 立即體驗 AI 排課模擬
+                    </button>
+                    <a href="/" class="btn-outline" target="_blank">
+                        <i class="fa-solid fa-arrow-up-right-from-square"></i> 開啟排課管理系統
+                    </a>
+                </div>
+            </div>
+            <div class="hero-image-wrapper">
+                <img src="/static/images/hero_banner.jpg" alt="舟歌 AI 智慧排課 Hero Banner" onerror="this.src='https://picsum.photos/800/450?dark'">
+            </div>
+        </section>
+
+        <!-- Live Metrics Counter -->
+        <div class="metrics-grid">
+            <div class="metric-card" onmouseenter="playHoverSFX()">
+                <div class="metric-val" id="count-speed">0.05</div>
+                <div class="metric-label">秒級 CP-SAT 計算速度</div>
+            </div>
+            <div class="metric-card" onmouseenter="playHoverSFX()">
+                <div class="metric-val" id="count-rate">99.8%</div>
+                <div class="metric-label">最佳解算與相容滿意度</div>
+            </div>
+            <div class="metric-card" onmouseenter="playHoverSFX()">
+                <div class="metric-val" id="count-conflict">0</div>
+                <div class="metric-label">教師/班級 課表時間衝突</div>
+            </div>
+            <div class="metric-card" onmouseenter="playHoverSFX()">
+                <div class="metric-val" id="count-satisfaction">100%</div>
+                <div class="metric-label">DBF / Excel 無縫轉換相容</div>
+            </div>
+        </div>
+
+        <!-- Interactive AI Solver Simulation Showcase -->
+        <section class="solver-demo-box">
+            <div class="solver-header">
+                <div>
+                    <h2 style="font-size: 1.6rem; color: #fff; font-family: var(--font-tech);">
+                        <i class="fa-solid fa-microchip" style="color: var(--primary);"></i> OR-Tools 限制式滿意解算模擬器
+                    </h2>
+                    <p style="color: var(--text-muted); font-size: 0.9rem;">動態呈現 AI 在 milliseconds 內排版班級、教師與跨班選修課表之演算過程</p>
+                </div>
+                <div class="solver-status">
+                    <div class="dot-pulse" id="status-dot"></div>
+                    <span id="status-text">引擎狀態：待命準備中</span>
+                </div>
+            </div>
+
+            <div class="progress-bar-container">
+                <div class="progress-bar-fill" id="solver-progress"></div>
+            </div>
+
+            <div class="log-console" id="log-console">
+                <div class="log-line">[SYSTEM] 舟歌 AI 演算法模組讀取完成。等待觸發模擬計算...</div>
+            </div>
+
+            <div style="display: flex; gap: 15px; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap;">
+                <h3 style="font-size: 1.1rem; color: var(--primary);">
+                    <i class="fa-solid fa-table-cells"></i> 即時課表動態矩陣 (實時畫布演示)
+                </h3>
+                <button class="btn-glow" style="padding: 8px 18px; font-size: 0.88rem;" onclick="runSimulatedSolver()">
+                    <i class="fa-solid fa-arrows-rotate"></i> 重新模擬排課演算
+                </button>
+            </div>
+
+            <div class="timetable-preview">
+                <table class="table-custom">
+                    <thead>
+                        <tr>
+                            <th>節次 / 時間</th>
+                            <th>星期一</th>
+                            <th>星期二</th>
+                            <th>星期三</th>
+                            <th>星期四</th>
+                            <th>星期五</th>
+                        </tr>
+                    </thead>
+                    <tbody id="demo-timetable-body">
+                        <!-- Filled dynamically by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Feature Matrix Grid -->
+        <section style="margin-bottom: 80px;">
+            <div class="section-header">
+                <div class="section-tag">
+                    <span>SIX CORE ADVANTAGES</span>
+                    <button class="btn-read-section" onclick="speakText('舟歌 AI 智慧排課系統的六大核心優勢包括：一、毫秒級 OR-Tools CP-SAT 最佳化解算引擎；二、靈活多元限制條件；三、跨班選修與合班同排同步化調度；四、DBF與Excel資料完全相容與備份；五、教師專屬雲端課表與線上調課Portal；六、跨平台雙軌部署。')">
+                        <i class="fa-solid fa-volume-low"></i> 朗讀本區 (Edge TTS)
+                    </button>
+                </div>
+                <h2 class="section-title">六大核心亮點與強大優勢</h2>
+            </div>
+
+            <div class="features-grid">
+                <div class="feature-card" onmouseenter="playHoverSFX()" onclick="speakText('第一亮點：Google OR-Tools CP-SAT 毫秒級核心算力。採用國際領先的限制式滿足問題求解器，能在數秒鐘內從數百萬種課表組合中，找出最佳零衝突解。')">
+                    <div class="feature-icon"><i class="fa-solid fa-brain"></i></div>
+                    <h3 class="feature-title">Google OR-Tools CP-SAT 算力</h3>
+                    <p class="feature-desc">採用國際頂尖限制式滿意解答求解器 (Constraint Programming SAT)，可在數秒鐘內從幾百萬種課表組合中算出最佳零衝突解答。</p>
+                </div>
+
+                <div class="feature-card" onmouseenter="playHoverSFX()" onclick="speakText('第二亮點：多維度高彈性限制式配置。支援教師不排課時間、科目不排課、預排固定課、每日科目分散與連續授課上限等十幾種複雜規則。')">
+                    <div class="feature-icon"><i class="fa-solid fa-sliders"></i></div>
+                    <h3 class="feature-title">多元彈性限制條件配置</h3>
+                    <p class="feature-desc">完美支援「教師不排課時段」、「特定科目避開第8節」、「預排固定課」、「連續授課上限」與「每日科目均勻分散」等規則。</p>
+                </div>
+
+                <div class="feature-card" onmouseenter="playHoverSFX()" onclick="speakText('第三亮點：跨班選修與合班同排調度。專為新課綱跨班選修、多班同排與虛擬班級設計，精準鎖定相同時間軸同步授課。')">
+                    <div class="feature-icon"><i class="fa-solid fa-layer-group"></i></div>
+                    <h3 class="feature-title">跨班選修與合班/同排同步</h3>
+                    <p class="feature-desc">專為高中新課綱與多元選修設計！精準處理跨班選修群組、同排課程與虛擬班級（如合班體育、外語選修）的時間軸嚴密同步。</p>
+                </div>
+
+                <div class="feature-card" onmouseenter="playHoverSFX()" onclick="speakText('第四亮點：全方位 DBF 與 Excel 相容備份。相容於傳統國高中小教務系統 DBF 資料庫，並支援一鍵備份、還原點快照與 Excel 匯出。')">
+                    <div class="feature-icon"><i class="fa-solid fa-database"></i></div>
+                    <h3 class="feature-title">DBF / Excel 雙向完美備份</h3>
+                    <p class="feature-desc">無縫銜接傳統學校教務系統 DBF 格式數據（claspv_base, no_teach, class），提供一鍵導出 Excel、ZIP 備份與隨時復原快照機制。</p>
+                </div>
+
+                <div class="feature-card" onmouseenter="playHoverSFX()" onclick="speakText('第五亮點：教師專屬雲端課表與調課 Portal。提供教師手機與電腦隨身查詢課表、檢視空堂與線上調課請假系統。')">
+                    <div class="feature-icon"><i class="fa-solid fa-user-tie"></i></div>
+                    <h3 class="feature-title">教師專屬 Portal 與線上調課</h3>
+                    <p class="feature-desc">內建響應式 Teacher Portal！教師可透過手機或電腦即時查詢個人課表、尋找代課空堂、並線上提出請假調課申請。</p>
+                </div>
+
+                <div class="feature-card" onmouseenter="playHoverSFX()" onclick="speakText('第六亮點：Web 雲端與桌面 PyWebView 雙軌部署。既可在瀏覽器中開啟，亦能打包成單一 exe 免安裝桌面應用程式。')">
+                    <div class="feature-icon"><i class="fa-solid fa-desktop"></i></div>
+                    <h3 class="feature-title">雙軌部署 (Web 雲端 + 桌面版)</h3>
+                    <p class="feature-desc">採用 Python Flask 與 PyWebView 整合技術，既可作為校園內網 Web 服務，又能一鍵打包為單檔免安裝獨立桌面應用程式。</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Core Visual Architecture Section -->
+        <section class="core-visual-section">
+            <div class="visual-card-wrapper">
+                <img src="/static/images/solver_visual.jpg" alt="AI 排課核心演算法構架" onerror="this.src='https://picsum.photos/800/450?tech'">
+            </div>
+            <div>
+                <div class="section-tag" style="justify-content: flex-start;">SYSTEM ARCHITECTURE</div>
+                <h2 style="font-size: 2rem; color: #fff; margin-bottom: 20px;">先進智慧調度運算架構</h2>
+                <p style="color: var(--text-muted); margin-bottom: 25px;">
+                    舟歌 AI 將學校教務處繁複的排課規則轉換為高維度數學模型。透過 CP-SAT 方程式矩陣化解算，全自動保障教師與班級課表完美契合。
+                </p>
+                <ul class="tech-list">
+                    <li class="tech-item" onmouseenter="playHoverSFX()">
+                        <i class="fa-solid fa-circle-check"></i>
+                        <div>
+                            <strong style="color: #fff;">自動消除衝課與空堂浪費</strong>
+                            <div style="font-size: 0.88rem; color: var(--text-muted);">百分百消除同一教師同節次重複排課、同班級重複排課之絕對衝突。</div>
+                        </div>
+                    </li>
+                    <li class="tech-item" onmouseenter="playHoverSFX()">
+                        <i class="fa-solid fa-circle-check"></i>
+                        <div>
+                            <strong style="color: #fff;">靈活權重優化 (Soft Constraints)</strong>
+                            <div style="font-size: 0.88rem; color: var(--text-muted);">可自訂軟性權重，優先滿足教師偏好時段、平均分散主科作業時間。</div>
+                        </div>
+                    </li>
+                    <li class="tech-item" onmouseenter="playHoverSFX()">
+                        <i class="fa-solid fa-circle-check"></i>
+                        <div>
+                            <strong style="color: #fff;">還原點與快照防護 (Snapshot Restore)</strong>
+                            <div style="font-size: 0.88rem; color: var(--text-muted);">隨時儲存課表調整快照，支援一鍵還原至任何歷史排課狀態。</div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </section>
+
+    </div>
+
+    <footer>
+        <p><i class="fa-solid fa-ship"></i> 舟歌 AI 智慧自動排課系統 &copy; 2026. All Rights Reserved.</p>
+        <p style="font-size: 0.8rem; color: #64748b;">Powered by Microsoft Edge Neural TTS, Google OR-Tools CP-SAT & Python Flask Framework</p>
+    </footer>
+
+    <!-- Web Audio & Edge TTS Speech & Dynamic JS -->
+    <script>
+        // -------------------------------------------------------------
+        // Canvas Particle Matrix Background
+        // -------------------------------------------------------------
+        const canvas = document.getElementById('bg-canvas');
+        const ctx = canvas.getContext('2d');
+        let width = canvas.width = window.innerWidth;
+        let height = canvas.height = window.innerHeight;
+
+        window.addEventListener('resize', () => {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        });
+
+        const particles = [];
+        const particleCount = 45;
+
+        for (let i = 0; i < particleCount; i++) {
+            particles.push({
+                x: Math.random() * width,
+                y: Math.random() * height,
+                vx: (Math.random() - 0.5) * 0.6,
+                vy: (Math.random() - 0.5) * 0.6,
+                radius: Math.random() * 2 + 1,
+                color: Math.random() > 0.5 ? '#00f0ff' : '#7000ff'
+            });
+        }
+
+        function drawCanvas() {
+            ctx.clearRect(0, 0, width, height);
+
+            for (let i = 0; i < particleCount; i++) {
+                let p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+
+                if (p.x < 0 || p.x > width) p.vx *= -1;
+                if (p.y < 0 || p.y > height) p.vy *= -1;
+
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fillStyle = p.color;
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = p.color;
+                ctx.fill();
+
+                for (let j = i + 1; j < particleCount; j++) {
+                    let p2 = particles[j];
+                    let dist = Math.hypot(p.x - p2.x, p.y - p2.y);
+                    if (dist < 140) {
+                        ctx.beginPath();
+                        ctx.moveTo(p.x, p.y);
+                        ctx.lineTo(p2.x, p2.y);
+                        ctx.strokeStyle = `rgba(0, 240, 255, ${1 - dist / 140 * 0.8})`;
+                        ctx.lineWidth = 0.5;
+                        ctx.stroke();
+                    }
+                }
+            }
+
+            requestAnimationFrame(drawCanvas);
+        }
+        drawCanvas();
+
+        // -------------------------------------------------------------
+        // Web Audio API Synthesizer (SFX & Ambient)
+        // -------------------------------------------------------------
+        let audioCtx = null;
+        let ambientOsc = null;
+        let ambientGain = null;
+        let isAmbientPlaying = false;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function playHoverSFX() {
+            try {
+                initAudio();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.08);
+
+                gain.gain.setValueAtTime(0.03, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.08);
+
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.08);
+            } catch (e) {}
+        }
+
+        function playCompleteSFX() {
+            try {
+                initAudio();
+                const notes = [523.25, 659.25, 783.99, 1046.50]; // C Major Chord
+                notes.forEach((freq, idx) => {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, audioCtx.currentTime + idx * 0.1);
+
+                    gain.gain.setValueAtTime(0.1, audioCtx.currentTime + idx * 0.1);
+                    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + idx * 0.1 + 0.4);
+
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+
+                    osc.start(audioCtx.currentTime + idx * 0.1);
+                    osc.stop(audioCtx.currentTime + idx * 0.1 + 0.4);
+                });
+            } catch (e) {}
+        }
+
+        function toggleAmbientSound() {
+            initAudio();
+            const btnLabel = document.getElementById('ambient-label');
+            const btnIcon = document.getElementById('ambient-icon');
+
+            if (!isAmbientPlaying) {
+                ambientOsc = audioCtx.createOscillator();
+                ambientGain = audioCtx.createGain();
+
+                ambientOsc.type = 'sine';
+                ambientOsc.frequency.setValueAtTime(110, audioCtx.currentTime);
+
+                ambientGain.gain.setValueAtTime(0.01, audioCtx.currentTime);
+                ambientGain.gain.linearRampToValueAtTime(0.05, audioCtx.currentTime + 2);
+
+                ambientOsc.connect(ambientGain);
+                ambientGain.connect(audioCtx.destination);
+
+                ambientOsc.start();
+                isAmbientPlaying = true;
+                btnLabel.innerText = "背景科幻音效：開啟中";
+                btnIcon.className = "fa-solid fa-volume-high";
+                document.getElementById('btn-ambient').classList.add('active');
+            } else {
+                if (ambientGain) {
+                    ambientGain.gain.linearRampToValueAtTime(0.001, audioCtx.currentTime + 1);
+                    setTimeout(() => {
+                        ambientOsc.stop();
+                        isAmbientPlaying = false;
+                        btnLabel.innerText = "背景科幻音效：關閉";
+                        btnIcon.className = "fa-solid fa-music";
+                        document.getElementById('btn-ambient').classList.remove('active');
+                    }, 1000);
+                }
+            }
+        }
+
+        // -------------------------------------------------------------
+        // Microsoft Edge TTS Voice Handler
+        // -------------------------------------------------------------
+        let currentAudio = null;
+        let isSpeaking = false;
+
+        function getSelectedVoice() {
+            const selector = document.getElementById('edge-voice-select');
+            return selector ? selector.value : 'zh-TW-HsiaoChenNeural';
+        }
+
+        function speakText(text) {
+            if (currentAudio) {
+                currentAudio.pause();
+                currentAudio = null;
+            }
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+            }
+
+            const voice = getSelectedVoice();
+            const ttsUrl = `/api/tts?voice=${encodeURIComponent(voice)}&text=${encodeURIComponent(text)}`;
+
+            currentAudio = new Audio(ttsUrl);
+            
+            currentAudio.play().then(() => {
+                isSpeaking = true;
+                updateTTSUI(true);
+            }).catch(err => {
+                console.warn("API Edge TTS fallback to Web Speech API", err);
+                if ('speechSynthesis' in window) {
+                    const msg = new SpeechSynthesisUtterance(text);
+                    msg.lang = 'zh-TW';
+                    msg.rate = 1.0;
+                    const voices = window.speechSynthesis.getVoices();
+                    const edgeVoice = voices.find(v => (v.name.includes('HsiaoChen') || v.name.includes('YunJhe') || v.name.includes('Online (Natural)') || v.name.includes('Microsoft')) && (v.lang.includes('zh') || v.lang.includes('TW')));
+                    if (edgeVoice) msg.voice = edgeVoice;
+                    
+                    msg.onstart = () => updateTTSUI(true);
+                    msg.onend = () => updateTTSUI(false);
+                    msg.onerror = () => updateTTSUI(false);
+
+                    window.speechSynthesis.speak(msg);
+                }
+            });
+
+            currentAudio.onended = () => updateTTSUI(false);
+            currentAudio.onerror = () => updateTTSUI(false);
+        }
+
+        function updateTTSUI(active) {
+            isSpeaking = active;
+            const btnLabel = document.getElementById('tts-label');
+            const btnIcon = document.getElementById('tts-icon');
+            const btn = document.getElementById('btn-tts-all');
+            if (active) {
+                if (btnLabel) btnLabel.innerText = "Edge TTS 播報中 (點擊停止)";
+                if (btnIcon) btnIcon.className = "fa-solid fa-circle-pause";
+                if (btn) btn.classList.add('active');
+            } else {
+                if (btnLabel) btnLabel.innerText = "啟動 Edge TTS 語音導覽";
+                if (btnIcon) btnIcon.className = "fa-solid fa-volume-high";
+                if (btn) btn.classList.remove('active');
+            }
+        }
+
+        function toggleVoiceGuide() {
+            if (isSpeaking) {
+                if (currentAudio) {
+                    currentAudio.pause();
+                    currentAudio = null;
+                }
+                if ('speechSynthesis' in window) {
+                    window.speechSynthesis.cancel();
+                }
+                updateTTSUI(false);
+            } else {
+                const fullGuideText = "歡迎使用舟歌 AI 智慧排課系統。本語音由 Microsoft Edge 智慧神經網路引擎驅動。本系統採用 Google OR-Tools 限制式求解引擎，能在毫秒之間為貴校處理數萬種課程、教師不排課時段、以及跨班選修等複雜限制條件。系統具備雙軌部署、教師專屬雲端Portal、線上記請假調課、以及完整的 DBF 與 Excel 相容性。請點擊畫面中的模擬求解按鈕，體驗極速智慧排課的極致魅力！";
+                speakText(fullGuideText);
+            }
+        }
+
+        // -------------------------------------------------------------
+        // Live Simulated Solver & Interactive Timetable Grid Generator
+        // -------------------------------------------------------------
+        const subjects = ["國文", "英文", "數學", "物理", "化學", "歷史", "地理", "體育", "資訊", "跨班選修"];
+        const teachers = ["王老師", "李老師", "張老師", "陳老師", "林老師", "黃老師"];
+
+        function generateTimetableData() {
+            const tbody = document.getElementById('demo-timetable-body');
+            tbody.innerHTML = '';
+
+            const periodTimes = [
+                "第 1 節 (08:10-09:00)",
+                "第 2 節 (09:10-10:00)",
+                "第 3 節 (10:10-11:00)",
+                "第 4 節 (11:10-12:00)",
+                "第 5 節 (13:10-14:00)",
+                "第 6 節 (14:10-15:00)",
+                "第 7 節 (15:10-16:00)"
+            ];
+
+            periodTimes.forEach((pTime, pIdx) => {
+                let tr = document.createElement('tr');
+                let tdTime = document.createElement('td');
+                tdTime.style.fontFamily = 'var(--font-code)';
+                tdTime.style.color = 'var(--text-muted)';
+                tdTime.innerText = pTime;
+                tr.appendChild(tdTime);
+
+                for (let d = 0; d < 5; d++) {
+                    let td = document.createElement('td');
+                    let sub = subjects[(pIdx * 3 + d * 2) % subjects.length];
+                    let tea = teachers[(pIdx + d) % teachers.length];
+                    let isSim = sub === "跨班選修" || (d === 2 && pIdx === 3);
+
+                    td.innerHTML = `
+                        <div class="slot-card" onmouseenter="playHoverSFX()">
+                            <div class="slot-subject">${sub}</div>
+                            <div class="slot-teacher">${tea}</div>
+                            ${isSim ? '<div class="slot-tag"><i class="fa-solid fa-link"></i> 同排/合班</div>' : ''}
+                        </div>
+                    `;
+                    tr.appendChild(td);
+                }
+                tbody.appendChild(tr);
+            });
+        }
+
+        function runSimulatedSolver() {
+            initAudio();
+            const btn = document.querySelector('.solver-demo-box .btn-glow');
+            const progress = document.getElementById('solver-progress');
+            const consoleBox = document.getElementById('log-console');
+            const statusDot = document.getElementById('status-dot');
+            const statusText = document.getElementById('status-text');
+
+            btn.disabled = true;
+            statusDot.style.background = '#f59e0b';
+            statusDot.style.boxShadow = '0 0 10px #f59e0b';
+            statusText.innerText = "CP-SAT 求解器運作中...";
+
+            consoleBox.innerHTML = '';
+            progress.style.width = '0%';
+
+            const logs = [
+                "[0.001s] 正在載入 DBF 教學基本資料與 config_rules.json 限制式...",
+                "[0.008s] 建立 CP-SAT 數學變數矩陣: 1,420 變數, 8,650 條約束...",
+                "[0.015s] 加入 硬性限制: 教師不重疊、班級不衝課、不排課時段隔離...",
+                "[0.025s] 加入 軟性優化權重: 每日科目分散(W=5), 連續授課上限(W=10)...",
+                "[0.038s] 開始 CP-SAT 多核心平行求解 (Threads=8)...",
+                "[0.048s] 成功尋獲全球最佳可行解 (Feasible Solution)! 無任何衝突！",
+                "[0.052s] 課表資料結構化輸出完成！"
+            ];
+
+            let step = 0;
+            const timer = setInterval(() => {
+                if (step < logs.length) {
+                    let div = document.createElement('div');
+                    div.className = 'log-line ' + (step === logs.length - 1 ? 'success highlight' : '');
+                    div.innerText = logs[step];
+                    consoleBox.appendChild(div);
+                    consoleBox.scrollTop = consoleBox.scrollHeight;
+                    progress.style.width = `${((step + 1) / logs.length) * 100}%`;
+                    step++;
+                } else {
+                    clearInterval(timer);
+                    statusDot.style.background = '#10b981';
+                    statusDot.style.boxShadow = '0 0 10px #10b981';
+                    statusText.innerText = "求解完成 (耗時 0.052 秒 - 零衝突)";
+                    btn.disabled = false;
+                    generateTimetableData();
+                    playCompleteSFX();
+                }
+            }, 250);
+        }
+
+        // Initialize default view
+        generateTimetableData();
+    </script>
+</body>
+</html>
