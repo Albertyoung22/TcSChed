@@ -2,8 +2,83 @@ import os
 import sys
 import time
 import socket
+import json
 import threading
-import webview
+import traceback
+import tempfile
+import webbrowser
+import subprocess
+import io
+
+# Handle PyInstaller --windowed mode where sys.stdout and sys.stderr are None
+class DummyStream:
+    def __init__(self, log_path=None):
+        self.log_path = log_path
+
+    def write(self, s):
+        if self.log_path and s:
+            try:
+                with open(self.log_path, "a", encoding="utf-8", errors="replace") as f:
+                    f.write(str(s))
+            except Exception:
+                pass
+        return len(s) if s else 0
+
+    def flush(self):
+        pass
+
+    def isatty(self):
+        return False
+
+# Ensure working directory is set to the application directory
+if getattr(sys, 'frozen', False):
+    base_dir = os.path.dirname(sys.executable)
+    meipass = getattr(sys, '_MEIPASS', base_dir)
+    bundled_cfg = os.path.join(meipass, 'config_rules.json')
+    target_cfg = os.path.join(base_dir, 'config_rules.json')
+    if not os.path.exists(target_cfg) and os.path.exists(bundled_cfg):
+        import shutil
+        try:
+            shutil.copy2(bundled_cfg, target_cfg)
+        except Exception:
+            pass
+else:
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+
+if base_dir:
+    try:
+        os.chdir(base_dir)
+    except Exception:
+        pass
+
+log_path = os.path.join(base_dir, "desktop_app.log")
+
+if sys.stdout is None or not hasattr(sys.stdout, 'write'):
+    sys.stdout = DummyStream(log_path)
+elif hasattr(sys.stdout, 'reconfigure'):
+    try:
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    except Exception:
+        pass
+
+if sys.stderr is None or not hasattr(sys.stderr, 'write'):
+    sys.stderr = DummyStream(log_path)
+elif hasattr(sys.stderr, 'reconfigure'):
+    try:
+        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+    except Exception:
+        pass
+
+# Safely import webview without crashing if pythonnet/WebView2 DLLs are missing
+try:
+    import webview
+except Exception:
+    webview = None
+
+# Set a unique WebView2 user data directory to fix HRESULT 0x800700AA (Resource in use file lock)
+user_data_dir = os.path.join(tempfile.gettempdir(), f"tucheng_wv2_{os.getpid()}")
+os.environ["WEBVIEW2_USER_DATA_FOLDER"] = user_data_dir
+
 from app import app, load_schedule_data
 
 def get_free_port():
@@ -30,49 +105,116 @@ def run_server(host, port):
     try:
         load_schedule_data()
     except Exception as e:
-        print(f"Pre-load schedule data error: {e}")
+        print(f"[警告] 預先載入課表資料時發生錯誤: {e}")
         
     local_ip = get_local_ip()
     try:
         from waitress import serve
         print(f"\n==================================================")
-        print(f" 🚀 土城高中課表系統已啟動 (Waitress WSGI Server)")
-        print(f" 📍 本機瀏覽網址: http://127.0.0.1:{port}")
-        print(f" 🌐 局域網/手機連線網址: http://{local_ip}:{port}")
+        print(f" [系統] 舟歌AI排課系統已啟動 (Waitress WSGI)")
+        print(f" [網址] 本機瀏覽網址: http://127.0.0.1:{port}")
+        print(f" [局域網] 手機/跨裝置連線網址: http://{local_ip}:{port}")
         print(f"==================================================\n")
         serve(app, host=host, port=port, threads=8)
-    except ImportError:
-        print(f"Waitress not installed, falling back to Flask dev server...")
-        app.run(host=host, port=port, debug=False, use_reloader=False)
+    except Exception as ex:
+        print(f"[警告] Waitress 啟動例外, 改用 Flask 開發伺服器: {ex}")
+        try:
+            app.run(host=host, port=port, debug=False, use_reloader=False)
+        except Exception as e2:
+            print(f"[錯誤] Flask 伺服器啟動失敗: {e2}")
 
+def launch_standalone_window(url, title):
+    """Launches standalone app window using Chrome App mode, Edge App mode, or PyWebView/browser."""
+    # Method 1: Chrome / Edge App mode (Standalone desktop window without tabs/address bar)
+    browser_paths = [
+        # Google Chrome paths (Prioritized)
+        r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+        r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+        os.path.expandvars(r"%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe"),
+        os.path.expandvars(r"%PROGRAMFILES%\Google\Chrome\Application\chrome.exe"),
+        os.path.expandvars(r"%PROGRAMFILES(X86)%\Google\Chrome\Application\chrome.exe"),
+        # Microsoft Edge fallback paths
+        r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+        r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
+        os.path.expandvars(r"%LOCALAPPDATA%\Microsoft\Edge\Application\msedge.exe")
+    ]
+    browser_exe = None
+    for p in browser_paths:
+        if os.path.exists(p):
+            browser_exe = p
+            break
+
+    if browser_exe:
+        try:
+            print(f"[資訊] 使用獨立視窗模式開啟: {browser_exe}")
+            proc = subprocess.Popen([browser_exe, f"--app={url}", f"--window-size=1400,900"])
+            # Keep main process and WSGI server thread running
+            while True:
+                time.sleep(1)
+            return True
+        except Exception as e:
+            print(f"[警告] 獨立視窗模式啟動例外: {e}")
+
+    # Method 2: PyWebView native window
+    if webview:
+        try:
+            window = webview.create_window(
+                title=title,
+                url=url,
+                width=1400,
+                height=900,
+                min_size=(1024, 700),
+                resizable=True,
+                text_select=True,
+                confirm_close=False
+            )
+            webview.start(private_mode=False)
+            print("[資訊] PyWebView 桌面視窗已關閉。")
+            return True
+        except Exception as e:
+            print(f"[警告] PyWebView 啟動例外: {e}")
+
+    # Method 3: Default Web Browser fallback
+    print(f"[資訊] 改用預設瀏覽器開啟 {url}...")
+    webbrowser.open(url)
+    while True:
+        time.sleep(1)
+    return True
 
 def main():
-    # Listen on 0.0.0.0 so both localhost and LAN IP can access
     bind_host = "0.0.0.0"
     port = 5000
     
-    # Check if port 5000 is available, if not find another
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     res = sock.connect_ex(("127.0.0.1", port))
     sock.close()
     if res == 0:
-        # Port 5000 is already occupied by a running server, use free port
         port = get_free_port()
+
+    try:
+        load_schedule_data()
+    except Exception as e:
+        print(f"[警告] 預先載入課表資料時發生錯誤: {e}")
 
     local_ip = get_local_ip()
 
-    # Start Flask/Waitress server thread listening on 0.0.0.0
+    # Start Flask/Waitress server thread
     server_thread = threading.Thread(target=run_server, args=(bind_host, port), daemon=True)
     server_thread.start()
 
-    # Give Flask a second to spin up
-    time.sleep(1.2)
+    # Wait until server is ACTUALLY listening on localhost
+    print(f"[資訊] 正在等待 Web 伺服器於連接埠 {port} 啟動...")
+    for _ in range(100):
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.settimeout(0.2)
+            s.connect(('127.0.0.1', port))
+            s.close()
+            break
+        except Exception:
+            time.sleep(0.1)
 
     url = f"http://127.0.0.1:{port}"
-    print(f"Launching Tucheng High School Schedule Desktop App on {url} (LAN IP: http://{local_ip}:{port})...")
-
-
-    # Read dynamic school name from config_rules.json
     cfg = {}
     try:
         if os.path.exists("config_rules.json"):
@@ -80,24 +222,10 @@ def main():
                 cfg = json.load(f)
     except Exception:
         pass
-    school_name = cfg.get("school_name", "土城高中")
+    school_name = cfg.get("school_name", "高級中學")
+    title = f"舟歌AI排課 - {school_name}"
 
-    # Create native WebView Desktop Window
-    window = webview.create_window(
-        title=f"{school_name}課表查詢與智慧排課系統 - 桌面版",
-        url=url,
-        width=1400,
-        height=900,
-        min_size=(1024, 700),
-        resizable=True,
-        text_select=True,
-        confirm_close=False
-    )
-
-
-    # Start Native GUI loop (Edge Chromium engine on Windows)
-    webview.start(private_mode=False)
-    print("Desktop Application closed.")
+    launch_standalone_window(url, title)
 
 if __name__ == "__main__":
     main()
