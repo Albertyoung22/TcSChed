@@ -5249,14 +5249,19 @@ let dualSelectedDay = null;
 let dualSelectedPeriod = null;
 
 async function openDualViewModal(classCode, teacherCode) {
+    console.log("openDualViewModal triggered:", classCode, teacherCode);
     const modal = document.getElementById('dualViewModal');
-    if (!modal) return;
+    if (!modal) {
+        console.error("dualViewModal element not found!");
+        return;
+    }
 
     if (!metadata || !metadata.classes || metadata.classes.length === 0) {
         try { await fetchMetadata(); } catch (e) {}
     }
 
     modal.style.display = 'flex';
+    modal.style.zIndex = '99999';
 
     const classSelect = document.getElementById('dualViewClassSelect');
     const teacherSelect = document.getElementById('dualViewTeacherSelect');
