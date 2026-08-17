@@ -10,6 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
     <!-- Stylesheet -->
+    <link rel="icon" type="image/png" href="/static/images/icon.png">
     <link rel="stylesheet" href="/static/css/style.css">
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -238,9 +239,14 @@
                         <p class="sub-text">基於 Google OR-Tools CP-SAT 的高維度限制滿足求解器</p>
                     </div>
                 </div>
-                <button id="closeSolverBtn" class="close-modal-btn">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
+                <div class="modal-header-actions">
+                    <button class="maximize-modal-btn" onclick="toggleModalMaximize('solverModal')" title="全螢幕最大化展開/還原視窗">
+                        <i class="fa-solid fa-expand"></i>
+                    </button>
+                    <button id="closeSolverBtn" class="close-modal-btn">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
             </div>
             
             <div class="modal-body">
@@ -294,9 +300,14 @@
                         <p class="sub-text">自訂教師不排課時段、科目限制時段、全校班級/教師配課及 AI 偏好權重</p>
                     </div>
                 </div>
-                <button id="closeSettingsBtn" class="close-modal-btn">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
+                <div class="modal-header-actions">
+                    <button class="maximize-modal-btn" onclick="toggleModalMaximize('settingsModal')" title="全螢幕最大化展開/還原視窗">
+                        <i class="fa-solid fa-expand"></i>
+                    </button>
+                    <button id="closeSettingsBtn" class="close-modal-btn">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
             </div>
             
             <div class="modal-body">
@@ -1649,7 +1660,12 @@
         <div class="modal-content glass" style="max-width: 1100px; width: 95vw;">
             <div class="modal-header">
                 <h3><i class="fa-solid fa-clipboard-user" style="color: #fbbf24;"></i> 全校段考監考課表矩陣 (定期考查監考排程)</h3>
-                <button class="close-modal-btn" id="closeExamModalBtn">&times;</button>
+                <div class="modal-header-actions">
+                    <button class="maximize-modal-btn" onclick="toggleModalMaximize('examInvigilationModal')" title="全螢幕最大化展開/還原視窗">
+                        <i class="fa-solid fa-expand"></i>
+                    </button>
+                    <button class="close-modal-btn" id="closeExamModalBtn">&times;</button>
+                </div>
             </div>
             <div class="modal-body" style="padding: 16px;">
                 <div style="display: flex; gap: 12px; align-items: center; margin-bottom: 16px; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); flex-wrap: wrap;">
@@ -1698,7 +1714,7 @@
                         <span style="font-size: 0.75rem; color: #94a3b8;">左側為班級課表，右側為點選教師全週課表，點擊任意節次可即時同步對照與獲得調代課建議</span>
                     </div>
                 </div>
-                <div style="display: flex; align-items: center;">
+                <div class="modal-header-actions">
                     <button class="maximize-modal-btn" onclick="toggleModalMaximize('dualViewModal')" title="全螢幕最大化展開/還原視窗">
                         <i class="fa-solid fa-expand" id="dualViewMaxIcon"></i>
                     </button>
@@ -1803,7 +1819,12 @@
             <div class="modal-header">
                 <h3><i class="fa-solid fa-bug" style="color: #f472b6;"></i> 州董式 全校排課資料邏輯除錯稽核</h3>
 
-                <button class="close-modal-btn" id="closeDebugModalBtn">&times;</button>
+                <div class="modal-header-actions">
+                    <button class="maximize-modal-btn" onclick="toggleModalMaximize('dataDebugModal')" title="全螢幕最大化展開/還原視窗">
+                        <i class="fa-solid fa-expand"></i>
+                    </button>
+                    <button class="close-modal-btn" id="closeDebugModalBtn">&times;</button>
+                </div>
             </div>
             <div class="modal-body" style="padding: 16px;">
                 <div style="display: flex; gap: 12px; margin-bottom: 16px; align-items: center;">
@@ -1929,7 +1950,12 @@
                 <h3 style="margin: 0; color: #f8fafc; font-size: 1.15rem; display: flex; align-items: center; gap: 8px;">
                     <i class="fa-solid fa-pen-to-square" style="color: #38bdf8;"></i> <span id="noteModalTitle">課表/調課事項註記</span>
                 </h3>
-                <button class="close-modal-btn" onclick="closeNoteModal()">&times;</button>
+                <div class="modal-header-actions">
+                    <button class="maximize-modal-btn" onclick="toggleModalMaximize('noteModal')" title="全螢幕最大化展開/還原視窗">
+                        <i class="fa-solid fa-expand"></i>
+                    </button>
+                    <button class="close-modal-btn" onclick="closeNoteModal()">&times;</button>
+                </div>
             </div>
             <div class="modal-body" style="padding: 16px 0; display: flex; flex-direction: column; gap: 14px;">
                 <input type="hidden" id="noteTargetKey">
