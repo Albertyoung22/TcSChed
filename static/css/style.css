@@ -464,11 +464,10 @@ body {
     text-align: center;
     border: 1px solid rgba(255, 255, 255, 0.06);
     vertical-align: middle;
-    height: 85px !important;
-    min-height: 85px !important;
-    max-height: 85px !important;
+    min-height: 85px;
+    height: auto;
     box-sizing: border-box !important;
-    overflow: hidden !important;
+    overflow: visible;
 }
 
 .schedule-table th {
@@ -558,21 +557,10 @@ body {
 .schedule-cell.has-lesson {
     background: rgba(139, 92, 246, 0.03);
     border: 1px solid rgba(139, 92, 246, 0.1);
-    max-height: 80px;
-    overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(168, 85, 247, 0.4) transparent;
+    overflow-y: visible;
     padding: 2px 0;
 }
 
-.schedule-cell::-webkit-scrollbar {
-    width: 3px;
-}
-
-.schedule-cell::-webkit-scrollbar-thumb {
-    background: rgba(168, 85, 247, 0.4);
-    border-radius: 4px;
-}
 
 .multi-group-tag {
     font-size: 0.65rem;
@@ -608,16 +596,30 @@ body {
 
 
 .meta-link {
-    font-size: 0.85rem;
-    color: var(--accent);
+    font-size: 0.82rem;
+    color: #38bdf8;
+    background: rgba(56, 189, 248, 0.15);
+    border: 1px solid rgba(56, 189, 248, 0.35);
+    padding: 2px 7px;
+    border-radius: 6px;
     text-decoration: none;
-    transition: color 0.15s;
+    transition: all 0.2s ease;
     cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: 600;
+    margin-top: 2px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .meta-link:hover {
-    color: #22d3ee;
-    text-decoration: underline;
+    color: #ffffff;
+    background: #0284c7;
+    border-color: #38bdf8;
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+    text-decoration: none;
+    transform: translateY(-1px);
 }
 
 .room-lbl {
@@ -643,6 +645,66 @@ body {
     background: rgba(245, 158, 11, 0.15);
     color: #fbbf24;
     border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+/* Card Lock Badge & Styling */
+.lesson-block.is-locked {
+    position: relative;
+    border: 1px solid rgba(234, 179, 8, 0.6) !important;
+    background: linear-gradient(135deg, rgba(234, 179, 8, 0.15), rgba(15, 23, 42, 0.8)) !important;
+}
+
+.lesson-block.is-locked::after {
+    content: "🔒";
+    position: absolute;
+    top: 2px;
+    right: 4px;
+    font-size: 0.72rem;
+}
+
+/* Unplaced Holding Bar */
+.unplaced-holding-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 9999;
+    background: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(12px);
+    border-top: 2px solid rgba(56, 189, 248, 0.4);
+    padding: 10px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.holding-cards-container {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    flex: 1;
+    padding: 4px 0;
+}
+
+.holding-card-chip {
+    background: rgba(30, 41, 59, 0.9);
+    border: 1px dashed rgba(56, 189, 248, 0.5);
+    border-radius: 8px;
+    padding: 6px 12px;
+    color: #f8fafc;
+    font-size: 0.82rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: grab;
+    user-select: none;
+    white-space: nowrap;
+}
+
+.holding-card-chip:hover {
+    border-color: #38bdf8;
+    background: rgba(56, 189, 248, 0.2);
 }
 
 .week-badge.even {
@@ -923,27 +985,71 @@ body {
     border-radius: 0 !important;
     border: none !important;
     margin: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+.modal-content.fullscreen-modal .modal-body {
+    flex: 1 !important;
+    max-height: calc(100vh - 80px) !important;
+    overflow-y: auto !important;
+}
+
+.modal-content.fullscreen-modal .table-responsive {
+    max-height: calc(100vh - 240px) !important;
+}
+
+.modal-header-actions {
+    position: absolute !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    right: 24px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    z-index: 100 !important;
+}
+
+.modal-header-actions .maximize-modal-btn,
+.modal-header-actions .close-modal-btn,
+.modal-header-actions .close-btn,
+.modal-header-actions .modal-close-btn {
+    position: static !important;
+    top: auto !important;
+    right: auto !important;
+    margin: 0 !important;
+    transform: none !important;
+}
+
+.modal-header-actions .maximize-modal-btn:hover {
+    transform: scale(1.08) !important;
+}
+
+.modal-header-actions .close-modal-btn:hover,
+.modal-header-actions .close-btn:hover,
+.modal-header-actions .modal-close-btn:hover {
+    transform: rotate(90deg) scale(1.08) !important;
 }
 
 .maximize-modal-btn {
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: #94a3b8;
-    width: 34px;
-    height: 34px;
-    border-radius: 8px;
-    cursor: pointer;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
-    margin-right: 8px;
+    background: rgba(255, 255, 255, 0.08) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    color: #cbd5e1 !important;
+    width: 38px !important;
+    height: 38px !important;
+    border-radius: 50% !important;
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 0.95rem !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 .maximize-modal-btn:hover {
-    background: rgba(99, 102, 241, 0.25);
-    color: #38bdf8;
-    border-color: #38bdf8;
+    background: rgba(56, 189, 248, 0.25) !important;
+    color: #38bdf8 !important;
+    border-color: rgba(56, 189, 248, 0.6) !important;
+    transform: scale(1.08) !important;
 }
 
 .modal-header {
@@ -1369,9 +1475,8 @@ body {
         color: #0f172a !important;
         text-align: center !important;
         vertical-align: middle !important;
-        height: 52pt !important;
         min-height: 52pt !important;
-        max-height: 52pt !important;
+        height: auto !important;
         box-sizing: border-box !important;
         page-break-inside: avoid;
     }
