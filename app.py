@@ -3651,6 +3651,79 @@ def api_delete_simultaneous_group():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
+def call_groq_substitute_rank(absent_subject_name, absent_subject_code, absent_class, candidates_info, cfg):
+    """
+    Use Groq LLM to semantically rank substitute teacher candidates.
+    Returns a dict: {teacher_code: {"fit": "high"|"medium"|"low", "reason": str}}
+    Falls back gracefully if no API key or call fails.
+    """
+    import urllib.request, json as _json
+    groq_api_key = (cfg.get("groq_api_key") or "").strip()
+    if not groq_api_key:
+        return {}
+
+    model = cfg.get("groq_model", "llama-3.3-70b-versatile")
+    url = "https://api.groq.com/openai/v1/chat/completions"
+
+    # Build concise candidate list for the prompt
+    cand_lines = []
+    for c in candidates_info[:30]:   # limit to 30 to keep prompt short
+        subjects = c.get("teach_subjects", "無資料")
+        cand_lines.append(f'  - 代碼:{c["teacher_code"]} 姓名:{c["teacher_name"]} 任教科目:{subjects}')
+    cand_text = "\n".join(cand_lines)
+
+    system_prompt = (
+        "你是一個臺灣中學排課專家 AI。"
+        "請根據『請假課程』的科目，語意判斷每位候選教師是否適合代課。\n"
+        "判斷時需考慮：\n"
+        "1. 跨學制相容性（如國中英語 ↔ 高中英語文 視為同科）\n"
+        "2. 選修與必修同科域（如數學演習 ↔ 數學、選修化學 ↔ 化學）\n"
+        "3. 協同授課（如臺灣手語協同教師）可視為部分相容\n"
+        "4. 完全不同科目（如國文 vs 體育）標記為 low\n\n"
+        "回傳格式必須是合法 JSON，結構為：\n"
+        "{\"rankings\": [{\"teacher_code\": \"...\", \"fit\": \"high|medium|low\", \"reason\": \"簡短說明\"}]}\n"
+        "不要輸出任何其他文字或 Markdown。"
+    )
+
+    user_msg = (
+        f"請假課程：{absent_subject_name}（代碼:{absent_subject_code}），班級：{absent_class}\n\n"
+        f"候選代課教師列表：\n{cand_text}\n\n"
+        "請逐一評估每位教師的代課適合度（high/medium/low）並說明原因。"
+    )
+
+    headers = {
+        "Authorization": f"Bearer {groq_api_key}",
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0"
+    }
+    body = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user",   "content": user_msg}
+        ],
+        "temperature": 0.1,
+        "response_format": {"type": "json_object"}
+    }
+
+    try:
+        req_obj = urllib.request.Request(
+            url,
+            data=_json.dumps(body).encode("utf-8"),
+            headers=headers,
+            method="POST"
+        )
+        with urllib.request.urlopen(req_obj, timeout=15) as resp:
+            res_data = _json.loads(resp.read().decode("utf-8"))
+            content = res_data["choices"][0]["message"]["content"]
+            parsed = _json.loads(content)
+            rankings = parsed.get("rankings", [])
+            return {r["teacher_code"]: {"fit": r.get("fit","low"), "reason": r.get("reason","")} for r in rankings}
+    except Exception as ex:
+        print(f"[AI代課推薦] Groq API 呼叫失敗，使用規則排序: {ex}")
+        return {}
+
+
 @app.route("/api/substitute/recommend", methods=["POST"])
 def api_substitute_recommend():
     try:
@@ -3709,30 +3782,49 @@ def api_substitute_recommend():
         candidates = []
         target_class = absent_course.get("class_name", "") if absent_course else ""
         target_subject = absent_course.get("subject_name", "") if absent_course else ""
+        target_subject_code = absent_course.get("subject_code", "") if absent_course else ""
+
+        # Build per-teacher subject list (unique subject names they teach)
+        teacher_subjects_map = {}
+        for s in schedules:
+            tc = s.get("teacher_code")
+            sn = s.get("subject_name", "")
+            if tc and sn:
+                if tc not in teacher_subjects_map:
+                    teacher_subjects_map[tc] = set()
+                teacher_subjects_map[tc].add(sn)
 
         for t in teachers:
             t_code = t["code"]
             if t_code == absent_tcode or t_code in busy_teachers:
                 continue
-                
+
             # Check if slot is blocked in no_teach
             blocked_slots = no_teach_map.get(t_code, [])
             if f"{day}-{period}" in blocked_slots:
                 continue
 
-            # Priority 1: Same class teacher
+            # Rule: Same class teacher
             t_classes = teacher_classes_map.get(t_code, set())
             is_same_class = (target_class in t_classes) if target_class else False
-            
-            # Priority 2: Same subject/domain teacher
+
+            # Rule: Exact same subject_code (baseline for AI fallback)
             same_subject_bonus = False
-            for s in schedules:
-                if s["teacher_code"] == t_code and target_subject and target_subject in s.get("subject_name", ""):
-                    same_subject_bonus = True
-                    break
+            if target_subject_code:
+                for s in schedules:
+                    if s["teacher_code"] == t_code and s.get("subject_code", "") == target_subject_code:
+                        same_subject_bonus = True
+                        break
 
             c_list = sorted(list(t_classes))
             c_str = ", ".join(c_list) if c_list else "無"
+
+            # Collect subject names this teacher actually teaches (for AI prompt)
+            t_subject_set = teacher_subjects_map.get(t_code, set())
+            declared_subject = t.get("subject", "")
+            if declared_subject:
+                t_subject_set.add(declared_subject)
+            teach_subjects_str = "、".join(sorted(t_subject_set)) if t_subject_set else "無資料"
 
             candidates.append({
                 "teacher_code": t_code,
@@ -3740,17 +3832,43 @@ def api_substitute_recommend():
                 "role": t.get("role", "") or "專任教師",
                 "assigned_classes_str": c_str,
                 "is_same_class": is_same_class,
-                "is_same_domain": same_subject_bonus
+                "is_same_domain": same_subject_bonus,
+                "teach_subjects": teach_subjects_str,
+                "ai_fit": None,
+                "ai_reason": ""
             })
 
-        # Sort: Same class teacher FIRST, then same domain, then name
-        candidates.sort(key=lambda x: (not x["is_same_class"], not x["is_same_domain"], x["teacher_name"]))
+        # AI semantic ranking (if Groq API key available)
+        ai_ranks = call_groq_substitute_rank(
+            target_subject, target_subject_code, target_class, candidates, cfg
+        )
+
+        fit_order = {"high": 0, "medium": 1, "low": 2, None: 3}
+        for c in candidates:
+            ai_info = ai_ranks.get(c["teacher_code"], {})
+            c["ai_fit"]    = ai_info.get("fit", None)
+            c["ai_reason"] = ai_info.get("reason", "")
+            # Merge AI fit into is_same_domain for backward compat
+            if c["ai_fit"] == "high":
+                c["is_same_domain"] = True
+
+        # Sort: same class > AI fit (high→medium→low) > name
+        use_ai = bool(ai_ranks)
+        if use_ai:
+            candidates.sort(key=lambda x: (
+                not x["is_same_class"],
+                fit_order.get(x["ai_fit"], 3),
+                x["teacher_name"]
+            ))
+        else:
+            candidates.sort(key=lambda x: (not x["is_same_class"], not x["is_same_domain"], x["teacher_name"]))
 
         return jsonify({
             "status": "success",
             "absent_teacher_info": absent_teacher_info,
             "absent_course": absent_course,
-            "candidates": candidates
+            "candidates": candidates,
+            "ai_ranked": use_ai
         })
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
