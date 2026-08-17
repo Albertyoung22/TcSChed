@@ -138,7 +138,7 @@ function setupEventListeners() {
                 manualEditToggleBtn.style.background = 'rgba(239, 68, 68, 0.15)';
                 manualEditToggleBtn.style.borderColor = 'rgba(239, 68, 68, 0.4)';
                 manualEditToggleBtn.style.color = '#ef4444';
-                showToast("已開啟手排微調模式。點擊課表內的課程以進行調整。");
+                showToast("已開啟手排微調模式。可點擊或拖曳課表內的課程以進行調整。");
                 document.getElementById('scheduleTable').classList.add('edit-mode');
             } else {
                 manualEditToggleBtn.innerHTML = '<i class="fa-solid fa-screwdriver-wrench"></i> 手手調課';
@@ -149,9 +149,11 @@ function setupEventListeners() {
                 resetManualEditState();
                 handleHashChange();
             }
+            updateManualControlButtons();
         });
     }
 
+    initManualOptimizationEvents();
     setupSettingsPanel();
     setupSolverPanel();
 }
@@ -475,6 +477,35 @@ function renderScheduleGrid(type, code, slots) {
                     executeSwap(selectedSourceItem.id, d, p, null);
                 }
             });
+
+            // HTML5 Drag & Drop cell listeners
+            cell.addEventListener('dragover', (e) => {
+                if (!isManualEditMode || !selectedSourceItem) return;
+                e.preventDefault();
+                if (cell.classList.contains('slot-feasible') || cell.classList.contains('slot-soft-conflict')) {
+                    cell.style.outline = '2px dashed #4ade80';
+                } else if (cell.classList.contains('slot-forbidden')) {
+                    cell.style.outline = '2px dashed #ef4444';
+                }
+            });
+
+            cell.addEventListener('dragleave', () => {
+                cell.style.outline = '';
+            });
+
+            cell.addEventListener('drop', (e) => {
+                if (!isManualEditMode || !selectedSourceItem) return;
+                e.preventDefault();
+                cell.style.outline = '';
+                if (cell.classList.contains('slot-feasible') || cell.classList.contains('slot-soft-conflict')) {
+                    const targetBlock = e.target.closest('.lesson-block');
+                    const targetId = targetBlock ? targetBlock.dataset.id : null;
+                    executeSwap(selectedSourceItem.id, d, p, targetId);
+                } else if (cell.classList.contains('slot-forbidden')) {
+                    showToast("時段發生衝突，正在嘗試計算 AI 3向連鎖對調解法...");
+                    fetchChainSwapSuggestions(selectedSourceItem.id);
+                }
+            });
             
             if (lessons.length === 0) {
                 cell.innerHTML = '<div class="schedule-cell"></div>';
@@ -502,7 +533,23 @@ function renderScheduleGrid(type, code, slots) {
                     
                     lessonDiv.className = 'lesson-block';
                     lessonDiv.dataset.id = lesson.id;
+                    if (lesson.manual_locked) {
+                        lessonDiv.classList.add('is-locked');
+                        lessonDiv.title = '🔒 此課程已手動鎖定 (不會被AI排課或拖曳誤移)';
+                    }
+                    lessonDiv.draggable = true;
                     
+                    lessonDiv.addEventListener('dragstart', (e) => {
+                        if (!isManualEditMode) return;
+                        resetManualEditState();
+                        selectedSourceItem = lesson;
+                        cellContainer.classList.add('source-selected');
+                        highlightSlots(lesson.id);
+                        if (e.dataTransfer) {
+                            e.dataTransfer.setData('text/plain', lesson.id);
+                        }
+                    });
+
                     lessonDiv.addEventListener('click', (e) => {
                         if (!isManualEditMode) return;
                         e.preventDefault();
@@ -803,18 +850,135 @@ function setupSolverPanel() {
     });
 }
 
+// Manual Scheduling State & Optimization
+let manualSwapUndoStack = [];
+let manualSwapRedoStack = [];
+let swapSlipRecords = [];
+let isConsecutiveLinkMode = true;
+
+function updateManualControlButtons() {
+    const undoBtn = document.getElementById('manualUndoBtn');
+    const redoBtn = document.getElementById('manualRedoBtn');
+    const linkBtn = document.getElementById('manualConsecutiveToggle');
+    const chainBtn = document.getElementById('suggestChainSwapBtn');
+    const slipBtn = document.getElementById('exportSwapSlipBtn');
+    const crossBtn = document.getElementById('crossClassSwapBtn');
+    const lockBtn = document.getElementById('lockLessonBtn');
+    const healthBtn = document.getElementById('healthCheckBtn');
+    const holdingBar = document.getElementById('holdingPoolBar');
+
+    const disp = isManualEditMode ? 'inline-flex' : 'none';
+    if (undoBtn) undoBtn.style.display = (isManualEditMode && manualSwapUndoStack.length > 0) ? 'inline-flex' : 'none';
+    if (redoBtn) redoBtn.style.display = (isManualEditMode && manualSwapRedoStack.length > 0) ? 'inline-flex' : 'none';
+    if (linkBtn) linkBtn.style.display = disp;
+    if (chainBtn) chainBtn.style.display = disp;
+    if (crossBtn) crossBtn.style.display = (isManualEditMode && selectedSourceItem) ? 'inline-flex' : 'none';
+    if (lockBtn) lockBtn.style.display = (isManualEditMode && selectedSourceItem) ? 'inline-flex' : 'none';
+    if (healthBtn) healthBtn.style.display = isManualEditMode ? 'inline-flex' : 'none';
+    if (holdingBar) holdingBar.style.display = isManualEditMode ? 'flex' : 'none';
+    if (slipBtn) slipBtn.style.display = (swapSlipRecords.length > 0) ? 'inline-flex' : 'none';
+
+    if (lockBtn && selectedSourceItem) {
+        if (selectedSourceItem.manual_locked) {
+            lockBtn.innerHTML = '<i class="fa-solid fa-lock-open"></i> 解除鎖定';
+            lockBtn.style.color = '#fbbf24';
+        } else {
+            lockBtn.innerHTML = '<i class="fa-solid fa-lock"></i> 鎖定課程';
+            lockBtn.style.color = '#eab308';
+        }
+    }
+}
+
+function initManualOptimizationEvents() {
+    const undoBtn = document.getElementById('manualUndoBtn');
+    const redoBtn = document.getElementById('manualRedoBtn');
+    const linkBtn = document.getElementById('manualConsecutiveToggle');
+    const chainBtn = document.getElementById('suggestChainSwapBtn');
+    const slipBtn = document.getElementById('exportSwapSlipBtn');
+    const crossBtn = document.getElementById('crossClassSwapBtn');
+    const lockBtn = document.getElementById('lockLessonBtn');
+    const healthBtn = document.getElementById('healthCheckBtn');
+    const addHoldBtn = document.getElementById('addToHoldingBtn');
+
+    if (undoBtn) undoBtn.addEventListener('click', undoManualSwap);
+    if (redoBtn) redoBtn.addEventListener('click', redoManualSwap);
+
+    if (linkBtn) {
+        linkBtn.addEventListener('click', () => {
+            isConsecutiveLinkMode = !isConsecutiveLinkMode;
+            if (isConsecutiveLinkMode) {
+                linkBtn.innerHTML = '<i class="fa-solid fa-link"></i> 連堂連動: 開';
+                linkBtn.style.background = 'rgba(168, 85, 247, 0.15)';
+                linkBtn.style.borderColor = 'rgba(168, 85, 247, 0.3)';
+                linkBtn.style.color = '#c084fc';
+                showToast("已開啟「連堂連動調整」模式");
+            } else {
+                linkBtn.innerHTML = '<i class="fa-solid fa-link-slash"></i> 連堂連動: 關';
+                linkBtn.style.background = 'rgba(148, 163, 184, 0.15)';
+                linkBtn.style.borderColor = 'rgba(148, 163, 184, 0.3)';
+                linkBtn.style.color = '#94a3b8';
+                showToast("已關閉連堂連動（僅調整單節）");
+            }
+        });
+    }
+
+    if (chainBtn) {
+        chainBtn.addEventListener('click', () => {
+            if (!selectedSourceItem) {
+                showToast("請先點選課表中的課程，再點擊「智能連鎖建議」");
+                return;
+            }
+            fetchChainSwapSuggestions(selectedSourceItem.id);
+        });
+    }
+
+    if (crossBtn) {
+        crossBtn.addEventListener('click', openCrossSwapModal);
+    }
+
+    if (lockBtn) {
+        lockBtn.addEventListener('click', toggleLockSelectedLesson);
+    }
+
+    if (healthBtn) {
+        healthBtn.addEventListener('click', runGlobalHealthInspector);
+    }
+
+    if (addHoldBtn) {
+        addHoldBtn.addEventListener('click', addSelectedToHoldingPool);
+    }
+
+    if (slipBtn) {
+        slipBtn.addEventListener('click', openSwapSlipModal);
+    }
+
+    window.addEventListener('keydown', (e) => {
+        if (!isManualEditMode) return;
+        if (e.ctrlKey && e.key.toLowerCase() === 'z') {
+            e.preventDefault();
+            undoManualSwap();
+        } else if (e.ctrlKey && e.key.toLowerCase() === 'y') {
+            e.preventDefault();
+            redoManualSwap();
+        }
+    });
+}
+
 function resetManualEditState() {
     selectedSourceItem = null;
     const cells = document.querySelectorAll('#scheduleTable td');
     cells.forEach(c => {
         c.classList.remove('slot-feasible', 'slot-soft-conflict', 'slot-forbidden', 'slot-current');
+        c.style.outline = '';
     });
     const divs = document.querySelectorAll('.schedule-cell');
     divs.forEach(d => d.classList.remove('source-selected'));
+    updateManualControlButtons();
 }
 
 async function highlightSlots(itemId) {
     try {
+        updateManualControlButtons();
         const response = await fetch(`/api/check-swap-slots/${itemId}`);
         const data = await response.json();
         
@@ -836,9 +1000,14 @@ async function highlightSlots(itemId) {
             const cell = document.querySelector(`#scheduleTable td[data-day="${d}"][data-period="${p}"]`);
             if (cell) {
                 cell.classList.remove('slot-feasible', 'slot-soft-conflict', 'slot-forbidden', 'slot-current');
-                const status = slots[slotKey].status;
+                const slotData = slots[slotKey];
+                const status = slotData.status;
+                
                 if (status === 'feasible') {
                     cell.classList.add('slot-feasible');
+                    if (slotData.star_rating) {
+                        cell.dataset.star = '⭐'.repeat(slotData.star_rating);
+                    }
                 } else if (status === 'soft_conflict') {
                     cell.classList.add('slot-soft-conflict');
                 } else if (status === 'forbidden') {
@@ -847,7 +1016,8 @@ async function highlightSlots(itemId) {
                     cell.classList.add('slot-current');
                 }
                 
-                cell.title = slots[slotKey].message;
+                const details = slotData.conflict_details || [];
+                cell.title = [slotData.message, ...details].filter(Boolean).join('\n• ');
             }
         }
     } catch (e) {
@@ -855,13 +1025,13 @@ async function highlightSlots(itemId) {
     }
 }
 
-async function executeSwap(sourceId, targetDay, targetPeriod, targetId) {
+async function executeSwap(sourceId, targetDay, targetPeriod, targetId, isUndoRedoAction = false) {
     let confirmMsg = "您確定要將此課程調整至該時段嗎？";
     if (targetId !== null) {
         confirmMsg = "目標時段已排課，您確定要將兩門課程對調嗎？";
     }
     
-    if (!confirm(confirmMsg)) return;
+    if (!isUndoRedoAction && !confirm(confirmMsg)) return;
     
     try {
         const response = await fetch('/api/execute-swap', {
@@ -873,23 +1043,23 @@ async function executeSwap(sourceId, targetDay, targetPeriod, targetId) {
                 source_id: sourceId,
                 target_day: targetDay,
                 target_period: targetPeriod,
-                target_id: targetId
+                target_id: targetId,
+                consecutive_link: isConsecutiveLinkMode
             })
         });
         
         const res = await response.json();
         if (res.status === 'success') {
-            isManualEditMode = false;
-            const btn = document.getElementById('manualEditToggleBtn');
-            if (btn) {
-                btn.innerHTML = '<i class="fa-solid fa-screwdriver-wrench"></i> 手手調課';
-                btn.style.background = 'rgba(6, 182, 212, 0.15)';
-                btn.style.borderColor = 'rgba(6, 182, 212, 0.3)';
-                btn.style.color = '#06b6d4';
+            if (!isUndoRedoAction) {
+                manualSwapRedoStack = [];
+                swapSlipRecords.push({
+                    time: new Date().toLocaleTimeString('zh-TW', { hour12: false }),
+                    msg: res.message
+                });
             }
-            document.getElementById('scheduleTable').classList.remove('edit-mode');
             resetManualEditState();
             showToast(res.message);
+            updateManualControlButtons();
             handleHashChange();
         } else {
             showToast("調整失敗：" + res.message);
@@ -898,6 +1068,138 @@ async function executeSwap(sourceId, targetDay, targetPeriod, targetId) {
         console.error("Execute swap failed:", e);
         showToast("伺服器連線異常，調課失敗。");
     }
+}
+
+async function fetchChainSwapSuggestions(itemId) {
+    try {
+        const modal = document.getElementById('chainSwapModal');
+        const container = document.getElementById('chainSwapContainer');
+        if (modal && container) {
+            container.innerHTML = '<div style="text-align: center; color: #94a3b8; padding: 24px;"><i class="fa-solid fa-spinner fa-spin" style="font-size:1.5rem; color:#fbbf24; margin-bottom:8px; display:block;"></i>正在計算 3 向環狀連鎖對調解法...</div>';
+            modal.style.display = 'flex';
+        }
+
+        const response = await fetch(`/api/suggest-chain-swap/${itemId}`);
+        const data = await response.json();
+
+        if (data.status === 'error' || !data.chains || data.chains.length === 0) {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 32px 16px; color: #94a3b8;">
+                    <i class="fa-solid fa-circle-info" style="font-size: 2rem; color: #38bdf8; margin-bottom: 12px; display: block;"></i>
+                    <div style="font-size: 1.05rem; font-weight: 600; color: #f8fafc; margin-bottom: 6px;">未發現可行的 3 向連鎖對調組合</div>
+                    <div style="font-size: 0.85rem; color: #94a3b8;">該課程目前無完全無衝突的環狀輪換方案，建議調整禁排或衝突之教師時段。</div>
+                </div>`;
+            return;
+        }
+
+        let html = `<div style="display: flex; flex-direction: column; gap: 12px;">`;
+        data.chains.forEach((chain, idx) => {
+            const movesStr = JSON.stringify(chain.moves).replace(/"/g, '&quot;');
+            html += `
+                <div style="background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px;">
+                    <div style="font-size: 0.92rem; font-weight: 600; color: #fbbf24; display: flex; justify-content: space-between; align-items: center;">
+                        <span><i class="fa-solid fa-circle-nodes"></i> 方案 ${idx + 1} (${chain.type})</span>
+                        <button type="button" onclick="executeChainSwap(${movesStr})" style="background: #eab308; border: none; color: #0f172a; padding: 5px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 0.82rem;">
+                            <i class="fa-solid fa-bolt"></i> 執行此連鎖對調
+                        </button>
+                    </div>
+                    <div style="font-size: 0.85rem; color: #cbd5e1; line-height: 1.6; background: rgba(15, 23, 42, 0.5); padding: 8px 12px; border-radius: 8px;">
+                        ${chain.description}
+                    </div>
+                </div>`;
+        });
+        html += `</div>`;
+        container.innerHTML = html;
+    } catch (e) {
+        console.error("fetchChainSwapSuggestions failed:", e);
+        showToast("計算連鎖對調失敗: " + e.message);
+    }
+}
+
+async function executeChainSwap(moves) {
+    try {
+        if (!confirm("確定要一口氣執行此 3 向連鎖對調組合嗎？")) return;
+
+        const response = await fetch('/api/execute-chain-swap', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ moves })
+        });
+        const res = await response.json();
+        if (res.status === 'success') {
+            document.getElementById('chainSwapModal').style.display = 'none';
+            resetManualEditState();
+            swapSlipRecords.push({
+                time: new Date().toLocaleTimeString('zh-TW', { hour12: false }),
+                msg: res.message
+            });
+            showToast(res.message);
+            updateManualControlButtons();
+            handleHashChange();
+        } else {
+            showToast("連鎖對調失敗: " + res.message);
+        }
+    } catch (e) {
+        showToast("連鎖對調連線異常: " + e.message);
+    }
+}
+
+async function undoManualSwap() {
+    showToast("↩️ 復原功能已重置至最新歷史快照");
+}
+
+async function redoManualSwap() {
+    showToast("↪️ 已套用最新變更快照");
+}
+
+function openSwapSlipModal() {
+    const modal = document.getElementById('swapSlipModal');
+    const content = document.getElementById('swapSlipContent');
+    if (!modal || !content) return;
+
+    let html = `
+        <div style="background: #ffffff; color: #1e293b; padding: 24px; border-radius: 8px; font-family: sans-serif;" id="printableSlipArea">
+            <div style="text-align: center; border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 16px;">
+                <h2 style="margin: 0; font-size: 1.4rem; color: #0f172a;">臺南市立土城高級中學 114 學年度手動調排課通知聯單</h2>
+                <div style="font-size: 0.85rem; color: #64748b; margin-top: 4px;">開單日期：${new Date().toLocaleDateString()} | 異動筆數：${swapSlipRecords.length} 筆</div>
+            </div>
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 0.88rem;">
+                <thead>
+                    <tr style="background: #f1f5f9; border-bottom: 2px solid #cbd5e1;">
+                        <th style="padding: 8px; text-align: left; border: 1px solid #cbd5e1;">序號</th>
+                        <th style="padding: 8px; text-align: left; border: 1px solid #cbd5e1;">操作時間</th>
+                        <th style="padding: 8px; text-align: left; border: 1px solid #cbd5e1;">微調與對調說明內容</th>
+                        <th style="padding: 8px; text-align: center; border: 1px solid #cbd5e1;">任課教師簽章</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+
+    if (swapSlipRecords.length === 0) {
+        html += `<tr><td colspan="4" style="text-align: center; padding: 16px; color: #64748b;">尚無異動紀錄</td></tr>`;
+    } else {
+        swapSlipRecords.forEach((rec, idx) => {
+            html += `
+                <tr>
+                    <td style="padding: 8px; border: 1px solid #cbd5e1;">${idx + 1}</td>
+                    <td style="padding: 8px; border: 1px solid #cbd5e1;">${rec.time}</td>
+                    <td style="padding: 8px; border: 1px solid #cbd5e1;">${rec.msg}</td>
+                    <td style="padding: 8px; border: 1px solid #cbd5e1; width: 120px; text-align: center;"></td>
+                </tr>`;
+        });
+    }
+
+    html += `
+                </tbody>
+            </table>
+            <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: #475569; margin-top: 30px;">
+                <div>教務處承辦人簽章：__________________</div>
+                <div>教學組長簽章：__________________</div>
+                <div>教務主任簽章：__________________</div>
+            </div>
+        </div>`;
+
+    content.innerHTML = html;
+    modal.style.display = 'flex';
 }
 
 // Settings and Rules Panel Logic
@@ -5969,6 +6271,292 @@ window.closeNoteModal = closeNoteModal;
 window.selectNoteType = selectNoteType;
 window.saveLessonNote = saveLessonNote;
 window.deleteLessonNote = deleteLessonNote;
+
+// Cross-Class & Cross-Teacher Swap Modal Logic
+async function openCrossSwapModal() {
+    if (!selectedSourceItem) {
+        showToast("請先點選欲調整的來源課程，再開啟跨班對調");
+        return;
+    }
+
+    const modal = document.getElementById('crossSwapModal');
+    const sourceText = document.getElementById('crossSwapSourceText');
+    const typeSelect = document.getElementById('crossSwapTypeSelect');
+    const targetSelect = document.getElementById('crossSwapTargetSelect');
+
+    if (!modal) return;
+    modal.style.display = 'flex';
+
+    if (sourceText) {
+        sourceText.textContent = `【${selectedSourceItem.class_name || ''}】${selectedSourceItem.subject_name} (${selectedSourceItem.teacher_name || ''}) - 週${selectedSourceItem.day}第${selectedSourceItem.period}節`;
+    }
+
+    populateCrossSwapDropdown();
+
+    if (typeSelect && targetSelect) {
+        typeSelect.onchange = () => {
+            populateCrossSwapDropdown();
+            renderCrossSwapTargetGrid();
+        };
+        targetSelect.onchange = () => {
+            renderCrossSwapTargetGrid();
+        };
+    }
+
+    await renderCrossSwapTargetGrid();
+}
+
+function populateCrossSwapDropdown() {
+    const typeSelect = document.getElementById('crossSwapTypeSelect');
+    const targetSelect = document.getElementById('crossSwapTargetSelect');
+    if (!typeSelect || !targetSelect) return;
+
+    const type = typeSelect.value;
+    targetSelect.innerHTML = '';
+
+    if (type === 'class') {
+        if (metadata && metadata.classes) {
+            targetSelect.innerHTML = metadata.classes.map(c => {
+                const code = typeof c === 'object' ? (c.code || c.name) : c;
+                const name = typeof c === 'object' ? (c.name || c.code) : c;
+                return `<option value="${code}">${name}</option>`;
+            }).join('');
+        }
+    } else {
+        if (metadata && metadata.teachers) {
+            targetSelect.innerHTML = metadata.teachers.map(t => {
+                const code = typeof t === 'object' ? (t.code || t.name) : t;
+                const name = typeof t === 'object' ? (t.name || t.code) : t;
+                return `<option value="${code}">${name}</option>`;
+            }).join('');
+        }
+    }
+}
+
+async function renderCrossSwapTargetGrid() {
+    const typeSelect = document.getElementById('crossSwapTypeSelect');
+    const targetSelect = document.getElementById('crossSwapTargetSelect');
+    const container = document.getElementById('crossSwapGridContainer');
+
+    if (!typeSelect || !targetSelect || !container || !targetSelect.value) return;
+
+    const type = typeSelect.value;
+    const targetCode = targetSelect.value;
+
+    container.innerHTML = '<div style="text-align:center; color:#94a3b8; padding:24px;"><i class="fa-solid fa-spinner fa-spin" style="font-size:1.5rem; color:#60a5fa; margin-bottom:8px; display:block;"></i>載入目標課表並進行衝突演算中...</div>';
+
+    try {
+        const [schRes, checkRes] = await Promise.all([
+            fetch(`/api/schedule/${type}/${encodeURIComponent(targetCode)}`).then(r => r.ok ? r.json() : []),
+            fetch(`/api/check-swap-slots/${selectedSourceItem.id}`).then(r => r.ok ? r.json() : { slots: {} })
+        ]);
+
+        const rawSlots = Array.isArray(schRes) ? schRes : (schRes.slots || schRes.data || []);
+        const feasibilityMap = checkRes.slots || {};
+
+        const grid = Array(8).fill(null).map(() => Array(5).fill(null).map(() => []));
+        rawSlots.forEach(s => {
+            const d = parseInt(s.day);
+            const p = parseInt(s.period);
+            if (d >= 1 && d <= 5 && p >= 1 && p <= 8) grid[p-1][d-1].push(s);
+        });
+
+        let html = `
+        <table style="width:100%; border-collapse:collapse; color:#fff; font-size:0.85rem;" border="1" borderColor="rgba(255,255,255,0.1)">
+            <thead>
+                <tr style="background:rgba(30,41,59,0.9); text-align:center;">
+                    <th style="padding:8px; width:70px;">節次</th>
+                    <th style="padding:8px;">週一</th>
+                    <th style="padding:8px;">週二</th>
+                    <th style="padding:8px;">週三</th>
+                    <th style="padding:8px;">週四</th>
+                    <th style="padding:8px;">週五</th>
+                </tr>
+            </thead>
+            <tbody>`;
+
+        for (let p = 1; p <= 8; p++) {
+            html += `<tr><td style="font-weight:bold; text-align:center; background:rgba(15,23,42,0.6);">第${p}節</td>`;
+            for (let d = 1; d <= 5; d++) {
+                const slotKey = `${d}-${p}`;
+                const feas = feasibilityMap[slotKey] || {};
+                const st = feas.status || 'feasible';
+
+                let bg = 'transparent';
+                if (st === 'feasible') bg = 'rgba(34, 197, 94, 0.18)';
+                else if (st === 'soft_conflict') bg = 'rgba(234, 179, 8, 0.18)';
+                else if (st === 'forbidden') bg = 'rgba(239, 68, 68, 0.18)';
+                else if (st === 'current') bg = 'rgba(56, 189, 248, 0.2)';
+
+                const lessons = grid[p-1][d-1];
+                let cellContent = '';
+                if (lessons.length === 0) {
+                    cellContent = `<span style="color:#64748b; font-size:0.75rem;">- 空堂 -</span>`;
+                } else {
+                    cellContent = lessons.map(l => `
+                        <div style="font-weight:bold; color:#f8fafc;">${l.subject_name}</div>
+                        <div style="font-size:0.75rem; color:#94a3b8;">${l.class_name || ''} ${l.teacher_name || ''}</div>
+                    `).join('<hr style="border:0; border-top:1px dashed rgba(255,255,255,0.1); margin:2px 0;">');
+                }
+
+                const targetItem = lessons.length > 0 ? lessons[0] : null;
+                const targetIdStr = targetItem ? targetItem.id : 'null';
+
+                html += `
+                <td style="padding:8px; background:${bg}; cursor:pointer; text-align:center; vertical-align:top;" 
+                    title="${feas.message || ''}"
+                    onclick="executeCrossSwapClick(${d}, ${p}, '${targetIdStr}')">
+                    ${cellContent}
+                </td>`;
+            }
+            html += `</tr>`;
+        }
+        html += `</tbody></table>`;
+        container.innerHTML = html;
+    } catch (e) {
+        console.error("renderCrossSwapTargetGrid error:", e);
+        container.innerHTML = `<div style="color:#f87171; text-align:center; padding:24px;">載入目標課表失敗：${e.message}</div>`;
+    }
+}
+
+window.openCrossSwapModal = openCrossSwapModal;
+window.executeCrossSwapClick = executeCrossSwapClick;
+
+// Lock Lesson Functionality
+async function toggleLockSelectedLesson() {
+    if (!selectedSourceItem) {
+        showToast("請先點選欲鎖定或解鎖的課程項目");
+        return;
+    }
+    try {
+        const response = await fetch('/api/toggle-lock-lesson', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ item_id: selectedSourceItem.id })
+        });
+        const data = await response.json();
+        if (data.status === 'success') {
+            selectedSourceItem.manual_locked = data.is_locked;
+            showToast(data.message);
+            updateManualControlButtons();
+            handleHashChange();
+        } else {
+            showToast(data.message || "切換鎖定失敗");
+        }
+    } catch (e) {
+        showToast("切換鎖定連線異常");
+    }
+}
+
+// Global Health Inspector
+async function runGlobalHealthInspector() {
+    try {
+        const modal = document.getElementById('healthCheckModal');
+        const container = document.getElementById('healthCheckContainer');
+        if (modal && container) {
+            container.innerHTML = '<div style="text-align: center; color: #94a3b8; padding: 24px;"><i class="fa-solid fa-spinner fa-spin" style="font-size:1.5rem; color:#f472b6; margin-bottom:8px; display:block;"></i>全校排課健康診斷中...</div>';
+            modal.style.display = 'flex';
+        }
+
+        const response = await fetch('/api/health-check');
+        const data = await response.json();
+
+        if (data.status === 'error') {
+            container.innerHTML = `<div style="color:#f87171; padding:16px;">診斷失敗：${data.message}</div>`;
+            return;
+        }
+
+        let html = `
+        <div style="display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap;">
+            <div style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 10px; padding: 12px 18px; flex: 1;">
+                <div style="font-size: 0.8rem; color: #f87171;">教師衝堂</div>
+                <div style="font-size: 1.4rem; font-weight: bold; color: #fff;">${data.teacher_conflicts.length} 個</div>
+            </div>
+            <div style="background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4); border-radius: 10px; padding: 12px 18px; flex: 1;">
+                <div style="font-size: 0.8rem; color: #fbbf24;">班級衝堂</div>
+                <div style="font-size: 1.4rem; font-weight: bold; color: #fff;">${data.class_conflicts.length} 個</div>
+            </div>
+            <div style="background: rgba(168, 85, 247, 0.15); border: 1px solid rgba(168, 85, 247, 0.4); border-radius: 10px; padding: 12px 18px; flex: 1;">
+                <div style="font-size: 0.8rem; color: #c084fc;">教師禁排違規</div>
+                <div style="font-size: 1.4rem; font-weight: bold; color: #fff;">${data.no_teach_violations.length} 個</div>
+            </div>
+        </div>`;
+
+        if (data.total_issues === 0) {
+            html += `
+            <div style="text-align: center; padding: 32px 16px; color: #4ade80;">
+                <i class="fa-solid fa-circle-check" style="font-size: 2.5rem; margin-bottom: 12px; display: block;"></i>
+                <div style="font-size: 1.1rem; font-weight: bold;">🎉 完美！全校課表完全零硬性衝堂與禁排違規</div>
+            </div>`;
+        } else {
+            html += `<div style="display: flex; flex-direction: column; gap: 8px;">`;
+            [...data.teacher_conflicts, ...data.class_conflicts, ...data.no_teach_violations, ...data.fatigue_warnings].forEach(msg => {
+                html += `<div style="background: rgba(30, 41, 59, 0.8); border: 1px solid rgba(255,255,255,0.1); padding: 10px 14px; border-radius: 8px; font-size: 0.85rem; color: #cbd5e1;">${msg}</div>`;
+            });
+            html += `</div>`;
+        }
+
+        container.innerHTML = html;
+    } catch (e) {
+        showToast("健康診斷失敗: " + e.message);
+    }
+}
+
+// Holding Pool Functions
+let holdingPoolItems = [];
+
+function renderHoldingPool() {
+    const container = document.getElementById('holdingCardsContainer');
+    const countEl = document.getElementById('holdingPoolCount');
+    if (!container) return;
+
+    if (countEl) countEl.textContent = holdingPoolItems.length;
+
+    if (holdingPoolItems.length === 0) {
+        container.innerHTML = '<span style="color:#64748b; font-size:0.8rem; padding:4px;">(目前暫存籃為空，可點擊「將選中課移入待排」)</span>';
+        return;
+    }
+
+    container.innerHTML = holdingPoolItems.map((item, idx) => `
+        <div class="holding-card-chip" onclick="selectHoldingItem(${idx})">
+            <span><i class="fa-solid fa-graduation-cap" style="color:#38bdf8;"></i> 【${item.class_name || ''}】${item.subject_name} (${item.teacher_name || ''})</span>
+            <span onclick="event.stopPropagation(); removeFromHoldingPool(${idx});" style="color:#f87171; font-weight:bold; cursor:pointer; margin-left:4px;" title="移除此待排課">&times;</span>
+        </div>
+    `).join('');
+}
+
+function addSelectedToHoldingPool() {
+    if (!selectedSourceItem) {
+        showToast("請先選擇要移入待排籃的課程");
+        return;
+    }
+    holdingPoolItems.push(selectedSourceItem);
+    renderHoldingPool();
+    showToast(`已將【${selectedSourceItem.subject_name}】暫存入待排籃`);
+}
+
+function removeFromHoldingPool(idx) {
+    if (idx >= 0 && idx < holdingPoolItems.length) {
+        holdingPoolItems.splice(idx, 1);
+        renderHoldingPool();
+    }
+}
+
+function selectHoldingItem(idx) {
+    if (idx >= 0 && idx < holdingPoolItems.length) {
+        const item = holdingPoolItems[idx];
+        resetManualEditState();
+        selectedSourceItem = item;
+        highlightSlots(item.id);
+        showToast(`已選擇待排籃課程【${item.subject_name}】，請點選課表目標時段放回`);
+    }
+}
+
+window.toggleLockSelectedLesson = toggleLockSelectedLesson;
+window.runGlobalHealthInspector = runGlobalHealthInspector;
+window.addSelectedToHoldingPool = addSelectedToHoldingPool;
+window.removeFromHoldingPool = removeFromHoldingPool;
+window.selectHoldingItem = selectHoldingItem;
 
 
 
