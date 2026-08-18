@@ -497,41 +497,41 @@ def run_solver():
 
     log("Solving CSP Timetable Model using CP-SAT solver...")
     solver = cp_model.CpSolver()
-    solver.parameters.max_time_in_seconds = 10.0
-    solver.parameters.num_search_workers = 2
+    solver.parameters.max_time_in_seconds = 25.0
+    solver.parameters.num_search_workers = 4
     status = solver.Solve(model)
 
     if status != cp_model.OPTIMAL and status != cp_model.FEASIBLE:
         log("Warning: User-defined hard constraints produced a conflict. Initiating Pass-2 Auto-Recovery Mode...")
-        model = cp_model.CpModel()
-        x = {}
-        day_vars = {}
-        period_vars = {}
+        model2 = cp_model.CpModel()
+        x2 = {}
+        day_vars2 = {}
+        period_vars2 = {}
 
         for u in units_list:
             uid = u["unit_id"]
-            day_vars[uid] = model.NewIntVar(1, 5, f'day_{uid}')
-            period_vars[uid] = model.NewIntVar(1, 8, f'period_{uid}')
+            day_vars2[uid] = model2.NewIntVar(1, 5, f'day_{uid}')
+            period_vars2[uid] = model2.NewIntVar(1, 8, f'period_{uid}')
             for d in days:
                 for p in periods:
-                    b_var = model.NewBoolVar(f'x_{uid}_{d}_{p}')
-                    x[uid, d, p] = b_var
-            model.Add(day_vars[uid] == sum(d * x[uid, d, p] for d in days for p in periods))
-            model.Add(period_vars[uid] == sum(p * x[uid, d, p] for d in days for p in periods))
-            model.Add(sum(x[uid, d, p] for d in days for p in periods) == 1)
+                    b_var = model2.NewBoolVar(f'x_{uid}_{d}_{p}')
+                    x2[uid, d, p] = b_var
+            model2.Add(day_vars2[uid] == sum(d * x2[uid, d, p] for d in days for p in periods))
+            model2.Add(period_vars2[uid] == sum(p * x2[uid, d, p] for d in days for p in periods))
+            model2.Add(sum(x2[uid, d, p] for d in days for p in periods) == 1)
 
         # DBF Simultaneous Groups
-        sim_groups = {}
+        sim_groups2 = {}
         for u in units_list:
             sg = u["sim_group"]
             if sg:
-                sim_groups.setdefault(sg, []).append(u["unit_id"])
-        for sg, uids in sim_groups.items():
+                sim_groups2.setdefault(sg, []).append(u["unit_id"])
+        for sg, uids in sim_groups2.items():
             if len(uids) > 1:
                 f_uid = uids[0]
                 for o_uid in uids[1:]:
-                    model.Add(day_vars[f_uid] == day_vars[o_uid])
-                    model.Add(period_vars[f_uid] == period_vars[o_uid])
+                    model2.Add(day_vars2[f_uid] == day_vars2[o_uid])
+                    model2.Add(period_vars2[f_uid] == period_vars2[o_uid])
 
         # Custom Simultaneous Groups (Floating)
         for grp in custom_sim_groups:
@@ -549,69 +549,8 @@ def run_solver():
             if len(matched_uids) > 1:
                 f_uid = matched_uids[0]
                 for o_uid in matched_uids[1:]:
-                    model.Add(day_vars[f_uid] == day_vars[o_uid])
-                    model.Add(period_vars[f_uid] == period_vars[o_uid])
-
-        # Class Conflicts
-        for cc, ulist in cls_units.items():
-            grp_reps = {}
-            for u in ulist:
-                if u["sim_group"]:
-                    ckey = ("SIM", u["sim_group"])
-                else:
-                    ckey = ("UNIT", u["unit_id"])
-                if ckey not in grp_reps:
-                    grp_reps[ckey] = u
-            reps = list(grp_reps.values())
-            for d in days:
-                for p in periods:
-                    model.AddAtMostOne(x[u["unit_id"], d, p] for u in reps if u["week_mode"] in (0, 1))
-                    model.AddAtMostOne(x[u["unit_id"], d, p] for u in reps if u["week_mode"] in (0, 2))
-
-        # Teacher Conflicts
-        for tc, ulist in teacher_units.items():
-            grp_reps = {}
-            for u in ulist:
-                if u["sim_group"]:
-                    tkey = ("SIM", u["sim_group"])
-                else:
-                    tkey = ("UNIT", u["unit_id"])
-                if tkey not in grp_reps:
-                    grp_reps[tkey] = u
-            reps = list(grp_reps.values())
-            for d in days:
-                for p in periods:
-                    model.AddAtMostOne(x[u["unit_id"], d, p] for u in reps if u["week_mode"] in (0, 1))
-                    model.AddAtMostOne(x[u["unit_id"], d, p] for u in reps if u["week_mode"] in (0, 2))
-
-        model.Maximize(
-            w_consecutive * sum(consec_pairs) +
-            w_spreading * sum(active_vars) -
-            w_no_teach * sum(no_teach_violations) -
-            w_no_sub * sum(no_sub_violations) -
-            w_morning_pref * sum(afternoon_penalties) -
-            w_pe_noon * sum(pe_noon_penalties)
-        )
-        status = solver.Solve(model)
-
-    if status != cp_model.OPTIMAL and status != cp_model.FEASIBLE:
-        log("Warning: Initiating Pass-3 Essential Timetable Recovery Mode (Guaranteed Feasibility)...")
-        model = cp_model.CpModel()
-        x = {}
-        day_vars = {}
-        period_vars = {}
-
-        for u in units_list:
-            uid = u["unit_id"]
-            day_vars[uid] = model.NewIntVar(1, 5, f'day_{uid}')
-            period_vars[uid] = model.NewIntVar(1, 8, f'period_{uid}')
-            for d in days:
-                for p in periods:
-                    b_var = model.NewBoolVar(f'x_{uid}_{d}_{p}')
-                    x[uid, d, p] = b_var
-            model.Add(day_vars[uid] == sum(d * x[uid, d, p] for d in days for p in periods))
-            model.Add(period_vars[uid] == sum(p * x[uid, d, p] for d in days for p in periods))
-            model.Add(sum(x[uid, d, p] for d in days for p in periods) == 1)
+                    model2.Add(day_vars2[f_uid] == day_vars2[o_uid])
+                    model2.Add(period_vars2[f_uid] == period_vars2[o_uid])
 
         # Class Conflicts
         for cc, ulist in cls_units.items():
@@ -623,8 +562,8 @@ def run_solver():
             reps = list(grp_reps.values())
             for d in days:
                 for p in periods:
-                    model.AddAtMostOne(x[u["unit_id"], d, p] for u in reps if u["week_mode"] in (0, 1))
-                    model.AddAtMostOne(x[u["unit_id"], d, p] for u in reps if u["week_mode"] in (0, 2))
+                    model2.AddAtMostOne(x2[u["unit_id"], d, p] for u in reps if u["week_mode"] in (0, 1))
+                    model2.AddAtMostOne(x2[u["unit_id"], d, p] for u in reps if u["week_mode"] in (0, 2))
 
         # Teacher Conflicts
         for tc, ulist in teacher_units.items():
@@ -636,11 +575,73 @@ def run_solver():
             reps = list(grp_reps.values())
             for d in days:
                 for p in periods:
-                    model.AddAtMostOne(x[u["unit_id"], d, p] for u in reps if u["week_mode"] in (0, 1))
-                    model.AddAtMostOne(x[u["unit_id"], d, p] for u in reps if u["week_mode"] in (0, 2))
+                    model2.AddAtMostOne(x2[u["unit_id"], d, p] for u in reps if u["week_mode"] in (0, 1))
+                    model2.AddAtMostOne(x2[u["unit_id"], d, p] for u in reps if u["week_mode"] in (0, 2))
 
-        model.Maximize(sum(active_vars))
-        status = solver.Solve(model)
+        solver2 = cp_model.CpSolver()
+        solver2.parameters.max_time_in_seconds = 15.0
+        solver2.parameters.num_search_workers = 4
+        status = solver2.Solve(model2)
+        if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
+            solver = solver2
+            day_vars = day_vars2
+            period_vars = period_vars2
+            x = x2
+
+    if status != cp_model.OPTIMAL and status != cp_model.FEASIBLE:
+        log("Warning: Initiating Pass-3 Essential Timetable Recovery Mode (Guaranteed Feasibility)...")
+        model3 = cp_model.CpModel()
+        x3 = {}
+        day_vars3 = {}
+        period_vars3 = {}
+
+        for u in units_list:
+            uid = u["unit_id"]
+            day_vars3[uid] = model3.NewIntVar(1, 5, f'day_{uid}')
+            period_vars3[uid] = model3.NewIntVar(1, 8, f'period_{uid}')
+            for d in days:
+                for p in periods:
+                    b_var = model3.NewBoolVar(f'x_{uid}_{d}_{p}')
+                    x3[uid, d, p] = b_var
+            model3.Add(day_vars3[uid] == sum(d * x3[uid, d, p] for d in days for p in periods))
+            model3.Add(period_vars3[uid] == sum(p * x3[uid, d, p] for d in days for p in periods))
+            model3.Add(sum(x3[uid, d, p] for d in days for p in periods) == 1)
+
+        # Class Conflicts
+        for cc, ulist in cls_units.items():
+            grp_reps = {}
+            for u in ulist:
+                ckey = get_unit_collapse_key(u, custom_sim_groups)
+                if ckey not in grp_reps:
+                    grp_reps[ckey] = u
+            reps = list(grp_reps.values())
+            for d in days:
+                for p in periods:
+                    model3.AddAtMostOne(x3[u["unit_id"], d, p] for u in reps if u["week_mode"] in (0, 1))
+                    model3.AddAtMostOne(x3[u["unit_id"], d, p] for u in reps if u["week_mode"] in (0, 2))
+
+        # Teacher Conflicts
+        for tc, ulist in teacher_units.items():
+            grp_reps = {}
+            for u in ulist:
+                tkey = get_unit_collapse_key(u, custom_sim_groups)
+                if tkey not in grp_reps:
+                    grp_reps[tkey] = u
+            reps = list(grp_reps.values())
+            for d in days:
+                for p in periods:
+                    model3.AddAtMostOne(x3[u["unit_id"], d, p] for u in reps if u["week_mode"] in (0, 1))
+                    model3.AddAtMostOne(x3[u["unit_id"], d, p] for u in reps if u["week_mode"] in (0, 2))
+
+        solver3 = cp_model.CpSolver()
+        solver3.parameters.max_time_in_seconds = 10.0
+        solver3.parameters.num_search_workers = 4
+        status = solver3.Solve(model3)
+        if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
+            solver = solver3
+            day_vars = day_vars3
+            period_vars = period_vars3
+            x = x3
 
     if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
         log(f"Solution FOUND! (Status: {solver.StatusName(status)})")
