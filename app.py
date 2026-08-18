@@ -1884,15 +1884,16 @@ def save_current_semester_single_file(sem_id=None):
             
         cfg["active_semester_id"] = sem_id
         
-        solved_records = []
-        solved_excel = os.path.join(os.path.dirname(__file__), "School_Schedule_Solved.xlsx")
-        if os.path.exists(solved_excel):
-            try:
-                import pandas as pd
-                df = pd.read_excel(solved_excel).fillna("")
-                solved_records = df.to_dict(orient="records")
-            except Exception:
-                pass
+        solved_records = cfg.get("solved_schedules", [])
+        if not solved_records:
+            solved_excel = get_solved_excel_path()
+            if solved_excel and os.path.exists(solved_excel):
+                try:
+                    import pandas as pd
+                    df = pd.read_excel(solved_excel).fillna("")
+                    solved_records = df.to_dict(orient="records")
+                except Exception:
+                    pass
 
         year = "115"
         term = "1"
