@@ -54,12 +54,7 @@ def get_local_ip():
 def get_latest_dbf_dir():
     """Finds the newest DBF directory containing class.dbf/claspv.dbf."""
     cfg = load_config_rules()
-    if "dbf_search_dir" in cfg:
-        search_dir = cfg["dbf_search_dir"]
-        if not search_dir:
-            return None
-    else:
-        search_dir = SEARCH_DIR
+    search_dir = cfg.get("dbf_search_dir") or SEARCH_DIR
     
     if search_dir and os.path.exists(search_dir):
         try:
@@ -1868,7 +1863,7 @@ SEMESTERS_DIR = os.path.join(DATA_DIR, "semesters")
 
 def get_active_semester_id():
     cfg = load_config_rules()
-    return cfg.get("active_semester_id", "114-1")
+    return cfg.get("active_semester_id", "115-1")
 
 def get_semester_file_path(sem_id):
     if not os.path.exists(SEMESTERS_DIR):
@@ -1885,7 +1880,7 @@ def save_current_semester_single_file(sem_id=None):
             cfg = {}
         
         if not sem_id:
-            sem_id = cfg.get("active_semester_id", "114-1")
+            sem_id = cfg.get("active_semester_id", "115-1")
             
         cfg["active_semester_id"] = sem_id
         
@@ -1899,7 +1894,7 @@ def save_current_semester_single_file(sem_id=None):
             except Exception:
                 pass
 
-        year = "114"
+        year = "115"
         term = "1"
         if "-" in str(sem_id):
             parts = str(sem_id).split("-")
