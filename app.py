@@ -3818,6 +3818,117 @@ def api_save_venue_capacities():
 
 
 
+@app.route("/api/preset/apply-school-activity", methods=["POST"])
+def api_preset_apply_school_activity():
+    try:
+        req = request.get_json() or {}
+        activity_type = req.get("type", "班會") # "班會", "週會", "社團", "團體活動"
+        day = str(req.get("day", "5")).strip()
+        period = str(req.get("period", "7")).strip()
+        
+        if not day or not period:
+            return jsonify({"status": "error", "message": "請指定星期與節次！"}), 400
+            
+        day_names = {"1": "一", "2": "二", "3": "三", "4": "四", "5": "五"}
+        d_name = day_names.get(day, day)
+        d_int, p_int = int(day), int(period)
+        
+        sched_data = load_schedule_data()
+        classes = sched_data.get("classes", []) if isinstance(sched_data, dict) else []
+        
+        subj_map = {
+            "班會": {"code": "903", "name": "班會", "teacher": "各班導師"},
+            "週會": {"code": "904", "name": "週會", "teacher": "學務處"},
+            "社團": {"code": "902", "name": "社團活動", "teacher": "指導教師"},
+            "團體活動": {"code": "803", "name": "團體活動", "teacher": "學務處/導師"}
+        }
+        info = subj_map.get(activity_type, {"code": "903", "name": activity_type, "teacher": "指導教師"})
+        
+        cfg = load_config_rules()
+        if "custom_simultaneous_groups" not in cfg:
+            cfg["custom_simultaneous_groups"] = []
+            
+        group_name = f"全校共同{info['name']}"
+        
+        members = []
+        for c in classes:
+            c_code = str(c.get("code", "")).strip()
+            c_name = str(c.get("name", "")).strip()
+            if c_code and c_code not in ["404", "504", "604"]:
+                members.append({
+                    "class_code": c_code,
+                    "class_name": c_name,
+                    "subject_code": info["code"],
+                    "subject_name": info["name"]
+                })
+                
+        # Update or add group
+        cfg["custom_simultaneous_groups"] = [g for g in cfg["custom_simultaneous_groups"] if isinstance(g, dict) and g.get("name") != group_name]
+        cfg["custom_simultaneous_groups"].append({
+            "name": group_name,
+            "members": members,
+            "fixed_day": day,
+            "fixed_period": period
+        })
+        
+        # Directly inject into current solved_schedules
+        solved = get_current_solved_schedules()
+        target_classes = set(m["class_code"] for m in members)
+        new_solved = []
+        for r in solved:
+            r_c = str(r.get("班級代碼") or r.get("class_code", "")).strip()
+            r_d = int(r.get("星期") or r.get("day", 0))
+            r_p = int(r.get("節次") or r.get("period", 0))
+            if r_c in target_classes and r_d == d_int and r_p == p_int:
+                continue
+            new_solved.append(r)
+            
+        for m in members:
+            c_code = m["class_code"]
+            c_name = m["class_name"]
+            cls_obj = next((c for c in classes if str(c.get("code", "")).strip() == c_code), {})
+            tutor = cls_obj.get("tutor", "") or info["teacher"]
+            teacher_disp = tutor if activity_type == "班會" else info["teacher"]
+            
+            new_solved.append({
+                "班級代碼": c_code,
+                "班級名稱": c_name,
+                "科目代碼": info["code"],
+                "科目名稱": info["name"],
+                "教師代碼": "9999",
+                "教師姓名": teacher_disp,
+                "星期": d_int,
+                "節次": p_int,
+                "節數": 1,
+                "單雙週": 0,
+                "教室代碼": "",
+                "教室名稱": "",
+                "manual_locked": True
+            })
+            
+        cfg["solved_schedules"] = new_solved
+        save_config_rules(cfg)
+        
+        # Save Excel file
+        try:
+            excel_path = os.path.join(os.path.dirname(__file__), "School_Schedule_Solved.xlsx")
+            import pandas as pd
+            pd.DataFrame(new_solved).to_excel(excel_path, index=False)
+        except Exception:
+            pass
+            
+        global _cached_data
+        _cached_data = None
+        
+        return jsonify({
+            "status": "success",
+            "message": f"已成功將【週{d_name} 第{period}節】直接定為全校【{info['name']}】！全校各班課表已即時填入並更新！",
+            "simultaneous_groups": cfg["custom_simultaneous_groups"],
+            "solved": True
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 @app.route("/api/simultaneous-groups", methods=["GET"])
 def api_get_simultaneous_groups():
     try:
