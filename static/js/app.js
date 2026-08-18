@@ -3742,6 +3742,42 @@ async function loadSimultaneousGroups() {
         return { day, period };
     }
 
+    const presetMeetingBlockBtn = document.getElementById('presetSimMeetingBlockBtn');
+    if (presetMeetingBlockBtn && presetMeetingBlockBtn.dataset.listener !== 'true') {
+        presetMeetingBlockBtn.dataset.listener = 'true';
+        presetMeetingBlockBtn.addEventListener('click', async () => {
+            const { day, period } = getSelectedPresetTime();
+            if (!day || !period) {
+                showToast("請先於上方下拉選單選擇要留空的【星期】與【節次】！");
+                return;
+            }
+            const dayNames = { "1": "一", "2": "二", "3": "三", "4": "四", "5": "五" };
+            const dName = dayNames[day] || day;
+            if (!confirm(`確定要將【週${dName} 第${period}節】設定為全校班週會專用留空時段嗎？\n\n設定後，全校所有班級在該節次均不會排入學科正課，留給班週會使用！`)) {
+                return;
+            }
+            try {
+                showToast(`正在設定全校 週${dName} 第${period}節 班週會留空...`);
+                const resp = await fetch('/api/school-wide-blocked-slots', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ action: 'add', day, period })
+                });
+                const res = await resp.json();
+                if (res.status === 'success') {
+                    showToast(res.message);
+                    if (typeof currentType !== 'undefined' && currentType && typeof currentCode !== 'undefined' && currentCode) {
+                        loadSchedule(currentType, currentCode);
+                    }
+                } else {
+                    showToast("設定失敗：" + res.message);
+                }
+            } catch (e) {
+                showToast("伺服器連線異常。");
+            }
+        });
+    }
+
     const presetClassMeetingBtn = document.getElementById('presetSimClassMeetingBtn');
     if (presetClassMeetingBtn && presetClassMeetingBtn.dataset.listener !== 'true') {
         presetClassMeetingBtn.dataset.listener = 'true';
