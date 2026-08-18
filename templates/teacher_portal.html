@@ -1104,22 +1104,45 @@
                 <!-- Tab 7: Simultaneous Groups Manager -->
                 <div id="ruleTabSim" class="rule-tab-content" style="display: none;">
                     <!-- Quick Preset School-wide Common Scheduling Banner -->
-                    <div style="background: linear-gradient(135deg, rgba(14, 165, 233, 0.12), rgba(99, 102, 241, 0.12)); border: 1px solid rgba(56, 189, 248, 0.3); padding: 12px 16px; border-radius: 10px; margin-bottom: 16px;">
-                        <div style="font-weight: 600; color: #38bdf8; font-size: 0.95rem; margin-bottom: 6px; display: flex; align-items: center; gap: 8px;">
-                            <i class="fa-solid fa-users-rectangle" style="color: #38bdf8;"></i> ⚡ 全校共同排課一鍵設定 (班會 / 社團活動 / 週會同步)
+                    <div style="background: linear-gradient(135deg, rgba(14, 165, 233, 0.15), rgba(99, 102, 241, 0.15)); border: 1px solid rgba(56, 189, 248, 0.35); padding: 14px 18px; border-radius: 12px; margin-bottom: 16px;">
+                        <div style="font-weight: 600; color: #38bdf8; font-size: 0.95rem; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                            <span style="display: flex; align-items: center; gap: 8px;">
+                                <i class="fa-solid fa-users-rectangle" style="color: #38bdf8;"></i> ⚡ 全校共同排課一鍵設定 (班會 / 社團活動 / 週會同步)
+                            </span>
+                            <div style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem;">
+                                <label style="color: #fbbf24; font-weight: bold;"><i class="fa-solid fa-clock"></i> 指定固定時段：</label>
+                                <select id="presetSimDaySelect" style="padding: 5px 10px; border-radius: 6px; background: #0f172a; color: #38bdf8; border: 1px solid #38bdf8; font-size: 0.85rem; font-weight: bold; cursor: pointer;">
+                                    <option value="1">星期一</option>
+                                    <option value="2">星期二</option>
+                                    <option value="3">星期三</option>
+                                    <option value="4">星期四</option>
+                                    <option value="5" selected>星期五</option>
+                                    <option value="">-- 不固定 (由 AI 浮動同日同節) --</option>
+                                </select>
+                                <select id="presetSimPeriodSelect" style="padding: 5px 10px; border-radius: 6px; background: #0f172a; color: #38bdf8; border: 1px solid #38bdf8; font-size: 0.85rem; font-weight: bold; cursor: pointer;">
+                                    <option value="1">第1節</option>
+                                    <option value="2">第2節</option>
+                                    <option value="3">第3節</option>
+                                    <option value="4">第4節</option>
+                                    <option value="5">第5節</option>
+                                    <option value="6">第6節</option>
+                                    <option value="7" selected>第7節</option>
+                                    <option value="8">第8節</option>
+                                </select>
+                            </div>
                         </div>
-                        <div style="font-size: 0.8rem; color: #94a3b8; margin-bottom: 10px;">
-                            一鍵將全校所有班級的特定科目（如班會、社團活動、週會或彈性學習）設為同日同節次全校同步排課：
+                        <div style="font-size: 0.82rem; color: #94a3b8; margin-bottom: 12px; line-height: 1.5;">
+                            先於上方選擇欲固定的【星期與節次】，再點擊下方按鈕，系統將一鍵為全校所有班級綁定排在該時段：
                         </div>
-                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                            <button type="button" id="presetSimClassMeetingBtn" class="solver-action-btn primary-btn" style="padding: 5px 12px; font-size: 0.82rem; background: #0284c7;" title="一鍵設定全校所有班級班會課在同一時段同步上課">
-                                <i class="fa-solid fa-people-roof"></i> 一鍵設定【全校共同班會】(全校同步)
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <button type="button" id="presetSimClassMeetingBtn" class="solver-action-btn primary-btn" style="padding: 6px 14px; font-size: 0.85rem; background: #0284c7;" title="一鍵設定全校所有班級班會課在指定時段同步上課">
+                                <i class="fa-solid fa-people-roof"></i> 一鍵設定【全校共同班會】
                             </button>
-                            <button type="button" id="presetSimClubBtn" class="solver-action-btn primary-btn" style="padding: 5px 12px; font-size: 0.82rem; background: #6366f1;" title="一鍵設定全校所有班級社團活動在同一時段同步上課">
-                                <i class="fa-solid fa-masks-theater"></i> 一鍵設定【全校共同社團】(全校同步)
+                            <button type="button" id="presetSimClubBtn" class="solver-action-btn primary-btn" style="padding: 6px 14px; font-size: 0.85rem; background: #6366f1;" title="一鍵設定全校所有班級社團活動在指定時段同步上課">
+                                <i class="fa-solid fa-masks-theater"></i> 一鍵設定【全校共同社團】
                             </button>
-                            <button type="button" id="presetSimWeeklyBtn" class="solver-action-btn primary-btn" style="padding: 5px 12px; font-size: 0.82rem; background: #059669;" title="一鍵設定全校所有班級週會或彈性學習在同一時段同步上課">
-                                <i class="fa-solid fa-bullhorn"></i> 一鍵設定【全校共同週會】(全校同步)
+                            <button type="button" id="presetSimWeeklyBtn" class="solver-action-btn primary-btn" style="padding: 6px 14px; font-size: 0.85rem; background: #059669;" title="一鍵設定全校所有班級週會或彈性學習在指定時段同步上課">
+                                <i class="fa-solid fa-bullhorn"></i> 一鍵設定【全校共同週會】
                             </button>
                         </div>
                     </div>
