@@ -3841,8 +3841,17 @@ function renderSimGroupsTable() {
 
         // Members Details
         const tdMembers = document.createElement('td');
-        const membersList = (grp.members || []).map(m => `<span style="color:#fbbf24; font-weight:bold;">${m.class_name || m.class_code}</span> (${m.subject_name || m.subject_code})`);
-        tdMembers.innerHTML = membersList.join(' <i class="fa-solid fa-link" style="color:#818cf8; font-size:0.8rem;"></i> ');
+        const countBadge = `<span style="background:rgba(56,189,248,0.2); color:#38bdf8; padding:2px 8px; border-radius:12px; font-size:0.75rem; font-weight:bold; margin-right:8px;"><i class="fa-solid fa-users"></i> 共 ${grp.members.length} 班</span>`;
+        
+        let membersHtml = '';
+        if (grp.members.length > 6) {
+            const preview = grp.members.slice(0, 5).map(m => `<span style="background:rgba(15,23,42,0.8); border:1px solid rgba(251,191,36,0.4); color:#fbbf24; padding:2px 6px; border-radius:4px; font-size:0.8rem; margin:2px; display:inline-block;"><b>${m.class_name || m.class_code}</b> ${m.subject_name || m.subject_code}</span>`).join('');
+            membersHtml = `${countBadge}${preview} <span style="color:#94a3b8; font-size:0.78rem;">...及其他 ${grp.members.length - 5} 班</span>`;
+        } else {
+            const allBadges = grp.members.map(m => `<span style="background:rgba(15,23,42,0.8); border:1px solid rgba(251,191,36,0.4); color:#fbbf24; padding:2px 6px; border-radius:4px; font-size:0.8rem; margin:2px; display:inline-block;"><b>${m.class_name || m.class_code}</b> ${m.subject_name || m.subject_code}</span>`).join(' <i class="fa-solid fa-link" style="color:#818cf8; font-size:0.75rem;"></i> ');
+            membersHtml = `${countBadge}${allBadges}`;
+        }
+        tdMembers.innerHTML = membersHtml;
         tr.appendChild(tdMembers);
 
         // Status (Fixed Slot vs Dynamic Simultaneous)
