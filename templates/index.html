@@ -1147,20 +1147,23 @@
                             </div>
                         </div>
                         <div style="font-size: 0.82rem; color: #94a3b8; margin-bottom: 12px; line-height: 1.5;">
-                            先於上方選擇欲固定的【星期與節次】，再點擊下方按鈕：
+                            先於上方選擇欲固定的【星期與節次】，再點擊下方按鈕，系統將<b>直接為全校各班課表即時填入該活動科目並同步更新</b>：
                         </div>
                         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                            <button type="button" id="presetSimMeetingBlockBtn" class="solver-action-btn primary-btn" style="padding: 6px 14px; font-size: 0.85rem; background: linear-gradient(135deg, #f59e0b, #d97706); border: 1px solid #fbbf24; color: #fff; font-weight: bold;" title="專為配課表未設班會之學校設計：一鍵將指定時段全校各班留白，禁止排入任何正課作為班週會專用時段">
-                                <i class="fa-solid fa-calendar-xmark"></i> 🏛️ 一鍵設定【全校班週會留白不排課】
+                            <button type="button" id="presetSimClassMeetingBtn" class="solver-action-btn primary-btn" style="padding: 7px 16px; font-size: 0.85rem; background: linear-gradient(135deg, #0284c7, #0369a1); font-weight: bold;" title="直接將全校所有班級該時段定為【班會】(自動代入各班導師)">
+                                <i class="fa-solid fa-people-roof"></i> 🏛️ 一鍵定為【全校共同班會】
                             </button>
-                            <button type="button" id="presetSimClassMeetingBtn" class="solver-action-btn primary-btn" style="padding: 6px 14px; font-size: 0.85rem; background: #0284c7;" title="一鍵設定全校所有班級班會課在指定時段同步上課">
-                                <i class="fa-solid fa-people-roof"></i> 一鍵設定【全校共同班會】
+                            <button type="button" id="presetSimWeeklyBtn" class="solver-action-btn primary-btn" style="padding: 7px 16px; font-size: 0.85rem; background: linear-gradient(135deg, #059669, #047857); font-weight: bold;" title="直接將全校所有班級該時段定為【週會】(學務處主辦)">
+                                <i class="fa-solid fa-bullhorn"></i> 📢 一鍵定為【全校共同週會】
                             </button>
-                            <button type="button" id="presetSimClubBtn" class="solver-action-btn primary-btn" style="padding: 6px 14px; font-size: 0.85rem; background: #6366f1;" title="一鍵設定全校所有班級社團活動在指定時段同步上課">
-                                <i class="fa-solid fa-masks-theater"></i> 一鍵設定【全校共同社團】
+                            <button type="button" id="presetSimGroupActBtn" class="solver-action-btn primary-btn" style="padding: 7px 16px; font-size: 0.85rem; background: linear-gradient(135deg, #8b5cf6, #7c3aed); font-weight: bold;" title="直接將全校所有班級該時段定為【團體活動】">
+                                <i class="fa-solid fa-users"></i> 👥 一鍵定為【全校團體活動】
                             </button>
-                            <button type="button" id="presetSimWeeklyBtn" class="solver-action-btn primary-btn" style="padding: 6px 14px; font-size: 0.85rem; background: #059669;" title="一鍵設定全校所有班級週會或彈性學習在指定時段同步上課">
-                                <i class="fa-solid fa-bullhorn"></i> 一鍵設定【全校共同週會】
+                            <button type="button" id="presetSimClubBtn" class="solver-action-btn primary-btn" style="padding: 7px 16px; font-size: 0.85rem; background: linear-gradient(135deg, #6366f1, #4f46e5); font-weight: bold;" title="直接將全校所有班級該時段定為【社團活動】">
+                                <i class="fa-solid fa-masks-theater"></i> 🎭 一鍵定為【全校共同社團】
+                            </button>
+                            <button type="button" id="presetSimMeetingBlockBtn" class="solver-action-btn secondary-btn" style="padding: 7px 14px; font-size: 0.82rem; background: rgba(245, 158, 11, 0.15); border: 1px solid #fbbf24; color: #fbbf24;" title="將指定時段全校各班完全留空不排課">
+                                <i class="fa-solid fa-calendar-xmark"></i> 🚫 一鍵留空【全校此節不排課】
                             </button>
                         </div>
                     </div>
