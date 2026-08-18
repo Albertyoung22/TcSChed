@@ -667,15 +667,19 @@ def run_solver():
                     "說明": u["desc"]
                 })
 
-        base_dir = os.path.dirname(__file__)
-        if dbf_dir and "土城高中" in dbf_dir and os.path.exists(r"D:\土城高中"):
-            output_path = r"D:\土城高中\School_Schedule_Solved.xlsx"
-        else:
-            output_path = os.path.join(base_dir, "School_Schedule_Solved.xlsx")
-
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        local_output = os.path.join(base_dir, "School_Schedule_Solved.xlsx")
         df_out = pd.DataFrame(solved_records)
-        df_out.to_excel(output_path, index=False)
-        log(f"Successfully wrote solved schedule to: {output_path}")
+        df_out.to_excel(local_output, index=False)
+        log(f"Successfully wrote solved schedule to: {local_output}")
+
+        if os.path.exists(r"D:\土城高中"):
+            try:
+                tc_output = r"D:\土城高中\School_Schedule_Solved.xlsx"
+                df_out.to_excel(tc_output, index=False)
+                log(f"Successfully synced solved schedule to: {tc_output}")
+            except Exception as e_tc:
+                log(f"Warning syncing to D:\\土城高中: {e_tc}")
 
         # Update config_rules.json with solved_schedules
         if os.path.exists(config_rules_file):
@@ -690,6 +694,12 @@ def run_solver():
         cfg_to_update["solved_schedules"] = solved_records
         with open(config_rules_file, "w", encoding="utf-8") as f:
             json.dump(cfg_to_update, f, ensure_ascii=False, indent=2)
+
+        try:
+            from app import save_current_semester_single_file
+            save_current_semester_single_file()
+        except Exception as e_sem:
+            log(f"Warning saving semester file: {e_sem}")
 
         return {
             "status": "success",
