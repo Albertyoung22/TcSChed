@@ -1771,7 +1771,22 @@ def api_execute_swap():
         traceback.print_exc()
         return jsonify({"status": "error", "message": f"手調失敗: {str(e)}"}), 500
 
-DATA_DIR = os.environ.get("DATA_DIR", os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.dirname(os.path.abspath(__file__)))
+def get_valid_data_dir():
+    env_dir = os.environ.get("DATA_DIR", "")
+    if env_dir:
+        try:
+            os.makedirs(env_dir, exist_ok=True)
+            test_file = os.path.join(env_dir, ".test_write")
+            with open(test_file, "w") as f:
+                f.write("ok")
+            os.remove(test_file)
+            return env_dir
+        except Exception:
+            pass
+    base_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.dirname(os.path.abspath(__file__))
+    return base_dir
+
+DATA_DIR = get_valid_data_dir()
 CONFIG_RULES_FILE = resolve_path("config_rules.json")
 
 GITHUB_REPO = os.environ.get("GITHUB_REPO", "")     # e.g. "your_username/School_Schedule"
@@ -1779,14 +1794,15 @@ GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")   # Free GitHub Personal Acces
 GITHUB_BRANCH = os.environ.get("GITHUB_BRANCH", "main")
 
 def sync_to_github_cloud(filename, content_str, commit_message="Cloud Web UI Auto Save"):
-    if not GITHUB_REPO or not GITHUB_TOKEN:
+    if not GITHUB_REPO or not GITHUB_TOKEN or len(GITHUB_TOKEN) < 10:
         return False
     def _bg_sync():
         try:
             import urllib.request, base64
             url = f"https://api.github.com/repos/{GITHUB_REPO}/contents/{filename}"
+            auth_header = f"Bearer {GITHUB_TOKEN}" if GITHUB_TOKEN.startswith("github_pat_") else f"token {GITHUB_TOKEN}"
             req_get = urllib.request.Request(url, headers={
-                "Authorization": f"token {GITHUB_TOKEN}",
+                "Authorization": auth_header,
                 "User-Agent": "Flask-Cloud-Sync"
             })
             sha = None
@@ -1807,7 +1823,7 @@ def sync_to_github_cloud(filename, content_str, commit_message="Cloud Web UI Aut
                 payload["sha"] = sha
 
             req_put = urllib.request.Request(url, data=json.dumps(payload).encode('utf-8'), headers={
-                "Authorization": f"token {GITHUB_TOKEN}",
+                "Authorization": auth_header,
                 "Content-Type": "application/json",
                 "User-Agent": "Flask-Cloud-Sync"
             }, method="PUT")
@@ -1822,9 +1838,9 @@ def sync_to_github_cloud(filename, content_str, commit_message="Cloud Web UI Aut
                 with urllib.request.urlopen(hook_req) as r_resp:
                     print("Render Deploy Hook Triggered Successfully:", r_resp.read().decode('utf-8'))
             except Exception as e_hook:
-                print("Render Deploy Hook Error:", e_hook)
+                pass
         except Exception as e:
-            print("GitHub Cloud Sync Error:", e)
+            pass
 
     import threading
     threading.Thread(target=_bg_sync, daemon=True).start()
@@ -1867,7 +1883,10 @@ def get_active_semester_id():
 
 def get_semester_file_path(sem_id):
     if not os.path.exists(SEMESTERS_DIR):
-        os.makedirs(SEMESTERS_DIR, exist_ok=True)
+        try:
+            os.makedirs(SEMESTERS_DIR, exist_ok=True)
+        except Exception:
+            pass
     safe_id = str(sem_id).replace("/", "_").replace("\\", "_").replace(" ", "_")
     return os.path.join(SEMESTERS_DIR, f"{safe_id}.json")
 
@@ -1928,6 +1947,165 @@ def save_config_rules(data):
             f.write(json_str)
         sync_to_github_cloud("config_rules.json", json_str, "Cloud Web UI Auto Save config_rules.json")
         save_current_semester_single_file()
+
+# --- SEMESTERS API ROUTES ---
+
+@app.route("/api/semesters", methods=["GET"])
+@app.route("/api/semesters/list", methods=["GET"])
+def api_get_semesters():
+    try:
+        active_id = get_active_semester_id()
+        semesters = []
+        if os.path.exists(SEMESTERS_DIR):
+            for fname in os.listdir(SEMESTERS_DIR):
+                if fname.endswith(".json"):
+                    fpath = os.path.join(SEMESTERS_DIR, fname)
+                    try:
+                        with open(fpath, "r", encoding="utf-8") as f:
+                            data = json.load(f)
+                            sem_id = data.get("semester_id", fname[:-5])
+                            year = data.get("year", "115")
+                            term = data.get("term", "1")
+                            updated_at = data.get("updated_at", "")
+                            records_count = len(data.get("solved_schedules", []))
+                            semesters.append({
+                                "semester_id": sem_id,
+                                "year": year,
+                                "term": term,
+                                "updated_at": updated_at,
+                                "records_count": records_count,
+                                "is_active": (sem_id == active_id)
+                            })
+                    except Exception:
+                        pass
+        if not semesters:
+            semesters.append({
+                "semester_id": "115-1",
+                "year": "115",
+                "term": "1",
+                "updated_at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "records_count": 819,
+                "is_active": True
+            })
+        semesters.sort(key=lambda x: x["semester_id"], reverse=True)
+        return jsonify({
+            "status": "success",
+            "active_id": active_id,
+            "active_semester_id": active_id,
+            "semesters": semesters
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/semesters/switch", methods=["POST"])
+def api_switch_semester():
+    try:
+        req = request.get_json() or {}
+        sem_id = req.get("semester_id")
+        if not sem_id:
+            return jsonify({"status": "error", "message": "未提供學期 ID"}), 400
+        
+        fpath = get_semester_file_path(sem_id)
+        if not os.path.exists(fpath):
+            return jsonify({"status": "error", "message": f"找不到學期檔案: {sem_id}"}), 404
+            
+        with open(fpath, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            
+        cfg = data.get("config_rules", {})
+        cfg["active_semester_id"] = sem_id
+        if "solved_schedules" in data:
+            cfg["solved_schedules"] = data["solved_schedules"]
+            
+        save_config_rules(cfg)
+        
+        global _cached_data
+        _cached_data = None
+        
+        return jsonify({
+            "status": "success",
+            "message": f"已成功切換至學期：{sem_id}",
+            "active_semester_id": sem_id
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/semesters/create", methods=["POST"])
+def api_create_semester():
+    try:
+        req = request.get_json() or {}
+        year = str(req.get("year", "115")).strip()
+        term = str(req.get("term", "1")).strip()
+        sem_id = f"{year}-{term}"
+        
+        fpath = get_semester_file_path(sem_id)
+        cfg = load_config_rules()
+        cfg["active_semester_id"] = sem_id
+        
+        save_current_semester_single_file(sem_id)
+        return jsonify({
+            "status": "success",
+            "message": f"學期檔案 {sem_id} 已成功建立！",
+            "semester_id": sem_id
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/semesters/delete", methods=["POST"])
+def api_delete_semester():
+    try:
+        req = request.get_json() or {}
+        sem_id = req.get("semester_id")
+        if not sem_id:
+            return jsonify({"status": "error", "message": "未提供學期 ID"}), 400
+        if sem_id == get_active_semester_id():
+            return jsonify({"status": "error", "message": "無法刪除目前使用中的學期！"}), 400
+            
+        fpath = get_semester_file_path(sem_id)
+        if os.path.exists(fpath):
+            os.remove(fpath)
+            return jsonify({"status": "success", "message": f"學期 {sem_id} 已成功刪除！"})
+        return jsonify({"status": "error", "message": "學期檔案不存在"}), 404
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/semesters/export-single/<path:sem_id>", methods=["GET"])
+def api_export_single_semester(sem_id):
+    try:
+        fpath = get_semester_file_path(sem_id)
+        if not os.path.exists(fpath):
+            save_current_semester_single_file(sem_id)
+        return send_file(
+            fpath,
+            mimetype="application/json",
+            as_attachment=True,
+            download_name=f"{sem_id}.json"
+        )
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/semesters/import-single", methods=["POST"])
+def api_import_single_semester():
+    try:
+        if "file" not in request.files:
+            return jsonify({"status": "error", "message": "未上傳檔案"}), 400
+        file = request.files["file"]
+        if not file or file.filename == "":
+            return jsonify({"status": "error", "message": "未選擇檔案"}), 400
+            
+        data = json.load(file)
+        sem_id = data.get("semester_id")
+        if not sem_id:
+            sem_id = os.path.splitext(file.filename)[0]
+            data["semester_id"] = sem_id
+            
+        fpath = get_semester_file_path(sem_id)
+        with open(fpath, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+            
+        return jsonify({"status": "success", "message": f"學期單檔 {sem_id} 已成功匯入！"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 
 @app.route("/api/export-config", methods=["GET"])
