@@ -48,21 +48,9 @@
                 <button id="substituteModalBtn" class="solver-panel-btn" style="background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.3); color: #34d399; padding: 5px 12px; font-size: 0.85rem; height: 36px;" title="辦理教師調代課登記與智慧推薦">
                     <i class="fa-solid fa-user-clock"></i> 調代課管理
                 </button>
-                <a href="/teacher" target="_blank" class="solver-panel-btn" style="background: rgba(168, 85, 247, 0.15); border-color: rgba(168, 85, 247, 0.3); color: #c084fc; padding: 5px 12px; font-size: 0.85rem; height: 36px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;" title="開啟獨立教師個人課表與調代課請假門戶">
-                    <i class="fa-solid fa-user-graduate"></i> 教師個人門戶
-                </a>
-                <button id="examInvigilationBtn" class="solver-panel-btn" style="background: rgba(245, 158, 11, 0.15); border-color: rgba(245, 158, 11, 0.3); color: #fbbf24; padding: 5px 12px; font-size: 0.85rem; height: 36px;" title="自動生成定期考查監考表">
-                    <i class="fa-solid fa-clipboard-user"></i> 段考監考排程
-                </button>
-                <button id="dataDebugBtn" class="solver-panel-btn" style="background: rgba(236, 72, 153, 0.15); border-color: rgba(236, 72, 153, 0.3); color: #f472b6; padding: 5px 12px; font-size: 0.85rem; height: 36px;" title="執行州董式 9大排課資料邏輯除錯稽核">
-                    <i class="fa-solid fa-bug"></i> 資料邏輯除錯
-                </button>
-                <button id="openWebBrowserBtn" class="solver-panel-btn" style="background: rgba(14, 165, 233, 0.15); border-color: rgba(14, 165, 233, 0.3); color: #38bdf8; padding: 5px 12px; font-size: 0.85rem; height: 36px;" title="在系統預設網頁瀏覽器 (Chrome / Edge) 中開啟本頁面">
-                    <i class="fa-solid fa-globe"></i> 開啟 WEB 瀏覽器
-                </button>
-                <button id="teacherPortalBtn" onclick="window.open('/teacher', '_blank')" class="solver-panel-btn" style="background: rgba(99, 102, 241, 0.2); border-color: rgba(99, 102, 241, 0.4); color: #818cf8; padding: 5px 12px; font-size: 0.85rem; height: 36px;" title="開啟專屬『教師課表個人查詢門戶』網頁">
+                <a href="/teacher" target="_blank" id="teacherPortalBtn" class="solver-panel-btn" style="background: rgba(168, 85, 247, 0.15); border-color: rgba(168, 85, 247, 0.3); color: #c084fc; padding: 5px 12px; font-size: 0.85rem; height: 36px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;" title="開啟專屬『教師課表個人查詢門戶』網頁 (唯讀瀏覽、雙視窗調課對照)">
                     <i class="fa-solid fa-chalkboard-user"></i> 教師課表專頁
-                </button>
+                </a>
 
                 <div class="solver-panel-btn" id="headerSemesterBox" style="background: rgba(168, 85, 247, 0.15); border: 1px solid rgba(168, 85, 247, 0.3); color: #c084fc; display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; height: 36px;" title="切換目前學期課表檔案">
                     <i class="fa-solid fa-folder-open"></i>
