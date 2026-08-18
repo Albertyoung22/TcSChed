@@ -2638,6 +2638,62 @@ def api_save_no_sub():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
+@app.route("/api/school-wide-blocked-slots", methods=["GET", "POST"])
+def api_school_wide_blocked_slots():
+    try:
+        cfg = load_config_rules()
+        if "school_wide_blocked_slots" not in cfg:
+            cfg["school_wide_blocked_slots"] = []
+            
+        if request.method == "GET":
+            return jsonify({
+                "status": "success",
+                "blocked_slots": cfg["school_wide_blocked_slots"]
+            })
+            
+        req = request.get_json() or {}
+        action = req.get("action", "toggle")  # "add", "remove", "toggle", "set"
+        slots = req.get("slots", [])
+        day = str(req.get("day", "")).strip()
+        period = str(req.get("period", "")).strip()
+        
+        target_slot = f"{day}-{period}" if day and period else ""
+        day_names = {"1": "一", "2": "二", "3": "三", "4": "四", "5": "五"}
+        d_name = day_names.get(day, day)
+        
+        current_slots = list(cfg["school_wide_blocked_slots"])
+        
+        if action == "set":
+            current_slots = slots
+            msg = "全校留空/班週會專用時段已更新！"
+        elif action == "add" and target_slot:
+            if target_slot not in current_slots:
+                current_slots.append(target_slot)
+            msg = f"已成功鎖定【週{d_name} 第{period}節】為全校班週會專用時段 (禁止排入正課)！"
+        elif action == "remove" and target_slot:
+            if target_slot in current_slots:
+                current_slots.remove(target_slot)
+            msg = f"已成功解除【週{d_name} 第{period}節】全校鎖定！"
+        elif action == "toggle" and target_slot:
+            if target_slot in current_slots:
+                current_slots.remove(target_slot)
+                msg = f"已解除【週{d_name} 第{period}節】全校留空鎖定！"
+            else:
+                current_slots.append(target_slot)
+                msg = f"已成功鎖定【週{d_name} 第{period}節】為全校班週會專用時段 (禁止排入正課)！"
+        else:
+            msg = "設定完成"
+            
+        cfg["school_wide_blocked_slots"] = current_slots
+        save_config_rules(cfg)
+        return jsonify({
+            "status": "success",
+            "message": msg,
+            "blocked_slots": current_slots
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 @app.route("/api/course-assignments", methods=["GET"])
 def api_get_course_assignments():
     try:
