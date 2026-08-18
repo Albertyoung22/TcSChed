@@ -357,6 +357,20 @@ def run_solver():
                     for p in periods:
                         model.Add(sum(x[u["unit_id"], d, p] for u in r_units) <= cap)
 
+    # 6. School-wide Blocked Slots (e.g. 全校班週會專用時段留空)
+    school_wide_blocked_slots = custom_rules.get("school_wide_blocked_slots", [])
+    for slot in school_wide_blocked_slots:
+        try:
+            d_str, p_str = str(slot).split("-")
+            bd, bp = int(d_str), int(p_str)
+            if bd in days and bp in periods:
+                for u in units_list:
+                    # Allow subjects explicitly named 班會 / 週會, but block regular academic courses
+                    s_name = u.get("subject_name", "")
+                    if not any(kw in s_name for kw in ["班會", "週會", "導師時間", "團體活動"]):
+                        model.Add(x[u["unit_id"], bd, bp] == 0)
+        except Exception:
+            pass
 
     # Weights and penalties
     weights = custom_rules.get("weights", {})
