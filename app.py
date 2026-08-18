@@ -3981,14 +3981,48 @@ def api_delete_simultaneous_group():
         req = request.get_json() or {}
         name = req.get("name", "").strip()
         cfg = load_config_rules()
-        if "custom_simultaneous_groups" in cfg:
-            cfg["custom_simultaneous_groups"] = [g for g in cfg["custom_simultaneous_groups"] if isinstance(g, dict) and g.get("name") != name]
-            save_config_rules(cfg)
-            
-        # Trigger CP-SAT Solver Automatically!
-        solver_res = trigger_auto_solver()
         
-        return jsonify({"status": "success", "message": f"同時排課群組「{name}」已成功刪除！全校 AI 已自動重新求解與更新課表！", "solved": True})
+        target_group = None
+        if "custom_simultaneous_groups" in cfg:
+            for g in cfg["custom_simultaneous_groups"]:
+                if isinstance(g, dict) and g.get("name") == name:
+                    target_group = g
+                    break
+            cfg["custom_simultaneous_groups"] = [g for g in cfg["custom_simultaneous_groups"] if isinstance(g, dict) and g.get("name") != name]
+            
+        # Clean up any manual injected records in solved_schedules
+        if target_group and target_group.get("fixed_day") and target_group.get("fixed_period"):
+            fd = int(target_group["fixed_day"])
+            fp = int(target_group["fixed_period"])
+            member_classes = set(m.get("class_code") for m in target_group.get("members", []))
+            solved = cfg.get("solved_schedules", [])
+            new_solved = []
+            for r in solved:
+                r_c = str(r.get("班級代碼") or r.get("class_code", "")).strip()
+                r_d = int(r.get("星期") or r.get("day", 0))
+                r_p = int(r.get("節次") or r.get("period", 0))
+                if r_c in member_classes and r_d == fd and r_p == fp and any(kw in name for kw in ["班會", "週會", "社團", "活動"]):
+                    continue
+                new_solved.append(r)
+            cfg["solved_schedules"] = new_solved
+            try:
+                excel_path = os.path.join(os.path.dirname(__file__), "School_Schedule_Solved.xlsx")
+                import pandas as pd
+                pd.DataFrame(new_solved).to_excel(excel_path, index=False)
+            except Exception:
+                pass
+                
+        save_config_rules(cfg)
+        
+        global _cached_data
+        _cached_data = None
+        
+        return jsonify({
+            "status": "success",
+            "message": f"同時排課群組「{name}」已成功刪除！全校課表已即時同步清除！",
+            "simultaneous_groups": cfg["custom_simultaneous_groups"],
+            "solved": True
+        })
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
