@@ -247,7 +247,12 @@ def run_solver():
         # Otherwise, allow CP-SAT solver to reschedule freely to honor all rules (simultaneous groups, no-teach, venue limits, etc.)
         if u.get("manual_locked") and u["prefilled_day"] is not None and u["prefilled_period"] is not None:
             model.Add(day_vars[uid] == u["prefilled_day"])
-            model.Add(period_vars[uid] == u["prefilled_period"])
+    # Initialize Soft Constraint Penalty Lists
+    no_teach_violations = []
+    no_sub_violations = []
+    fixed_slot_violations = []
+    afternoon_penalties = []
+    pe_noon_penalties = []
 
     # 1. Simultaneous Groups (同時群)
     sim_groups = {}
@@ -292,6 +297,18 @@ def run_solver():
                 for uid in matched_uids:
                     model.Add(day_vars[uid] == fd)
                     model.Add(period_vars[uid] == fp)
+        
+        # When a fixed slot is specified for a group (e.g. 週五 第5節 週會, 週五 第6節 班會),
+        # penalize any other academic lessons placed in that slot with massive weight (50000)
+        if fixed_day is not None and fixed_period is not None and str(fixed_day).isdigit() and str(fixed_period).isdigit():
+            fd = int(fixed_day)
+            fp = int(fixed_period)
+            if fd in days and fp in periods:
+                member_classes = set(str(m.get("class_code", "")).strip() for m in members if isinstance(m, dict) and m.get("class_code"))
+                target_sub_codes = set(str(m.get("subject_code", "")).strip() for m in members if isinstance(m, dict) and m.get("subject_code"))
+                for u in units_list:
+                    if u["class_code"] in member_classes and u["subject_code"] not in target_sub_codes:
+                        fixed_slot_violations.append(x[u["unit_id"], fd, fp])
 
     # 3. Class Conflicts (班級不衝堂)
     cls_units = {}
@@ -503,6 +520,7 @@ def run_solver():
     model.Maximize(
         w_consecutive * sum(consec_pairs) +
         w_spreading * sum(active_vars) -
+        50000 * sum(fixed_slot_violations) -
         w_no_teach * sum(no_teach_violations) -
         w_no_sub * sum(no_sub_violations) -
         w_morning_pref * sum(afternoon_penalties) -
@@ -547,9 +565,11 @@ def run_solver():
                     model2.Add(day_vars2[f_uid] == day_vars2[o_uid])
                     model2.Add(period_vars2[f_uid] == period_vars2[o_uid])
 
-        # Custom Simultaneous Groups (Floating)
+        # Custom Simultaneous Groups (Fixed & Floating)
         for grp in custom_sim_groups:
             members = grp if isinstance(grp, list) else (grp.get("members", []) if isinstance(grp, dict) else [])
+            fixed_day = grp.get("fixed_day") if isinstance(grp, dict) else None
+            fixed_period = grp.get("fixed_period") if isinstance(grp, dict) else None
             matched_uids = []
             for target in members:
                 if not isinstance(target, dict):
@@ -648,6 +668,42 @@ def run_solver():
                     model3.AddAtMostOne(x3[u["unit_id"], d, p] for u in reps if u["week_mode"] in (0, 2))
 
         solver3 = cp_model.CpSolver()
+        solver3.parameters.max_time_in_seconds = 15.0
+        solver3.parameters.num_search_workers = 4
+        status = solver3.Solve(model3)
+        if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
+            solver = solver3
+            day_vars = day_vars3
+            period_vars = period_vars3
+            x = x3
+
+        # Class Conflicts
+        for cc, ulist in cls_units.items():
+            grp_reps = {}
+            for u in ulist:
+                ckey = get_unit_collapse_key(u, custom_sim_groups)
+                if ckey not in grp_reps:
+                    grp_reps[ckey] = u
+            reps = list(grp_reps.values())
+            for d in days:
+                for p in periods:
+                    model3.AddAtMostOne(x3[u["unit_id"], d, p] for u in reps if u["week_mode"] in (0, 1))
+                    model3.AddAtMostOne(x3[u["unit_id"], d, p] for u in reps if u["week_mode"] in (0, 2))
+
+        # Teacher Conflicts
+        for tc, ulist in teacher_units.items():
+            grp_reps = {}
+            for u in ulist:
+                tkey = get_unit_collapse_key(u, custom_sim_groups)
+                if tkey not in grp_reps:
+                    grp_reps[tkey] = u
+            reps = list(grp_reps.values())
+            for d in days:
+                for p in periods:
+                    model3.AddAtMostOne(x3[u["unit_id"], d, p] for u in reps if u["week_mode"] in (0, 1))
+                    model3.AddAtMostOne(x3[u["unit_id"], d, p] for u in reps if u["week_mode"] in (0, 2))
+
+        solver3 = cp_model.CpSolver()
         solver3.parameters.max_time_in_seconds = 10.0
         solver3.parameters.num_search_workers = 4
         status = solver3.Solve(model3)
@@ -681,6 +737,46 @@ def run_solver():
                     "週別設定": u["week_mode"],
                     "說明": u["desc"]
                 })
+
+        # Automatically merge all fixed simultaneous activity groups (週會, 班會, 團體活動, 社團) into solved_records
+        for grp in custom_sim_groups:
+            if not isinstance(grp, dict):
+                continue
+            fd = grp.get("fixed_day")
+            fp = grp.get("fixed_period")
+            g_name = grp.get("name", "")
+            if fd is not None and fp is not None and str(fd).isdigit() and str(fp).isdigit():
+                fd_int = int(fd)
+                fp_int = int(fp)
+                for m in grp.get("members", []):
+                    if not isinstance(m, dict):
+                        continue
+                    c_code = str(m.get("class_code", "")).strip()
+                    c_name = str(m.get("class_name", "")).strip() or c_code
+                    s_code = str(m.get("subject_code", "903")).strip()
+                    s_name = str(m.get("subject_name", g_name)).strip() or g_name
+                    
+                    # Remove any conflicting record at this class's fixed slot
+                    solved_records = [
+                        r for r in solved_records
+                        if not (str(r.get("班級代碼", "")).strip() == c_code and str(r.get("星期", "")) == str(fd_int) and str(r.get("節次", "")) == str(fp_int))
+                    ]
+                    
+                    t_name = "各班導師" if "班會" in g_name else ("學務處" if "週會" in g_name else "指導教師")
+                    solved_records.append({
+                        "班級代碼": c_code,
+                        "科目代碼": s_code,
+                        "教師代碼": "9999",
+                        "班級名稱": c_name,
+                        "科目名稱": s_name,
+                        "教師姓名": t_name,
+                        "教室名稱": "",
+                        "時間代碼": f"{fd_int}{fp_int}01",
+                        "星期": str(fd_int),
+                        "節次": str(fp_int),
+                        "週別設定": 0,
+                        "說明": "固定排課群組"
+                    })
 
         base_dir = os.path.dirname(os.path.abspath(__file__))
         local_output = os.path.join(base_dir, "School_Schedule_Solved.xlsx")
