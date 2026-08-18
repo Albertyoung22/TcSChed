@@ -93,35 +93,50 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 1.25rem;
     margin-bottom: 2rem;
+    flex-wrap: wrap;
 }
 
 .logo {
     display: flex;
     align-items: center;
     gap: 1rem;
+    flex-shrink: 0;
+    min-width: max-content;
 }
 
 .logo-icon {
     font-size: 2.5rem;
     color: var(--primary);
     filter: drop-shadow(0 0 10px var(--primary-glow));
+    flex-shrink: 0;
+}
+
+.logo-text {
+    display: flex;
+    flex-direction: column;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .logo-text h1 {
     font-family: var(--font-outfit);
-    font-size: 1.75rem;
+    font-size: clamp(1.25rem, 2vw, 1.75rem);
     font-weight: 700;
     letter-spacing: -0.5px;
     background: linear-gradient(135deg, #fff 0%, #c084fc 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
+    white-space: nowrap;
+    line-height: 1.25;
 }
 
 .logo-text .sub-text {
-    font-size: 0.8rem;
+    font-size: clamp(0.75rem, 1vw, 0.85rem);
     color: var(--text-secondary);
     letter-spacing: 0.5px;
+    white-space: nowrap;
 }
 
 .db-badge {
@@ -134,6 +149,7 @@ body {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    white-space: nowrap;
 }
 
 /* Controls & Search Card */
@@ -1366,9 +1382,17 @@ body {
     margin-right: 0.5rem;
 }
 
-@keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+/* Responsive adjustments */
+@media screen and (max-width: 900px) {
+    .app-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+    .header-actions {
+        width: 100%;
+        justify-content: flex-start !important;
+    }
 }
 
 /* Publication-Grade Print Stylesheet */
