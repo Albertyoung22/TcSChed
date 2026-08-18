@@ -5873,7 +5873,7 @@ function highlightDualSlotSync(d, p) {
     updateDualSwapAssistant(d, p);
 }
 
-function updateDualSwapAssistant(d, p) {
+async function updateDualSwapAssistant(d, p) {
     const daysMap = ['', '週一', '週二', '週三', '週四', '週五'];
     const infoEl = document.getElementById('dualSelectedSlotInfo');
     const col1 = document.getElementById('dualSameSubjTeachers');
@@ -5894,23 +5894,66 @@ function updateDualSwapAssistant(d, p) {
         infoEl.textContent = text;
     }
 
+    if (col1) col1.innerHTML = '<div style="color:#94a3b8; font-size:0.75rem;"><i class="fa-solid fa-spinner fa-spin"></i> 搜尋同科目空堂教師中...</div>';
+    if (col3) col3.innerHTML = '<div style="color:#94a3b8; font-size:0.75rem;"><i class="fa-solid fa-spinner fa-spin"></i> 查詢即時空堂場地中...</div>';
+
+    const activeLesson = classLessons.length > 0 ? classLessons[0] : null;
+    const subjName = activeLesson ? (activeLesson.subject_name || '課程') : '';
+    const curTeacherCode = activeLesson ? (activeLesson.teacher_code || activeLesson.teacher_name) : dualViewCurrentTeacher;
+
+    let subResult = null;
+    try {
+        const resp = await fetch('/api/substitute/recommend', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                teacher_code: curTeacherCode,
+                class_name: dualViewCurrentClass,
+                subject_name: subjName,
+                day: d,
+                period: p
+            })
+        });
+        subResult = await resp.json();
+    } catch (e) {
+        console.error("Error fetching substitute recommendation for dual view:", e);
+    }
+
+    if (dualSelectedDay !== d || dualSelectedPeriod !== p) return;
+
+    const candidates = (subResult && subResult.candidates) ? subResult.candidates : [];
+    const freeRooms = (subResult && subResult.free_classrooms) ? subResult.free_classrooms : (metadata.classrooms || []);
+
     if (col1) {
-        if (classLessons.length > 0) {
-            const activeLesson = classLessons[0];
-            const subjName = activeLesson.subject_name || '課程';
-            const curTeacherCode = activeLesson.teacher_code || activeLesson.teacher_name;
-
-            const candTeachers = (metadata.teachers || []).filter(tch => tch.code !== curTeacherCode && tch.name !== curTeacherCode);
-
-            col1.innerHTML = candTeachers.slice(0, 6).map(tch => 
-                `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; padding:4px 8px; background:rgba(255,255,255,0.03); border-radius:6px; border:1px solid rgba(255,255,255,0.06);">
-                    <div>
-                        <span style="color:#e2e8f0; font-weight:bold;">${tch.name}</span>
-                        <span style="font-size:0.7rem; color:#34d399; margin-left:4px;">🟢 當節空堂</span>
-                    </div>
-                    <button class="solver-action-btn primary-btn" style="padding:2px 8px; font-size:0.72rem; background:#0284c7; border-radius:4px; cursor:pointer;" onclick="executeAssignSubstitute('${tch.name}', '${tch.code}', ${d}, ${p}, '${subjName}')">選為代課</button>
-                 </div>`
-            ).join('') || '<div style="color:#64748b;">該時段無同科空堂教師</div>';
+        if (activeLesson) {
+            const sameSubjCands = candidates.filter(c => c.is_same_domain || c.ai_fit === 'high');
+            
+            if (sameSubjCands.length > 0) {
+                col1.innerHTML = sameSubjCands.slice(0, 6).map(tch => 
+                    `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; padding:4px 8px; background:rgba(16,185,129,0.08); border-radius:6px; border:1px solid rgba(16,185,129,0.2);">
+                        <div>
+                            <span style="color:#e2e8f0; font-weight:bold;">${tch.teacher_name}</span>
+                            <span style="font-size:0.7rem; color:#34d399; margin-left:4px;" title="任教：${tch.teach_subjects}">⭐ 同學科空堂</span>
+                        </div>
+                        <button class="solver-action-btn primary-btn" style="flex:none; width:auto; padding:2px 10px; font-size:0.72rem; background:#0284c7; border-radius:4px; cursor:pointer; white-space:nowrap;" onclick="executeAssignSubstitute('${tch.teacher_name}', '${tch.teacher_code}', ${d}, ${p}, '${subjName}')">選為代課</button>
+                     </div>`
+                ).join('');
+            } else if (candidates.length > 0) {
+                col1.innerHTML = `
+                    <div style="color:#fbbf24; font-size:0.72rem; margin-bottom:4px;"><i class="fa-solid fa-triangle-exclamation"></i> 當節無同學科空堂教師 (顯示其他當節空堂教師)：</div>
+                    ${candidates.slice(0, 4).map(tch => 
+                        `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; padding:4px 8px; background:rgba(255,255,255,0.03); border-radius:6px; border:1px solid rgba(255,255,255,0.06);">
+                            <div>
+                                <span style="color:#e2e8f0; font-weight:bold;">${tch.teacher_name}</span>
+                                <span style="font-size:0.68rem; color:#94a3b8; margin-left:4px;">(${tch.teach_subjects || '跨科'})</span>
+                            </div>
+                            <button class="solver-action-btn primary-btn" style="flex:none; width:auto; padding:2px 10px; font-size:0.72rem; background:#0284c7; border-radius:4px; cursor:pointer; white-space:nowrap;" onclick="executeAssignSubstitute('${tch.teacher_name}', '${tch.teacher_code}', ${d}, ${p}, '${subjName}')">選為代課</button>
+                         </div>`
+                    ).join('')}
+                `;
+            } else {
+                col1.innerHTML = '<div style="color:#64748b; padding:6px;">當前時段無全校可用空堂教師</div>';
+            }
         } else {
             col1.innerHTML = '<div style="color:#34d399; font-weight:bold; padding:8px; background:rgba(52,211,153,0.1); border-radius:6px;">🟢 此節次班級無課 (空堂)，無需請假調代課</div>';
         }
@@ -5927,7 +5970,7 @@ function updateDualSwapAssistant(d, p) {
                 col2.innerHTML = otherSlots.slice(0, 5).map(s => 
                     `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; padding:4px 8px; background:rgba(255,255,255,0.03); border-radius:6px; border:1px solid rgba(255,255,255,0.06);">
                         <span><strong style="color:#fbbf24;">${daysMap[s.day]}第${s.period}節</strong> ${s.subject_name} (${s.teacher_name})</span>
-                        <button class="solver-action-btn primary-btn" style="padding:2px 8px; font-size:0.72rem; background:#d97706; border-radius:4px; cursor:pointer;" onclick="executePerformSlotSwap(${d}, ${p}, ${s.day}, ${s.period}, '${subj1}', '${tch1}', '${s.subject_name}', '${s.teacher_name}')">對調此節</button>
+                        <button class="solver-action-btn primary-btn" style="flex:none; width:auto; padding:2px 10px; font-size:0.72rem; background:#d97706; border-radius:4px; cursor:pointer; white-space:nowrap;" onclick="executePerformSlotSwap(${d}, ${p}, ${s.day}, ${s.period}, '${subj1}', '${tch1}', '${s.subject_name}', '${s.teacher_name}')">對調此節</button>
                      </div>`
                 ).join('');
             } else {
@@ -5939,17 +5982,17 @@ function updateDualSwapAssistant(d, p) {
     }
 
     if (col3) {
-        const allRoomsList = metadata.classrooms || [];
+        const topFreeTeachers = candidates.slice(0, 5).map(c => c.teacher_name).join('、 ');
         col3.innerHTML = `
-            <div style="color:#34d399; font-weight:bold; margin-bottom:4px;"><i class="fa-solid fa-door-open"></i> 全校專用教室即時狀態 (${daysMap[d]}第${p}節)：</div>
-            <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:6px; max-height:100px; overflow-y:auto;">
-                ${allRoomsList.map(r => {
+            <div style="color:#34d399; font-weight:bold; margin-bottom:4px;"><i class="fa-solid fa-door-open"></i> 全校專用教室即時空堂狀態 (${daysMap[d]}第${p}節)：</div>
+            <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:6px; max-height:80px; overflow-y:auto;">
+                ${freeRooms.map(r => {
                     const rName = typeof r === 'object' ? (r.name || r.code) : r;
                     const rCode = typeof r === 'object' ? (r.code || r.name) : r;
                     return `<span style="background:rgba(52,211,153,0.15); border:1px solid rgba(52,211,153,0.3); color:#34d399; padding:2px 6px; border-radius:4px; font-size:0.75rem; cursor:pointer;" title="點擊查詢 ${rName} 場地課表" onclick="window.location.hash='#room/${encodeURIComponent(rCode)}'; closeDualViewModal();">🟢 ${rName} (空堂)</span>`;
-                }).join('') || '<span style="color:#64748b;">無多間專用教室紀錄</span>'}
+                }).join('') || '<span style="color:#64748b;">當節無空閒專用教室</span>'}
             </div>
-            <div style="color:#a78bfa; font-size:0.75rem;"><i class="fa-solid fa-user-clock"></i> 當節全校空堂備用教師：${(metadata.teachers || []).slice(0, 5).map(x=>x.name||x.code).join('、 ')} 老師</div>
+            <div style="color:#a78bfa; font-size:0.75rem;"><i class="fa-solid fa-user-clock"></i> 當節全校空堂教師 (${candidates.length}位)：${topFreeTeachers || '無'}</div>
         `;
     }
 }
