@@ -3778,21 +3778,43 @@ async function loadSimultaneousGroups() {
         });
     }
 
+    async function applyPresetSchoolActivity(activityType) {
+        const { day, period } = getSelectedPresetTime();
+        if (!day || !period) {
+            showToast("請先於上方下拉選單選擇【星期】與【節次】！");
+            return;
+        }
+        const dayNames = { "1": "一", "2": "二", "3": "三", "4": "四", "5": "五" };
+        const dName = dayNames[day] || day;
+        
+        try {
+            showToast(`正在將全校各班 週${dName} 第${period}節 直接定為【${activityType}】...`);
+            const resp = await fetch('/api/preset/apply-school-activity', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ type: activityType, day, period })
+            });
+            const res = await resp.json();
+            if (res.status === 'success') {
+                showToast(res.message);
+                currentSimGroupsData = res.simultaneous_groups || [];
+                renderSimGroupsTable();
+                if (typeof currentType !== 'undefined' && currentType && typeof currentCode !== 'undefined' && currentCode) {
+                    loadSchedule(currentType, currentCode);
+                }
+            } else {
+                showToast("設定失敗：" + res.message);
+            }
+        } catch (e) {
+            showToast("伺服器連線異常。");
+        }
+    }
+
     const presetClassMeetingBtn = document.getElementById('presetSimClassMeetingBtn');
     if (presetClassMeetingBtn && presetClassMeetingBtn.dataset.listener !== 'true') {
         presetClassMeetingBtn.dataset.listener = 'true';
         presetClassMeetingBtn.addEventListener('click', () => {
-            const { day, period } = getSelectedPresetTime();
-            createPresetSimGroup('全校共同班會', '班會', 'J109', day, period);
-        });
-    }
-
-    const presetClubBtn = document.getElementById('presetSimClubBtn');
-    if (presetClubBtn && presetClubBtn.dataset.listener !== 'true') {
-        presetClubBtn.dataset.listener = 'true';
-        presetClubBtn.addEventListener('click', () => {
-            const { day, period } = getSelectedPresetTime();
-            createPresetSimGroup('全校共同社團活動', '社團', 'J110', day, period);
+            applyPresetSchoolActivity('班會');
         });
     }
 
@@ -3800,8 +3822,23 @@ async function loadSimultaneousGroups() {
     if (presetWeeklyBtn && presetWeeklyBtn.dataset.listener !== 'true') {
         presetWeeklyBtn.dataset.listener = 'true';
         presetWeeklyBtn.addEventListener('click', () => {
-            const { day, period } = getSelectedPresetTime();
-            createPresetSimGroup('全校共同週會/彈性學習', '彈性', 'J116', day, period);
+            applyPresetSchoolActivity('週會');
+        });
+    }
+
+    const presetGroupActBtn = document.getElementById('presetSimGroupActBtn');
+    if (presetGroupActBtn && presetGroupActBtn.dataset.listener !== 'true') {
+        presetGroupActBtn.dataset.listener = 'true';
+        presetGroupActBtn.addEventListener('click', () => {
+            applyPresetSchoolActivity('團體活動');
+        });
+    }
+
+    const presetClubBtn = document.getElementById('presetSimClubBtn');
+    if (presetClubBtn && presetClubBtn.dataset.listener !== 'true') {
+        presetClubBtn.dataset.listener = 'true';
+        presetClubBtn.addEventListener('click', () => {
+            applyPresetSchoolActivity('社團');
         });
     }
 
