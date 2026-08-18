@@ -3916,6 +3916,12 @@ function renderSimGroupsTable() {
 
         delBtn.addEventListener('click', async () => {
             if (!confirm(`確定要刪除同時排課群組「${grp.name}」嗎？`)) return;
+            
+            // 1. Instant optimistic deletion from UI table (0 latency)
+            currentSimGroupsData = currentSimGroupsData.filter(g => g && g.name !== grp.name);
+            renderSimGroupsTable();
+            showToast(`正在刪除「${grp.name}」...`);
+            
             try {
                 const resp = await fetch('/api/delete-simultaneous-group', {
                     method: 'POST',
@@ -3925,15 +3931,18 @@ function renderSimGroupsTable() {
                 const res = await resp.json();
                 if (res.status === 'success') {
                     showToast(res.message);
-                    await loadSimultaneousGroups();
+                    currentSimGroupsData = res.simultaneous_groups || [];
+                    renderSimGroupsTable();
                     if (typeof currentType !== 'undefined' && currentType && typeof currentCode !== 'undefined' && currentCode) {
                         loadSchedule(currentType, currentCode);
                     }
                 } else {
                     showToast("刪除失敗：" + res.message);
+                    await loadSimultaneousGroups();
                 }
             } catch (e) {
                 showToast("伺服器連線異常。");
+                await loadSimultaneousGroups();
             }
         });
 
