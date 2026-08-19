@@ -19,7 +19,7 @@
         /* Read-Only Query Portal Mode Overrides */
         #solverPanelBtn, #settingsModalBtn, #substituteModalBtn, 
         #examInvigilationBtn, #dataDebugBtn, #teacherPortalBtn, 
-        #headerSemesterBox, #dbBadge, #manualEditToggleBtn, #importDbfBtn {
+        #headerSemesterBox, #dbBadge, #importDbfBtn {
             display: none !important;
         }
     </style>
@@ -152,6 +152,21 @@
                 <div class="action-buttons no-print">
                     <button id="manualEditToggleBtn" class="action-btn manual-edit-btn-prominent" title="開啟手動調課與拖曳微調模式">
                         <i class="fa-solid fa-hand-pointer"></i> 🛠️ 手動調課 / 拖曳微調
+                    </button>
+                    <button id="manualUndoBtn" class="action-btn" title="復原上一筆手動調課 (Ctrl+Z)" style="display: none; background: rgba(148, 163, 184, 0.15); border: 1px solid rgba(148, 163, 184, 0.3); color: #cbd5e1;">
+                        <i class="fa-solid fa-rotate-left"></i> 復原
+                    </button>
+                    <button id="manualRedoBtn" class="action-btn" title="重做下一筆手動調課 (Ctrl+Y)" style="display: none; background: rgba(148, 163, 184, 0.15); border: 1px solid rgba(148, 163, 184, 0.3); color: #cbd5e1;">
+                        <i class="fa-solid fa-rotate-right"></i> 重做
+                    </button>
+                    <button id="manualConsecutiveToggle" class="action-btn" title="連堂連動調整 (移動雙節課時連同第二節一併順移)" style="display: none; background: rgba(168, 85, 247, 0.15); border: 1px solid rgba(168, 85, 247, 0.3); color: #c084fc;">
+                        <i class="fa-solid fa-link"></i> 連堂連動: 開
+                    </button>
+                    <button id="suggestChainSwapBtn" class="action-btn" title="AI 3向連鎖環狀對調建議" style="display: none; background: rgba(251, 191, 36, 0.15); border: 1px solid rgba(251, 191, 36, 0.3); color: #fbbf24;">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> 智能連鎖建議
+                    </button>
+                    <button id="lockLessonBtn" class="action-btn" title="🔒 鎖定/解鎖選中課程 (鎖定後AI排課或拖曳時保持固定)" style="display: none; background: rgba(234, 179, 8, 0.15); border: 1px solid rgba(234, 179, 8, 0.3); color: #eab308;">
+                        <i class="fa-solid fa-lock"></i> 鎖定課程
                     </button>
                     <button id="shareBtn" class="action-btn" title="複製分享連結">
                         <i class="fa-solid fa-share-nodes"></i> 分享
