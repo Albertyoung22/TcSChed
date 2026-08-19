@@ -254,7 +254,7 @@ function setupEventListeners() {
                 showToast("已開啟【手動排課與拖曳微調模式】！可直接拖曳或點選課程進行對調。");
                 const table = document.getElementById('scheduleTable');
                 if (table) table.classList.add('edit-mode');
-                handleHashChange();
+                document.querySelectorAll('.lesson-block').forEach(el => el.draggable = true);
             } else {
                 manualEditToggleBtn.innerHTML = '<i class="fa-solid fa-hand-pointer"></i> 🛠️ 手動調課 / 拖曳微調';
                 manualEditToggleBtn.classList.remove('is-active');
@@ -264,7 +264,6 @@ function setupEventListeners() {
                 const table = document.getElementById('scheduleTable');
                 if (table) table.classList.remove('edit-mode');
                 resetManualEditState();
-                handleHashChange();
             }
             updateManualControlButtons();
         });
@@ -590,14 +589,9 @@ function renderScheduleGrid(type, code, slots) {
                 if (!isManualEditMode || !selectedSourceItem) return;
                 if (e.target.closest('.lesson-block')) return;
                 
-                if (cell.classList.contains('slot-feasible') || cell.classList.contains('slot-soft-conflict')) {
-                    const innerBlock = cell.querySelector('.lesson-block');
-                    const targetId = innerBlock ? innerBlock.dataset.id : null;
-                    executeSwap(selectedSourceItem.id, d, p, targetId);
-                } else if (cell.classList.contains('slot-forbidden')) {
-                    showToast("⛔ 此時段有衝堂衝突！正在為您計算 AI 連鎖對調解法...");
-                    fetchChainSwapSuggestions(selectedSourceItem.id);
-                }
+                const innerBlock = cell.querySelector('.lesson-block');
+                const targetId = innerBlock ? innerBlock.dataset.id : null;
+                executeSwap(selectedSourceItem.id, d, p, targetId);
             });
 
             // HTML5 Drag & Drop cell listeners
@@ -682,12 +676,12 @@ function renderScheduleGrid(type, code, slots) {
                         e.preventDefault();
                         e.stopPropagation();
                         
-                        if (selectedSourceItem && selectedSourceItem.id === lesson.id) {
+                        if (selectedSourceItem && String(selectedSourceItem.id) === String(lesson.id)) {
                             resetManualEditState();
                             return;
                         }
                         
-                        if (selectedSourceItem && (cell.classList.contains('slot-feasible') || cell.classList.contains('slot-soft-conflict'))) {
+                        if (selectedSourceItem) {
                             executeSwap(selectedSourceItem.id, d, p, lesson.id);
                             return;
                         }
@@ -1237,13 +1231,6 @@ async function highlightSlots(itemId) {
 }
 
 async function executeSwap(sourceId, targetDay, targetPeriod, targetId, isUndoRedoAction = false) {
-    let confirmMsg = "您確定要將此課程調整至該時段嗎？";
-    if (targetId !== null) {
-        confirmMsg = "目標時段已排課，您確定要將兩門課程對調嗎？";
-    }
-    
-    if (!isUndoRedoAction && !confirm(confirmMsg)) return;
-    
     try {
         const response = await fetch('/api/execute-swap', {
             method: 'POST',
