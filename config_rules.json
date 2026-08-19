@@ -6514,8 +6514,7 @@
       "teacher_name": "汪雪憬",
       "day": "3",
       "period": "1",
-      "room_name": "nan",
-      "manual_locked": true
+      "room_name": "nan"
     },
     {
       "id": "402_4_3",
@@ -7893,9 +7892,10 @@
       "subject_name": "輔導活動",
       "teacher_code": "11",
       "teacher_name": "郭姝欣",
-      "day": "1",
+      "day": "2",
       "period": "1",
-      "room_name": "nan"
+      "room_name": "nan",
+      "manual_locked": true
     },
     {
       "id": "201_3_2",
@@ -12107,8 +12107,7 @@
       "teacher_name": "陳嬿竹",
       "day": "2",
       "period": "1",
-      "room_name": "nan",
-      "manual_locked": true
+      "room_name": "nan"
     },
     {
       "id": "402_1_4",
@@ -12346,9 +12345,10 @@
       "subject_name": "生物",
       "teacher_code": "3",
       "teacher_name": "張世宗",
-      "day": "2",
+      "day": "1",
       "period": "1",
-      "room_name": "生物實驗室"
+      "room_name": "生物實驗室",
+      "manual_locked": true
     },
     {
       "id": "102_2_2",
@@ -15617,6 +15617,29 @@
       "target_old_day": "3",
       "target_old_period": "1",
       "target_new_day": "2",
+      "target_new_period": "1"
+    },
+    {
+      "id": "swap_1787163013732",
+      "timestamp": "2026-08-20 02:10:13",
+      "time_short": "02:10:13",
+      "type": "two_way_swap",
+      "message": "成功對調課程！【701 輔導活動 (郭姝欣)】與【701 生物 (張世宗)】已互相調換時段。",
+      "source_id": "101_1_1",
+      "source_subject": "輔導活動",
+      "source_teacher": "郭姝欣",
+      "source_class": "701",
+      "source_old_day": "1",
+      "source_old_period": "1",
+      "source_new_day": "2",
+      "source_new_period": "1",
+      "target_id": "101_2_1",
+      "target_subject": "生物",
+      "target_teacher": "張世宗",
+      "target_class": "701",
+      "target_old_day": "2",
+      "target_old_period": "1",
+      "target_new_day": "1",
       "target_new_period": "1"
     }
   ]
