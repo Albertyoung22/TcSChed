@@ -1406,3 +1406,73 @@ body {
 .dual-cell-slot:hover {
     background: rgba(0, 113, 227, 0.06) !important;
 }
+
+/* ==========================================================================
+   Universal High-Contrast Mac Typography & Form Control Protection
+   ========================================================================== */
+input[type="text"],
+input[type="number"],
+input[type="password"],
+input[type="email"],
+input[type="search"],
+select,
+textarea {
+    background: #ffffff !important;
+    color: #1d1d1f !important;
+    border: 1px solid rgba(0, 0, 0, 0.16) !important;
+    font-weight: 500 !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+    color: #86868b !important;
+}
+
+select option {
+    background: #ffffff !important;
+    color: #1d1d1f !important;
+}
+
+.modal-body h1, .modal-body h2, .modal-body h3, .modal-body h4, .modal-body h5, .modal-body h6 {
+    color: #1d1d1f !important;
+}
+
+.modal-body label {
+    color: #334155 !important;
+    font-weight: 600 !important;
+}
+
+.modal-body table {
+    color: #1d1d1f !important;
+    background: #ffffff !important;
+}
+
+.modal-body th {
+    background: #f1f5f9 !important;
+    color: #1e293b !important;
+    font-weight: 700 !important;
+}
+
+.modal-body td {
+    color: #1d1d1f !important;
+}
+
+.rules-tab-bar {
+    background: #f1f5f9 !important;
+    border: 1px solid rgba(0, 0, 0, 0.08) !important;
+}
+
+.rule-tab-btn {
+    color: #475569 !important;
+}
+
+.rule-tab-btn.active {
+    background: #ffffff !important;
+    color: #0071e3 !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+}
+
+.solver-console {
+    background: #1e293b !important;
+    color: #f8fafc !important;
+}
