@@ -942,6 +942,31 @@ let manualSwapUndoStack = [];
 let manualSwapRedoStack = [];
 let swapSlipRecords = [];
 let isConsecutiveLinkMode = true;
+let serverSwapHistory = [];
+
+async function fetchSwapHistory() {
+    try {
+        const response = await fetch('/api/swap-history');
+        const res = await response.json();
+        if (res.status === 'success') {
+            serverSwapHistory = res.history || [];
+            const count = serverSwapHistory.length;
+            const countBadge = document.getElementById('swapHistoryCount');
+            if (countBadge) countBadge.textContent = count;
+            
+            const undoBtn = document.getElementById('manualUndoBtn');
+            if (undoBtn) {
+                undoBtn.style.display = (isManualEditMode && count > 0) ? 'inline-flex' : 'none';
+            }
+            const histBtn = document.getElementById('swapHistoryBtn');
+            if (histBtn) {
+                histBtn.style.display = isManualEditMode ? 'inline-flex' : 'none';
+            }
+        }
+    } catch (e) {
+        console.error("Fetch swap history failed:", e);
+    }
+}
 
 function updateManualControlButtons() {
     const undoBtn = document.getElementById('manualUndoBtn');
@@ -953,9 +978,11 @@ function updateManualControlButtons() {
     const lockBtn = document.getElementById('lockLessonBtn');
     const healthBtn = document.getElementById('healthCheckBtn');
     const holdingBar = document.getElementById('holdingPoolBar');
+    const histBtn = document.getElementById('swapHistoryBtn');
 
     const disp = isManualEditMode ? 'inline-flex' : 'none';
-    if (undoBtn) undoBtn.style.display = (isManualEditMode && manualSwapUndoStack.length > 0) ? 'inline-flex' : 'none';
+    if (undoBtn) undoBtn.style.display = (isManualEditMode && (serverSwapHistory.length > 0 || manualSwapUndoStack.length > 0)) ? 'inline-flex' : 'none';
+    if (histBtn) histBtn.style.display = isManualEditMode ? 'inline-flex' : 'none';
     if (redoBtn) redoBtn.style.display = (isManualEditMode && manualSwapRedoStack.length > 0) ? 'inline-flex' : 'none';
     if (linkBtn) linkBtn.style.display = disp;
     if (chainBtn) chainBtn.style.display = disp;
@@ -974,6 +1001,9 @@ function updateManualControlButtons() {
             lockBtn.style.color = '#eab308';
         }
     }
+    
+    // Fetch latest swap history count from server
+    fetchSwapHistory();
 }
 
 function initManualOptimizationEvents() {
@@ -986,9 +1016,11 @@ function initManualOptimizationEvents() {
     const lockBtn = document.getElementById('lockLessonBtn');
     const healthBtn = document.getElementById('healthCheckBtn');
     const addHoldBtn = document.getElementById('addToHoldingBtn');
+    const histBtn = document.getElementById('swapHistoryBtn');
 
-    if (undoBtn) undoBtn.addEventListener('click', undoManualSwap);
+    if (undoBtn) undoBtn.addEventListener('click', () => undoManualSwap());
     if (redoBtn) redoBtn.addEventListener('click', redoManualSwap);
+    if (histBtn) histBtn.addEventListener('click', openSwapHistoryModal);
 
     if (linkBtn) {
         linkBtn.addEventListener('click', () => {
@@ -1044,10 +1076,10 @@ function initManualOptimizationEvents() {
         if (e.key === 'Escape') {
             const manualEditToggleBtn = document.getElementById('manualEditToggleBtn');
             if (manualEditToggleBtn) manualEditToggleBtn.click();
-        } else if (e.ctrlKey && e.key.toLowerCase() === 'z') {
+        } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
             e.preventDefault();
             undoManualSwap();
-        } else if (e.ctrlKey && e.key.toLowerCase() === 'y') {
+        } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
             e.preventDefault();
             redoManualSwap();
         }
@@ -1234,12 +1266,97 @@ async function executeChainSwap(moves) {
     }
 }
 
-async function undoManualSwap() {
-    showToast("↩️ 復原功能已重置至最新歷史快照");
+async function undoManualSwap(recordId = null) {
+    try {
+        const body = recordId ? JSON.stringify({ record_id: recordId }) : JSON.stringify({});
+        const response = await fetch('/api/undo-swap', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: body
+        });
+        const res = await response.json();
+        if (res.status === 'success') {
+            showToast(res.message);
+            resetManualEditState();
+            await fetchSwapHistory();
+            updateManualControlButtons();
+            handleHashChange();
+            // If modal is open, re-render modal list
+            const modal = document.getElementById('swapHistoryModal');
+            if (modal && modal.style.display !== 'none') {
+                openSwapHistoryModal();
+            }
+        } else {
+            showToast("復原失敗：" + res.message);
+        }
+    } catch (e) {
+        console.error("Undo failed:", e);
+        showToast("復原連線異常");
+    }
 }
 
 async function redoManualSwap() {
     showToast("↪️ 已套用最新變更快照");
+}
+
+async function openSwapHistoryModal() {
+    const modal = document.getElementById('swapHistoryModal');
+    const container = document.getElementById('swapHistoryList');
+    if (!modal || !container) return;
+
+    await fetchSwapHistory();
+
+    if (!serverSwapHistory || serverSwapHistory.length === 0) {
+        container.innerHTML = `
+            <div style="text-align: center; padding: 40px 20px; color: var(--text-secondary);">
+                <i class="fa-solid fa-clock-rotate-left" style="font-size: 2.5rem; color: #94a3b8; margin-bottom: 12px; display: block; opacity: 0.5;"></i>
+                <div style="font-size: 1.1rem; font-weight: 600; color: var(--text-primary); margin-bottom: 4px;">目前尚無調課歷史紀錄</div>
+                <div style="font-size: 0.88rem;">在課表上進行手動拖曳或對調後，此處將自動記錄每一次異動的時間、班級、科目與時段對照。</div>
+            </div>`;
+    } else {
+        let html = `<div style="display: flex; flex-direction: column; gap: 12px;">`;
+        // Show newest first
+        [...serverSwapHistory].reverse().forEach((rec, idx) => {
+            const isTwoWay = rec.type === 'two_way_swap';
+            const timeStr = rec.timestamp || rec.time_short || '剛剛';
+            html += `
+                <div class="glass" style="background: rgba(255, 255, 255, 0.95); border: 1px solid rgba(0, 113, 227, 0.15); border-radius: 12px; padding: 14px 18px; box-shadow: 0 4px 16px rgba(0,0,0,0.04); display: flex; flex-direction: column; gap: 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="background: ${isTwoWay ? 'rgba(52, 199, 89, 0.15)' : 'rgba(0, 113, 227, 0.12)'}; color: ${isTwoWay ? '#28a745' : '#0071e3'}; padding: 3px 8px; border-radius: 6px; font-size: 0.78rem; font-weight: 700;">
+                                ${isTwoWay ? '🔄 雙向對調' : '➡️ 單堂移動'}
+                            </span>
+                            <span style="font-size: 0.82rem; color: var(--text-secondary);"><i class="fa-regular fa-clock"></i> ${timeStr}</span>
+                        </div>
+                        <button type="button" onclick="undoManualSwap('${rec.id}')" class="action-btn" style="padding: 4px 12px; font-size: 0.8rem; background: rgba(255, 59, 48, 0.1); border: 1px solid rgba(255, 59, 48, 0.25); color: #ff3b30; border-radius: 6px; font-weight: 600; cursor: pointer;">
+                            <i class="fa-solid fa-rotate-left"></i> 復原此筆調課
+                        </button>
+                    </div>
+                    <div style="font-size: 0.92rem; color: var(--text-primary); font-weight: 500; line-height: 1.5;">
+                        ${rec.message}
+                    </div>
+                </div>`;
+        });
+        html += `</div>`;
+        container.innerHTML = html;
+    }
+    modal.style.display = 'flex';
+}
+
+async function clearSwapHistory() {
+    if (!confirm("確定要清空所有調課歷史紀錄嗎？（課表將保持目前排定狀態）")) return;
+    try {
+        const response = await fetch('/api/clear-swap-history', { method: 'POST' });
+        const res = await response.json();
+        if (res.status === 'success') {
+            showToast(res.message);
+            await fetchSwapHistory();
+            updateManualControlButtons();
+            document.getElementById('swapHistoryModal').style.display = 'none';
+        }
+    } catch (e) {
+        showToast("清空紀錄失敗");
+    }
 }
 
 function openSwapSlipModal() {
