@@ -254,6 +254,7 @@ function setupEventListeners() {
                 showToast("已開啟【手動排課與拖曳微調模式】！可直接拖曳或點選課程進行對調。");
                 const table = document.getElementById('scheduleTable');
                 if (table) table.classList.add('edit-mode');
+                handleHashChange();
             } else {
                 manualEditToggleBtn.innerHTML = '<i class="fa-solid fa-hand-pointer"></i> 🛠️ 手動調課 / 拖曳微調';
                 manualEditToggleBtn.classList.remove('is-active');
@@ -656,6 +657,7 @@ function renderScheduleGrid(type, code, slots) {
                     lessonDiv.style.gap = '2px';
                     
                     lessonDiv.className = 'lesson-block';
+                    lessonDiv.draggable = true;
                     lessonDiv.dataset.id = lesson.id;
                     if (lesson.manual_locked) {
                         lessonDiv.classList.add('is-locked');
@@ -6008,6 +6010,7 @@ let dualSelectedDay = null;
 let dualSelectedPeriod = null;
 
 async function openDualViewModal(classCode, teacherCode) {
+    if (isManualEditMode) return;
     console.log("openDualViewModal triggered:", classCode, teacherCode);
     initDualViewEvents();
     const modal = document.getElementById('dualViewModal');
