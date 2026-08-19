@@ -6512,9 +6512,10 @@
       "subject_name": "歷史",
       "teacher_code": "38.0",
       "teacher_name": "汪雪憬",
-      "day": "5",
-      "period": "2",
-      "room_name": "nan"
+      "day": "3",
+      "period": "1",
+      "room_name": "nan",
+      "manual_locked": true
     },
     {
       "id": "402_4_3",
@@ -10760,8 +10761,8 @@
       "subject_name": "數學",
       "teacher_code": "31.0",
       "teacher_name": "陳嬿竹",
-      "day": "2",
-      "period": "1",
+      "day": "5",
+      "period": "2",
       "room_name": "nan"
     },
     {
@@ -11684,8 +11685,8 @@
       "subject_name": "物理",
       "teacher_code": "28.0",
       "teacher_name": "吳昀蓁",
-      "day": "3",
-      "period": "3",
+      "day": "2",
+      "period": "1",
       "room_name": "nan"
     },
     {
@@ -12104,9 +12105,10 @@
       "subject_name": "數學",
       "teacher_code": "31.0",
       "teacher_name": "陳嬿竹",
-      "day": "3",
+      "day": "2",
       "period": "1",
-      "room_name": "nan"
+      "room_name": "nan",
+      "manual_locked": true
     },
     {
       "id": "402_1_4",
@@ -12668,8 +12670,8 @@
       "subject_name": "專項技術訓練",
       "teacher_code": "67.0",
       "teacher_name": "戴吟甄",
-      "day": "2",
-      "period": "1",
+      "day": "3",
+      "period": "3",
       "room_name": "nan"
     },
     {
@@ -15547,5 +15549,75 @@
       "fixed_period": "6"
     }
   ],
-  "swap_history": []
+  "swap_history": [
+    {
+      "id": "swap_1787158835451",
+      "timestamp": "2026-08-20 01:00:35",
+      "time_short": "01:00:35",
+      "type": "two_way_swap",
+      "message": "成功對調課程！【高一仁 專項技術訓練 (戴吟甄)】與【高一仁 物理 (吳昀蓁)】已互相調換時段。",
+      "source_id": "403_2_1",
+      "source_subject": "專項技術訓練",
+      "source_teacher": "戴吟甄",
+      "source_class": "高一仁",
+      "source_old_day": "2",
+      "source_old_period": "1",
+      "source_new_day": "3",
+      "source_new_period": "3",
+      "target_id": "403_3_3",
+      "target_subject": "物理",
+      "target_teacher": "吳昀蓁",
+      "target_class": "高一仁",
+      "target_old_day": "3",
+      "target_old_period": "3",
+      "target_new_day": "2",
+      "target_new_period": "1"
+    },
+    {
+      "id": "swap_1787158899645",
+      "timestamp": "2026-08-20 01:01:39",
+      "time_short": "01:01:39",
+      "type": "two_way_swap",
+      "message": "成功對調課程！【高一忠 數學 (陳嬿竹)】與【高一忠 歷史 (汪雪憬)】已互相調換時段。",
+      "source_id": "401_3_1",
+      "source_subject": "數學",
+      "source_teacher": "陳嬿竹",
+      "source_class": "高一忠",
+      "source_old_day": "2",
+      "source_old_period": "1",
+      "source_new_day": "5",
+      "source_new_period": "2",
+      "target_id": "401_5_2",
+      "target_subject": "歷史",
+      "target_teacher": "汪雪憬",
+      "target_class": "高一忠",
+      "target_old_day": "5",
+      "target_old_period": "2",
+      "target_new_day": "2",
+      "target_new_period": "1"
+    },
+    {
+      "id": "swap_1787158941066",
+      "timestamp": "2026-08-20 01:02:21",
+      "time_short": "01:02:21",
+      "type": "two_way_swap",
+      "message": "成功對調課程！【高一忠 歷史 (汪雪憬)】與【高一忠 數學 (陳嬿竹)】已互相調換時段。",
+      "source_id": "401_5_2",
+      "source_subject": "歷史",
+      "source_teacher": "汪雪憬",
+      "source_class": "高一忠",
+      "source_old_day": "2",
+      "source_old_period": "1",
+      "source_new_day": "3",
+      "source_new_period": "1",
+      "target_id": "401_2_1",
+      "target_subject": "數學",
+      "target_teacher": "陳嬿竹",
+      "target_class": "高一忠",
+      "target_old_day": "3",
+      "target_old_period": "1",
+      "target_new_day": "2",
+      "target_new_period": "1"
+    }
+  ]
 }
