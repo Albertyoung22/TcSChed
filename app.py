@@ -5161,6 +5161,26 @@ def normalize_schedule_record(r):
     if not t_code and r.get("teacher_code"): t_code = str(r["teacher_code"])
     if not t_name and r.get("teacher_name"): t_name = str(r["teacher_name"])
     
+    t_code = str(t_code or "").strip()
+    if t_code.endswith(".0"): t_code = t_code[:-2]
+    if t_code.lower() in ("nan", "none", "null"): t_code = ""
+
+    t_name = str(t_name or "").strip()
+    if t_name.endswith(".0"): t_name = t_name[:-2]
+    if t_name.lower() in ("nan", "none", "null"): t_name = ""
+
+    # If t_name is numeric or empty, look up in teachers config
+    if (not t_name or t_name.isdigit()) and t_code:
+        try:
+            cfg = load_config_rules()
+            for tch in cfg.get("teachers", []):
+                tch_code = str(tch.get("code", "")).strip().replace(".0", "")
+                if tch_code == t_code:
+                    t_name = tch.get("name", t_name)
+                    break
+        except Exception:
+            pass
+
     return {
         "id": r.get("id") or f"{c_code}_{day}_{period}",
         "class_code": c_code,
