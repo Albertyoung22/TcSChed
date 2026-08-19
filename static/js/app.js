@@ -942,8 +942,6 @@ let manualSwapUndoStack = [];
 let manualSwapRedoStack = [];
 let swapSlipRecords = [];
 let isConsecutiveLinkMode = true;
-let serverSwapHistory = [];
-
 async function fetchSwapHistory() {
     try {
         const response = await fetch('/api/swap-history');
@@ -951,8 +949,12 @@ async function fetchSwapHistory() {
         if (res.status === 'success') {
             serverSwapHistory = res.history || [];
             const count = serverSwapHistory.length;
+            
             const countBadge = document.getElementById('swapHistoryCount');
             if (countBadge) countBadge.textContent = count;
+            
+            const panelCountBadge = document.getElementById('swapHistoryPanelCount');
+            if (panelCountBadge) panelCountBadge.textContent = count;
             
             const undoBtn = document.getElementById('manualUndoBtn');
             if (undoBtn) {
@@ -962,9 +964,52 @@ async function fetchSwapHistory() {
             if (histBtn) {
                 histBtn.style.display = isManualEditMode ? 'inline-flex' : 'none';
             }
+
+            renderSwapHistoryPanel();
         }
     } catch (e) {
         console.error("Fetch swap history failed:", e);
+    }
+}
+
+function renderSwapHistoryPanel() {
+    const panel = document.getElementById('swapHistoryPanel');
+    const container = document.getElementById('swapHistoryPanelList');
+    if (!panel || !container) return;
+
+    panel.style.display = isManualEditMode ? 'block' : 'none';
+    if (!isManualEditMode) return;
+
+    if (!serverSwapHistory || serverSwapHistory.length === 0) {
+        container.innerHTML = `
+            <div style="text-align: center; padding: 24px 16px; color: var(--text-secondary); font-size: 0.9rem; background: rgba(0,0,0,0.02); border-radius: 10px; border: 1px dashed rgba(0,0,0,0.1);">
+                <i class="fa-solid fa-clock-rotate-left" style="font-size: 1.5rem; color: #94a3b8; margin-bottom: 8px; display: block; opacity: 0.6;"></i>
+                <span>目前尚無調課操作紀錄。在上方課表進行<b>拖曳</b>或<b>點選對調</b>後，此處將即時顯示調動明細與一鍵復原按鈕。</span>
+            </div>`;
+    } else {
+        let html = '';
+        [...serverSwapHistory].reverse().forEach((rec, idx) => {
+            const isTwoWay = rec.type === 'two_way_swap';
+            const timeStr = rec.timestamp || rec.time_short || '剛剛';
+            html += `
+                <div style="background: #ffffff; border: 1px solid rgba(0, 113, 227, 0.15); border-radius: 12px; padding: 12px 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.03); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                    <div style="display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 260px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="background: ${isTwoWay ? 'rgba(52, 199, 89, 0.12)' : 'rgba(0, 113, 227, 0.1)'}; color: ${isTwoWay ? '#28a745' : '#0071e3'}; padding: 2px 8px; border-radius: 6px; font-size: 0.78rem; font-weight: 700;">
+                                ${isTwoWay ? '🔄 雙向對調' : '➡️ 單堂移動'}
+                            </span>
+                            <span style="font-size: 0.8rem; color: var(--text-secondary);"><i class="fa-regular fa-clock"></i> ${timeStr}</span>
+                        </div>
+                        <div style="font-size: 0.9rem; color: var(--text-primary); font-weight: 600;">
+                            ${rec.message}
+                        </div>
+                    </div>
+                    <button type="button" onclick="undoManualSwap('${rec.id}')" class="action-btn" style="background: rgba(255, 59, 48, 0.08); border: 1px solid rgba(255, 59, 48, 0.25); color: #ff3b30; font-size: 0.82rem; padding: 5px 14px; border-radius: 6px; font-weight: 600; cursor: pointer; white-space: nowrap;">
+                        <i class="fa-solid fa-rotate-left"></i> 復原此步
+                    </button>
+                </div>`;
+        });
+        container.innerHTML = html;
     }
 }
 
