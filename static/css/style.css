@@ -1320,14 +1320,15 @@ body {
 }
 
 .modal-content {
-    background: rgba(255, 255, 255, 0.96) !important;
+    background: rgba(255, 255, 255, 0.98) !important;
     color: var(--text-primary) !important;
     border: 1px solid rgba(0, 0, 0, 0.1) !important;
     border-radius: 18px !important;
     box-shadow: 0 24px 64px rgba(0, 0, 0, 0.2), 0 4px 16px rgba(0, 0, 0, 0.06) !important;
-    width: 92vw !important;
-    max-width: 720px !important;
-    max-height: 88vh !important;
+    width: 95vw !important;
+    max-width: 900px !important;
+    height: auto !important;
+    max-height: 94vh !important;
     display: flex !important;
     flex-direction: column !important;
     overflow: hidden !important;
@@ -1338,9 +1339,9 @@ body {
     display: flex !important;
     justify-content: space-between !important;
     align-items: center !important;
-    padding: 18px 24px !important;
+    padding: 16px 24px !important;
     border-bottom: 1px solid var(--border-color) !important;
-    background: rgba(255, 255, 255, 0.85) !important;
+    background: rgba(255, 255, 255, 0.9) !important;
 }
 
 .modal-title {
@@ -1405,8 +1406,8 @@ body {
 }
 
 .modal-content.fullscreen-modal .modal-body {
-    max-height: calc(96vh - 130px) !important;
-    height: calc(96vh - 130px) !important;
+    max-height: calc(96vh - 120px) !important;
+    height: calc(96vh - 120px) !important;
     flex: 1 !important;
 }
 
@@ -1436,18 +1437,20 @@ body {
 }
 
 /* ==========================================================================
-   Dual View Modal (Split Timetable & Swap Assistant) Wide Layout
+   Dual View Modal (Split Timetable & Swap Assistant) Wide & Tall Layout
    ========================================================================== */
 #dualViewModal .modal-content {
-    max-width: 1420px !important;
+    max-width: 1560px !important;
     width: 96vw !important;
+    height: 95vh !important;
+    max-height: 95vh !important;
 }
 
 #dualViewModal .modal-content.fullscreen-modal {
-    max-width: 98vw !important;
-    width: 98vw !important;
-    height: 96vh !important;
-    max-height: 96vh !important;
+    max-width: 99vw !important;
+    width: 99vw !important;
+    height: 98vh !important;
+    max-height: 98vh !important;
 }
 
 #dualViewGridSplit {
