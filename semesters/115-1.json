@@ -3,7 +3,7 @@
   "school_name": "臺南市立土城高級中學",
   "year": "115",
   "term": "1",
-  "updated_at": "2026-08-20 00:07:23",
+  "updated_at": "2026-08-20 00:52:12",
   "config_rules": {
     "custom_no_teach": {
       "0028": [
@@ -10118,10 +10118,9 @@
         "subject_name": "選修物理-電磁現象一",
         "teacher_code": "2.0",
         "teacher_name": "林柏宏",
-        "day": "3",
+        "day": "4",
         "period": "1",
-        "room_name": "nan",
-        "manual_locked": true
+        "room_name": "nan"
       },
       {
         "id": "601_2_2",
@@ -11031,10 +11030,9 @@
         "subject_name": "英語文",
         "teacher_code": "35.0",
         "teacher_name": "蔡英鈴",
-        "day": "4",
+        "day": "3",
         "period": "1",
-        "room_name": "nan",
-        "manual_locked": true
+        "room_name": "nan"
       },
       {
         "id": "602_2_3",
@@ -15555,31 +15553,7 @@
         "fixed_period": "6"
       }
     ],
-    "swap_history": [
-      {
-        "id": "swap_1787155643732",
-        "timestamp": "2026-08-20 00:07:23",
-        "time_short": "00:07:23",
-        "type": "two_way_swap",
-        "message": "成功對調課程！【高三忠 英語文 (蔡英鈴)】與【高三忠 選修物理-電磁現象一 (林柏宏)】已互相調換時段。",
-        "source_id": "601_3_1",
-        "source_subject": "英語文",
-        "source_teacher": "蔡英鈴",
-        "source_class": "高三忠",
-        "source_old_day": "3",
-        "source_old_period": "1",
-        "source_new_day": "4",
-        "source_new_period": "1",
-        "target_id": "601_4_1",
-        "target_subject": "選修物理-電磁現象一",
-        "target_teacher": "林柏宏",
-        "target_class": "高三忠",
-        "target_old_day": "4",
-        "target_old_period": "1",
-        "target_new_day": "3",
-        "target_new_period": "1"
-      }
-    ]
+    "swap_history": []
   },
   "solved_schedules": [
     {
@@ -21722,10 +21696,9 @@
       "subject_name": "選修物理-電磁現象一",
       "teacher_code": "2.0",
       "teacher_name": "林柏宏",
-      "day": "3",
+      "day": "4",
       "period": "1",
-      "room_name": "nan",
-      "manual_locked": true
+      "room_name": "nan"
     },
     {
       "id": "601_2_2",
@@ -22635,10 +22608,9 @@
       "subject_name": "英語文",
       "teacher_code": "35.0",
       "teacher_name": "蔡英鈴",
-      "day": "4",
+      "day": "3",
       "period": "1",
-      "room_name": "nan",
-      "manual_locked": true
+      "room_name": "nan"
     },
     {
       "id": "602_2_3",
