@@ -5,8 +5,29 @@ let metadata = {
     classrooms: [],
     period_times: {}
 };
-let isManualEditMode = false;
 let selectedSourceItem = null;
+
+function resolveTeacherDisplayName(name, code) {
+    if (!name && !code) return '';
+    let n = String(name || '').trim();
+    let c = String(code || '').trim();
+
+    if (n.endsWith('.0')) n = n.slice(0, -2);
+    if (c.endsWith('.0')) c = c.slice(0, -2);
+
+    if (n && n.toLowerCase() !== 'nan' && n.toLowerCase() !== 'null' && !/^\d+$/.test(n)) {
+        return n;
+    }
+
+    const lookupCode = c || n;
+    if (typeof metadata !== 'undefined' && metadata.teachers) {
+        const found = metadata.teachers.find(t => String(t.code).trim() === lookupCode || String(t.code).trim() === lookupCode + '.0');
+        if (found && found.name && !/^\d+$/.test(found.name)) {
+            return found.name;
+        }
+    }
+    return n || c;
+}
 
 // DOM Elements
 const searchInput = document.getElementById('searchInput');
@@ -671,7 +692,8 @@ function renderScheduleGrid(type, code, slots) {
 
                     if (type === 'class') {
                         // Class view: link to teacher and classroom with Dual-View Modal trigger
-                        targetLink = lesson.teacher_name ? `<a href="#teacher/${encodeURIComponent(lesson.teacher_code || lesson.teacher_name)}" onclick="openDualViewModal('${code}', '${lesson.teacher_code || lesson.teacher_name}'); return false;" class="meta-link" title="開啟雙視窗課表對照與調課助手"><i class="fa-solid fa-chalkboard-user"></i> ${lesson.teacher_name} <i class="fa-solid fa-columns" style="font-size:0.7rem; opacity:0.7;"></i></a>` : '';
+                        const dispTName = resolveTeacherDisplayName(lesson.teacher_name, lesson.teacher_code);
+                        targetLink = dispTName ? `<a href="#teacher/${encodeURIComponent(lesson.teacher_code || dispTName)}" onclick="openDualViewModal('${code}', '${lesson.teacher_code || dispTName}'); return false;" class="meta-link" title="開啟雙視窗課表對照與調課助手"><i class="fa-solid fa-chalkboard-user"></i> ${dispTName} <i class="fa-solid fa-columns" style="font-size:0.7rem; opacity:0.7;"></i></a>` : '';
                         const hasRoom = lesson.room_name && String(lesson.room_name).trim() !== '' && String(lesson.room_name).toLowerCase() !== 'nan' && String(lesson.room_name).toLowerCase() !== 'none' && String(lesson.room_name).toLowerCase() !== 'null';
                         roomLink = hasRoom ? `<a href="#room/${encodeURIComponent(lesson.room_code || lesson.room_name)}" class="room-lbl meta-link"><i class="fa-solid fa-location-dot"></i> ${lesson.room_name}</a>` : '';
                     } else if (type === 'teacher') {
@@ -681,8 +703,9 @@ function renderScheduleGrid(type, code, slots) {
                         roomLink = hasRoom ? `<a href="#room/${encodeURIComponent(lesson.room_code || lesson.room_name)}" class="room-lbl meta-link"><i class="fa-solid fa-location-dot"></i> ${lesson.room_name}</a>` : '';
                     } else if (type === 'room') {
                         // Room view: link to class and teacher
+                        const dispTName = resolveTeacherDisplayName(lesson.teacher_name, lesson.teacher_code);
                         targetLink = lesson.class_name ? `<a href="#class/${encodeURIComponent(lesson.class_code || lesson.class_name)}" class="meta-link"><i class="fa-solid fa-users"></i> ${lesson.class_name}</a>` : '';
-                        roomLink = lesson.teacher_name ? `<span class="room-lbl" style="font-size:0.85rem;"><a href="#teacher/${encodeURIComponent(lesson.teacher_code || lesson.teacher_name)}" onclick="openDualViewModal('${lesson.class_code}', '${lesson.teacher_code || lesson.teacher_name}'); return false;" class="meta-link"><i class="fa-solid fa-chalkboard-user"></i> ${lesson.teacher_name}</a></span>` : '';
+                        roomLink = dispTName ? `<span class="room-lbl" style="font-size:0.85rem;"><a href="#teacher/${encodeURIComponent(lesson.teacher_code || dispTName)}" onclick="openDualViewModal('${lesson.class_code}', '${lesson.teacher_code || dispTName}'); return false;" class="meta-link"><i class="fa-solid fa-chalkboard-user"></i> ${dispTName}</a></span>` : '';
                     }
 
                     // Week Mode Banner
