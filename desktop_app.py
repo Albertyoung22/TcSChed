@@ -215,8 +215,11 @@ def main():
             time.sleep(0.1)
 
     url = f"http://127.0.0.1:{port}"
-    print(f"[資訊] 系統成功啟動！主頁面: {url}")
-    print(f"[資訊] 系統亮點與 AI 導覽 Showcase: {url}/showcase")
+    lan_url = f"http://{local_ip}:{port}" if local_ip and local_ip != "127.0.0.1" else url
+    print(f"[資訊] 系統成功啟動！本機瀏覽網址: {url}")
+    print(f"[資訊] 【真實局域網 IP 連線網址】: {lan_url}")
+    print(f"[資訊] 教師個人門戶網頁: {lan_url}/teacher")
+    print(f"[資訊] 系統亮點與 AI 導覽 Showcase: {lan_url}/showcase")
     cfg = {}
     try:
         if os.path.exists("config_rules.json"):
