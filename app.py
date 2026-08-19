@@ -1556,7 +1556,7 @@ def check_manual_swap_conflicts(source_item, target_day, target_period, target_i
     target_day = str(target_day)
     target_period = str(target_period)
     
-    # 1. Teacher Conflict Check on target_day & target_period
+    # 1. Source Teacher Conflict Check on target_day & target_period
     if s_teacher:
         for item in solved:
             item_id = str(item.get("id"))
@@ -1568,17 +1568,17 @@ def check_manual_swap_conflicts(source_item, target_day, target_period, target_i
                         is_forbidden = True
                         warnings.append(f"⛔ 教師衝堂：【{s_teacher}】老師在週{target_day}第{target_period}節已在【{item.get('class_name')}】授課！")
 
-    # 2. Class Conflict Check on target_day & target_period (when moving to empty slot)
-    if not target_item and s_class:
+    # 2. Source Class Conflict Check on target_day & target_period
+    if s_class:
         for item in solved:
             item_id = str(item.get("id"))
-            if item_id != s_id:
+            if item_id != s_id and (t_id is None or item_id != t_id):
                 if str(item.get("day")) == target_day and str(item.get("period")) == target_period:
                     if str(item.get("class_name", "")).strip() == s_class:
                         is_forbidden = True
                         warnings.append(f"⛔ 班級衝堂：【{s_class}】在週{target_day}第{target_period}節已有【{item.get('subject_name')}】({item.get('teacher_name')})！")
 
-    # 3. Teacher No-Teach Restriction
+    # 3. Source Teacher No-Teach Restriction
     custom_no_teach = cfg.get("custom_no_teach", {})
     t_key = s_tcode or s_teacher
     blocked_slots = custom_no_teach.get(t_key, [])
@@ -1591,6 +1591,7 @@ def check_manual_swap_conflicts(source_item, target_day, target_period, target_i
         t_tcode = str(target_item.get("teacher_code", "")).strip()
         t_class = str(target_item.get("class_name", "")).strip()
         
+        # 4a. Target Teacher Conflict on old_day & old_period
         if t_teacher:
             for item in solved:
                 item_id = str(item.get("id"))
@@ -1601,6 +1602,22 @@ def check_manual_swap_conflicts(source_item, target_day, target_period, target_i
                         if (t_tcode and it_tcode and t_tcode == it_tcode) or (t_teacher and t_teacher == it_teacher):
                             is_forbidden = True
                             warnings.append(f"⛔ 對調衝堂：【{t_teacher}】老師移至原時段(週{old_day}第{old_period}節)會與【{item.get('class_name')}】衝堂！")
+                            
+        # 4b. Target Class Conflict on old_day & old_period
+        if t_class:
+            for item in solved:
+                item_id = str(item.get("id"))
+                if item_id != s_id and item_id != t_id:
+                    if str(item.get("day")) == old_day and str(item.get("period")) == old_period:
+                        if str(item.get("class_name", "")).strip() == t_class:
+                            is_forbidden = True
+                            warnings.append(f"⛔ 對調班級衝堂：【{t_class}】在原時段(週{old_day}第{old_period}節)已有【{item.get('subject_name')}】({item.get('teacher_name')})！")
+
+        # 4c. Target Teacher No-Teach on old_day & old_period
+        t_target_key = t_tcode or t_teacher
+        target_blocked_slots = custom_no_teach.get(t_target_key, [])
+        if f"{old_day}-{old_period}" in target_blocked_slots:
+            warnings.append(f"⚠️ 對調教師禁排：【{t_teacher}】老師設定週{old_day}第{old_period}節為不排課時段！")
 
     return is_forbidden, warnings
 
@@ -1636,11 +1653,12 @@ def api_check_swap_slots(item_id):
                 if source_d == d and source_p == p:
                     slots_status[slot_key] = {"status": "current", "message": "目前時段"}
                 else:
-                    # Find target item at (d, p) for the same class or teacher
+                    # Find target item at (d, p) for the current view (class or teacher)
                     target_item = None
                     for s in solved:
                         if str(s.get("id")) != str(item.get("id")) and str(s.get("day")) == str(d) and str(s.get("period")) == str(p):
-                            if s.get("class_name") == item.get("class_name") or s.get("teacher_name") == item.get("teacher_name"):
+                            if (item.get("class_name") and str(s.get("class_name", "")).strip() == str(item.get("class_name", "")).strip()) or \
+                               (item.get("teacher_name") and str(s.get("teacher_name", "")).strip() == str(item.get("teacher_name", "")).strip()):
                                 target_item = s
                                 break
                     is_forb, warn_list = check_manual_swap_conflicts(item, d, p, target_item, solved, cfg)
@@ -5026,22 +5044,30 @@ def normalize_schedule_record(r):
     }
 
 def get_current_solved_schedules():
-    cfg = load_config_rules()
-    solved = cfg.get("solved_schedules", [])
+    excel_path = os.path.join(os.path.dirname(__file__), "School_Schedule_Solved.xlsx")
+    solved = []
+
+    # Priority 1: Read freshly generated School_Schedule_Solved.xlsx
+    if os.path.exists(excel_path):
+        try:
+            import pandas as pd
+            df = pd.read_excel(excel_path)
+            solved = df.to_dict(orient="records")
+        except Exception as e:
+            print(f"[警告] 讀取 School_Schedule_Solved.xlsx 失敗: {e}")
+
+    # Priority 2: Fallback to config_rules.json
     if not solved:
-        excel_path = os.path.join(os.path.dirname(__file__), "School_Schedule_Solved.xlsx")
-        if os.path.exists(excel_path):
-            try:
-                import pandas as pd
-                df = pd.read_excel(excel_path)
-                solved = df.to_dict(orient="records")
-            except Exception:
-                pass
+        cfg = load_config_rules()
+        solved = cfg.get("solved_schedules", [])
+
+    # Priority 3: Fallback to default 6 class generator
     if not solved:
         solved = generate_default_6class_schedule()
+        cfg = load_config_rules()
         cfg["solved_schedules"] = solved
         save_config_rules(cfg)
-        
+
     normalized = [normalize_schedule_record(r) for r in solved if isinstance(r, dict)]
     return normalized
 
@@ -5402,6 +5428,158 @@ def api_config_groq():
             })
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/server-info", methods=["GET"])
+def api_server_info():
+    """Returns local server network status and real IP address for cross-device links."""
+    try:
+        local_ip = get_local_ip()
+        host = request.host
+        port = host.split(":")[-1] if ":" in host else "5000"
+        scheme = request.scheme or "http"
+        lan_url = f"{scheme}://{local_ip}:{port}" if port not in ("80", "443") else f"{scheme}://{local_ip}"
+        cloud_url = "https://tucheng-school-schedule.onrender.com"
+        github_url = "https://github.com/Albertyoung22/TcSChed"
+        return jsonify({
+            "status": "success",
+            "local_ip": local_ip,
+            "port": port,
+            "lan_url": lan_url,
+            "cloud_url": cloud_url,
+            "github_url": github_url
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/save-config-rule", methods=["POST"])
+def api_save_config_rule():
+    """Saves individual rule config keys dynamically."""
+    try:
+        req = request.get_json(silent=True) or {}
+        key = str(req.get("key", "")).strip()
+        val = req.get("value")
+        if not key:
+            return jsonify({"status": "error", "message": "Key name is required"}), 400
+        cfg = load_config_rules()
+        cfg[key] = val
+        save_config_rules(cfg)
+        return jsonify({"status": "success", "message": f"Rule {key} updated successfully!"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/run-solver", methods=["GET", "POST"])
+def api_trigger_cp_solver():
+    """Triggers CP-SAT solver execution dynamically with live module reloads."""
+    try:
+        import importlib
+        import solve_schedule
+        importlib.reload(solve_schedule)
+        res = solve_schedule.run_solver()
+        return jsonify(res)
+    except Exception as e:
+        return jsonify({"status": "error", "message": f"排課運算失敗: {str(e)}"}), 500
+
+@app.route("/api/health-check", methods=["GET"])
+def api_health_check():
+    """Runs global schedule health inspection & data logic validation with smart pseudo-teacher and joint-event filtering."""
+    try:
+        data = load_schedule_data()
+        solved = get_current_solved_schedules()
+        cfg = load_config_rules()
+
+        teacher_conflicts = []
+        class_conflicts = []
+        no_teach_violations = []
+        fatigue_warnings = []
+
+        slot_teachers = {}
+        slot_classes = {}
+
+        teacher_no_teach = cfg.get("teacher_no_teach", {})
+
+        PSEUDO_TEACHERS = {"學務處", "各班導師", "教務處", "輔導室", "體育組", "總務處", "校長室", "無", "未指定", "待定", "自習"}
+        JOINT_SUBJECTS = {"週會", "班會", "全校活動", "社團活動"}
+
+        for s in solved:
+            day = s.get("day")
+            period = s.get("period")
+            t_name = s.get("teacher_name")
+            t_code = s.get("teacher_code")
+            c_name = str(s.get("class_name") or s.get("class_code") or "")
+            subj = s.get("subject_name", "")
+
+            if not day or not period:
+                continue
+
+            slot_key = (day, period)
+
+            is_pseudo_teacher = (t_name in PSEUDO_TEACHERS) or any(p in (t_name or "") for p in ["導師", "處", "組"])
+            
+            # Taiwanese High School Grouped Electives & Extraction Subjects
+            GROUPED_ELECTIVE_KEYWORDS = [
+                "本土", "語文", "手語", "閩南", "原民", "客家", "自主學習", 
+                "充實補強", "彈性學習", "週期課程", "選修", "抽離", "跨班", 
+                "分組", "輔導", "週會", "班會", "社團", "全校活動"
+            ]
+
+            is_joint_subject = (subj in JOINT_SUBJECTS) or any(k in subj for k in GROUPED_ELECTIVE_KEYWORDS) or ("跨班" in c_name)
+
+            # 1. Check teacher conflict (Only for real individual teachers teaching non-joint subjects)
+            if t_name and not is_pseudo_teacher and not is_joint_subject:
+                t_key = (slot_key, t_name)
+                if t_key in slot_teachers:
+                    other_c = slot_teachers[t_key]
+                    if other_c != c_name:
+                        msg = f"❌ 教師【{t_name}】衝堂：在 星期{day} 第{period}節 同時排了【{other_c}】與【{c_name}】({subj})"
+                        if msg not in teacher_conflicts:
+                            teacher_conflicts.append(msg)
+                else:
+                    slot_teachers[t_key] = c_name
+
+            # 2. Check class conflict (Only for standard non-cross-class sessions)
+            if c_name and "跨班" not in c_name and not is_joint_subject:
+                c_key = (slot_key, c_name)
+                if c_key in slot_classes:
+                    other_info = slot_classes[c_key]
+                    other_subj = other_info.split("(")[0]
+                    if other_subj != subj:
+                        msg = f"❌ 班級【{c_name}】衝堂：在 星期{day} 第{period}節 同時排了多門課程 ({other_info} 與 {subj})"
+                        if msg not in class_conflicts:
+                            class_conflicts.append(msg)
+                else:
+                    slot_classes[c_key] = f"{subj}({t_name or ''})"
+
+            # 3. Check teacher no-teach restriction
+            if t_code and t_code in teacher_no_teach and not is_pseudo_teacher:
+                forbidden_slots = teacher_no_teach[t_code]
+                slot_str = f"{day}-{period}"
+                if slot_str in forbidden_slots:
+                    msg = f"⚠️ 教師【{t_name}】禁排違規：星期{day} 第{period}節 被排課【{c_name}】({subj})，違反個人不排課設定"
+                    if msg not in no_teach_violations:
+                        no_teach_violations.append(msg)
+
+            # 4. Check Period 8 constraint: Regular main courses must NOT be in Period 8
+            if str(period) == "8":
+                is_tutoring = (subj.endswith("輔導") or ("輔導" in subj[1:]) or any(k in subj for k in ["第八", "8節", "課後", "補救"])) if subj else False
+                if subj and (subj.startswith("輔導活動") or subj == "輔導"):
+                    is_tutoring = False
+                if not is_tutoring and not is_pseudo_teacher:
+                    msg = f"⚠️ 正課排入第8節違規：班級【{c_name}】星期{day} 第8節 被安排了正課【{subj}】({t_name})，按規定正課僅能排在第1~7節"
+                    if msg not in no_teach_violations:
+                        no_teach_violations.append(msg)
+
+        total_issues = len(teacher_conflicts) + len(class_conflicts) + len(no_teach_violations) + len(fatigue_warnings)
+
+        return jsonify({
+            "status": "success",
+            "teacher_conflicts": teacher_conflicts,
+            "class_conflicts": class_conflicts,
+            "no_teach_violations": no_teach_violations,
+            "fatigue_warnings": fatigue_warnings,
+            "total_issues": total_issues
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": f"診斷時發生錯誤: {str(e)}"}), 500
 
 @app.route("/api/ai-chat", methods=["POST"])
 def api_ai_chat():
