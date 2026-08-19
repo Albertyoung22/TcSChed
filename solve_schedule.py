@@ -21,7 +21,7 @@ def find_latest_dbf_dir():
     return None
 
 def get_unit_collapse_key(u, custom_sim_groups):
-    if u.get("prefilled_day") is not None and u.get("prefilled_period") is not None:
+    if u.get("manual_locked") and u.get("prefilled_day") is not None and u.get("prefilled_period") is not None:
         return ("PRE", u["prefilled_day"], u["prefilled_period"])
     if u.get("sim_group"):
         return ("SIM", u["sim_group"])
@@ -30,7 +30,25 @@ def get_unit_collapse_key(u, custom_sim_groups):
         for m in members:
             if isinstance(m, dict) and str(m.get("class_code", "")).strip() == str(u.get("class_code", "")).strip() and str(m.get("subject_code", "")).strip() == str(u.get("subject_code", "")).strip():
                 return ("CUSTOM_SIM", idx)
+    if u.get("prefilled_day") is not None and u.get("prefilled_period") is not None:
+        return ("DBF_SLOT", u["class_code"], u["prefilled_day"], u["prefilled_period"])
     return ("UNIT", u["unit_id"])
+
+def is_period_8_tutoring_subject(subj_name):
+    """
+    Distinguishes Period 8 Tutoring courses (e.g. 英文輔導, 國文輔導, 數學輔導, 理化輔導)
+    from Regular curriculum subjects (e.g. 輔導活動, 輔導).
+    """
+    if not subj_name:
+        return False
+    s = str(subj_name).strip()
+    if s.startswith("輔導活動") or s == "輔導" or "輔導室" in s:
+        return False
+    if s.endswith("輔導") or ("輔導" in s[1:]):
+        return True
+    if any(kw in s for kw in ["第八", "8節", "課後", "補救"]):
+        return True
+    return False
 
 def run_solver():
     logs = []
@@ -243,16 +261,38 @@ def run_solver():
         model.Add(period_vars[uid] == sum(p * x[uid, d, p] for d in days for p in periods))
         model.Add(sum(x[uid, d, p] for d in days for p in periods) == 1)
 
-        # Only enforce prefilled_day/prefilled_period if explicitly marked as manual_locked!
-        # Otherwise, allow CP-SAT solver to reschedule freely to honor all rules (simultaneous groups, no-teach, venue limits, etc.)
+        # Enforce School Scheduling Rule:
+        # Regular courses (正課) -> Heavily penalized in Period 8.
+        # Tutoring / Remedial courses (輔導課) -> Heavily penalized in Periods 1~7.
+        subj_name = str(u.get("subject_name", ""))
+        is_tutoring = is_period_8_tutoring_subject(subj_name)
+
         if u.get("manual_locked") and u["prefilled_day"] is not None and u["prefilled_period"] is not None:
             model.Add(day_vars[uid] == u["prefilled_day"])
+            model.Add(period_vars[uid] == u["prefilled_period"])
+
     # Initialize Soft Constraint Penalty Lists
     no_teach_violations = []
     no_sub_violations = []
     fixed_slot_violations = []
     afternoon_penalties = []
     pe_noon_penalties = []
+    period_8_regular_penalties = []
+    tutoring_daytime_penalties = []
+
+    restrict_period_8 = custom_rules.get("restrict_period_8_for_tutoring_only", True)
+
+    for u in units_list:
+        uid = u["unit_id"]
+        subj_name = str(u.get("subject_name", ""))
+        is_tutoring = is_period_8_tutoring_subject(subj_name)
+        if not u.get("manual_locked") and restrict_period_8:
+            if not is_tutoring:
+                # Regular course (正課): HARD CONSTRAINT -> Strictly Periods 1~7 ONLY!
+                model.Add(period_vars[uid] <= 7)
+            else:
+                # Tutoring course (輔導課): HARD CONSTRAINT -> Strictly Period 8 ONLY!
+                model.Add(period_vars[uid] == 8)
 
     # 1. Simultaneous Groups (同時群)
     sim_groups = {}
