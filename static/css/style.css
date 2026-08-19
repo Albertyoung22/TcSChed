@@ -1388,6 +1388,28 @@ body {
     color: #ff3b30 !important;
 }
 
+.maximize-modal-btn:hover {
+    background: rgba(52, 199, 89, 0.15) !important;
+    color: #34c759 !important;
+}
+
+/* Fullscreen Maximized Modal (Apple macOS Style) */
+.modal-content.fullscreen-modal {
+    width: 98vw !important;
+    max-width: 98vw !important;
+    height: 96vh !important;
+    max-height: 96vh !important;
+    border-radius: 14px !important;
+    margin: 0 !important;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.modal-content.fullscreen-modal .modal-body {
+    max-height: calc(96vh - 130px) !important;
+    height: calc(96vh - 130px) !important;
+    flex: 1 !important;
+}
+
 .modal-body {
     padding: 20px 24px !important;
     overflow-y: auto !important;
