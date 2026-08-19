@@ -3982,7 +3982,7 @@
       "teacher_name": "吳昀蓁",
       "day": "5",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "402_4_2",
@@ -3994,7 +3994,7 @@
       "teacher_name": "唐藝秦",
       "day": "4",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "403_5_5",
@@ -4006,7 +4006,7 @@
       "teacher_name": "吳美枝",
       "day": "5",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "501_5_7",
@@ -4018,7 +4018,7 @@
       "teacher_name": "陳嬿竹",
       "day": "5",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "601_5_2",
@@ -4030,7 +4030,7 @@
       "teacher_name": "陳姿伊",
       "day": "5",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "602_3_6",
@@ -4042,7 +4042,7 @@
       "teacher_name": "蔡英鈴",
       "day": "3",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "603_5_7",
@@ -4054,7 +4054,7 @@
       "teacher_name": "王映緹",
       "day": "5",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "101_4_7",
@@ -4066,7 +4066,7 @@
       "teacher_name": "謝旻勳",
       "day": "4",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "201_4_2",
@@ -4078,7 +4078,7 @@
       "teacher_name": "林秋萍",
       "day": "4",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "301_5_1",
@@ -4090,7 +4090,7 @@
       "teacher_name": "游貞維",
       "day": "5",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "203_5_3",
@@ -4102,7 +4102,7 @@
       "teacher_name": "吳佩蓁",
       "day": "5",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "302_5_2",
@@ -4114,7 +4114,7 @@
       "teacher_name": "謝明訓",
       "day": "5",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "102_4_3",
@@ -4126,7 +4126,7 @@
       "teacher_name": "徐毓君",
       "day": "4",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "103_5_2",
@@ -4138,7 +4138,7 @@
       "teacher_name": "張寧",
       "day": "5",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "202_4_7",
@@ -4150,7 +4150,7 @@
       "teacher_name": "楊佩承",
       "day": "4",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "401_5_3",
@@ -4162,7 +4162,7 @@
       "teacher_name": "陳嬿竹",
       "day": "5",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "402_2_5",
@@ -4174,7 +4174,7 @@
       "teacher_name": "吳昀蓁",
       "day": "2",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "403_5_7",
@@ -4186,7 +4186,7 @@
       "teacher_name": "廖卿妃",
       "day": "5",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "501_1_2",
@@ -4198,7 +4198,7 @@
       "teacher_name": "汪雪憬",
       "day": "1",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "502_1_1",
@@ -4210,7 +4210,7 @@
       "teacher_name": "呂明蔘",
       "day": "1",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "601_1_1",
@@ -4222,7 +4222,7 @@
       "teacher_name": "陳姿伊",
       "day": "1",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "602_1_1",
@@ -4234,7 +4234,7 @@
       "teacher_name": "蔡英鈴",
       "day": "1",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "603_1_7",
@@ -4246,7 +4246,7 @@
       "teacher_name": "孫蜂揮",
       "day": "1",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "101_5_6",
@@ -4258,7 +4258,7 @@
       "teacher_name": "陳景昇",
       "day": "5",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "201_1_2",
@@ -4270,7 +4270,7 @@
       "teacher_name": "陳嘉元",
       "day": "1",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "303_1_1",
@@ -4282,7 +4282,7 @@
       "teacher_name": "黃雅琪",
       "day": "1",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "301_2_6",
@@ -4294,7 +4294,7 @@
       "teacher_name": "劉顓瑋",
       "day": "2",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "203_2_1",
@@ -4306,7 +4306,7 @@
       "teacher_name": "蔡秉晃",
       "day": "2",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "302_4_1",
@@ -4318,7 +4318,7 @@
       "teacher_name": "張惟珽",
       "day": "4",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "102_1_3",
@@ -4330,7 +4330,7 @@
       "teacher_name": "戴琮諺",
       "day": "1",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "103_1_3",
@@ -4342,7 +4342,7 @@
       "teacher_name": "陶正忠",
       "day": "1",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "202_5_6",
@@ -4354,7 +4354,7 @@
       "teacher_name": "潘麗雲",
       "day": "5",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "503_5_2",
@@ -4366,7 +4366,7 @@
       "teacher_name": "戴延諭",
       "day": "5",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "503_5_6",
@@ -4378,7 +4378,7 @@
       "teacher_name": "葉又寧",
       "day": "5",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "401_5_3",
@@ -4390,7 +4390,7 @@
       "teacher_name": "吳昀蓁",
       "day": "5",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "402_5_6",
@@ -4402,7 +4402,7 @@
       "teacher_name": "唐藝秦",
       "day": "5",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "403_5_3",
@@ -4414,7 +4414,7 @@
       "teacher_name": "吳美枝",
       "day": "5",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "501_5_6",
@@ -4426,7 +4426,7 @@
       "teacher_name": "陳嬿竹",
       "day": "5",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "502_5_6",
@@ -4438,7 +4438,7 @@
       "teacher_name": "蘇瑞梧",
       "day": "5",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "601_2_7",
@@ -4450,7 +4450,7 @@
       "teacher_name": "陳姿伊",
       "day": "2",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "602_5_2",
@@ -4462,7 +4462,7 @@
       "teacher_name": "蔡英鈴",
       "day": "5",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "603_5_6",
@@ -4474,7 +4474,7 @@
       "teacher_name": "王映緹",
       "day": "5",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "101_3_3",
@@ -4486,7 +4486,7 @@
       "teacher_name": "謝旻勳",
       "day": "3",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "201_4_7",
@@ -4498,7 +4498,7 @@
       "teacher_name": "林秋萍",
       "day": "4",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "303_4_2",
@@ -4510,7 +4510,7 @@
       "teacher_name": "謝又安",
       "day": "4",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "301_5_7",
@@ -4522,7 +4522,7 @@
       "teacher_name": "游貞維",
       "day": "5",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "302_5_7",
@@ -4534,7 +4534,7 @@
       "teacher_name": "謝明訓",
       "day": "5",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "102_3_2",
@@ -4546,7 +4546,7 @@
       "teacher_name": "徐毓君",
       "day": "3",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "202_4_6",
@@ -4558,7 +4558,7 @@
       "teacher_name": "楊佩承",
       "day": "4",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "401_1_7",
@@ -4570,7 +4570,7 @@
       "teacher_name": "陳嬿竹",
       "day": "1",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "402_5_4",
@@ -4582,7 +4582,7 @@
       "teacher_name": "吳昀蓁",
       "day": "5",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "403_2_1",
@@ -4594,7 +4594,7 @@
       "teacher_name": "廖卿妃",
       "day": "2",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "501_2_3",
@@ -4606,7 +4606,7 @@
       "teacher_name": "汪雪憬",
       "day": "2",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "502_1_2",
@@ -4618,7 +4618,7 @@
       "teacher_name": "呂明蔘",
       "day": "1",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "601_1_1",
@@ -4630,7 +4630,7 @@
       "teacher_name": "陳姿伊",
       "day": "1",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "602_1_1",
@@ -4642,7 +4642,7 @@
       "teacher_name": "蔡英鈴",
       "day": "1",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "603_3_7",
@@ -4654,7 +4654,7 @@
       "teacher_name": "孫蜂揮",
       "day": "3",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "101_3_6",
@@ -4666,7 +4666,7 @@
       "teacher_name": "陳景昇",
       "day": "3",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "201_5_2",
@@ -4678,7 +4678,7 @@
       "teacher_name": "陳嘉元",
       "day": "5",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "303_5_2",
@@ -4690,7 +4690,7 @@
       "teacher_name": "黃雅琪",
       "day": "5",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "301_1_2",
@@ -4702,7 +4702,7 @@
       "teacher_name": "劉顓瑋",
       "day": "1",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "203_1_2",
@@ -4714,7 +4714,7 @@
       "teacher_name": "蔡秉晃",
       "day": "1",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "302_1_1",
@@ -4726,7 +4726,7 @@
       "teacher_name": "張惟珽",
       "day": "1",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "102_5_7",
@@ -4738,7 +4738,7 @@
       "teacher_name": "戴琮諺",
       "day": "5",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "103_3_2",
@@ -4750,7 +4750,7 @@
       "teacher_name": "陶正忠",
       "day": "3",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "202_4_3",
@@ -4762,7 +4762,7 @@
       "teacher_name": "潘麗雲",
       "day": "4",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "503_5_3",
@@ -4774,7 +4774,7 @@
       "teacher_name": "戴延諭",
       "day": "5",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "503_5_7",
@@ -4786,7 +4786,7 @@
       "teacher_name": "葉又寧",
       "day": "5",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "601_5_3",
@@ -4794,11 +4794,11 @@
       "class_name": "高三忠",
       "subject_code": "943",
       "subject_name": "高三多元選修",
-      "teacher_code": "",
-      "teacher_name": "",
+      "teacher_code": "nan",
+      "teacher_name": "nan",
       "day": "5",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "602_5_5",
@@ -4806,11 +4806,11 @@
       "class_name": "高三孝",
       "subject_code": "943",
       "subject_name": "高三多元選修",
-      "teacher_code": "",
-      "teacher_name": "",
+      "teacher_code": "nan",
+      "teacher_name": "nan",
       "day": "5",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "604_3_1",
@@ -4822,7 +4822,7 @@
       "teacher_name": "王映緹",
       "day": "3",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "604_5_2",
@@ -4834,7 +4834,7 @@
       "teacher_name": "陳惠芬",
       "day": "5",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "604_1_2",
@@ -4846,7 +4846,7 @@
       "teacher_name": "蔡英鈴",
       "day": "1",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "601_4_6",
@@ -4854,11 +4854,11 @@
       "class_name": "高三忠",
       "subject_code": "958",
       "subject_name": "高三彈性充實補強1",
-      "teacher_code": "",
-      "teacher_name": "",
+      "teacher_code": "nan",
+      "teacher_name": "nan",
       "day": "4",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "602_4_6",
@@ -4866,11 +4866,11 @@
       "class_name": "高三孝",
       "subject_code": "958",
       "subject_name": "高三彈性充實補強1",
-      "teacher_code": "",
-      "teacher_name": "",
+      "teacher_code": "nan",
+      "teacher_name": "nan",
       "day": "4",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "604_1_5",
@@ -4906,7 +4906,7 @@
       "teacher_name": "蔡英鈴",
       "day": "5",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "301_1_1",
@@ -4918,7 +4918,7 @@
       "teacher_name": "黃慰華",
       "day": "1",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "302_4_7",
@@ -4930,7 +4930,7 @@
       "teacher_name": "黃冠寧",
       "day": "4",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "601_5_7",
@@ -4938,11 +4938,11 @@
       "class_name": "高三忠",
       "subject_code": "945",
       "subject_name": "高三加深加廣選修A",
-      "teacher_code": "",
-      "teacher_name": "",
+      "teacher_code": "nan",
+      "teacher_name": "nan",
       "day": "5",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "601_5_7",
@@ -4950,11 +4950,11 @@
       "class_name": "高三忠",
       "subject_code": "945",
       "subject_name": "高三加深加廣選修A",
-      "teacher_code": "",
-      "teacher_name": "",
+      "teacher_code": "nan",
+      "teacher_name": "nan",
       "day": "5",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "602_5_7",
@@ -4962,11 +4962,11 @@
       "class_name": "高三孝",
       "subject_code": "945",
       "subject_name": "高三加深加廣選修A",
-      "teacher_code": "",
-      "teacher_name": "",
+      "teacher_code": "nan",
+      "teacher_name": "nan",
       "day": "5",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "602_5_7",
@@ -4974,11 +4974,11 @@
       "class_name": "高三孝",
       "subject_code": "945",
       "subject_name": "高三加深加廣選修A",
-      "teacher_code": "",
-      "teacher_name": "",
+      "teacher_code": "nan",
+      "teacher_name": "nan",
       "day": "5",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "604_1_1",
@@ -4990,7 +4990,7 @@
       "teacher_name": "汪雪憬",
       "day": "1",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "604_1_1",
@@ -5002,7 +5002,7 @@
       "teacher_name": "汪雪憬",
       "day": "1",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "604_1_3",
@@ -5026,7 +5026,7 @@
       "teacher_name": "廖卿妃",
       "day": "5",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "302_5_5",
@@ -5038,7 +5038,7 @@
       "teacher_name": "戴美倫",
       "day": "5",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "301_1_4",
@@ -5050,7 +5050,7 @@
       "teacher_name": "黃冠寧",
       "day": "1",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "601_5_5",
@@ -5058,11 +5058,11 @@
       "class_name": "高三忠",
       "subject_code": "945",
       "subject_name": "高三加深加廣選修A",
-      "teacher_code": "",
-      "teacher_name": "",
+      "teacher_code": "nan",
+      "teacher_name": "nan",
       "day": "5",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "602_4_7",
@@ -5070,11 +5070,11 @@
       "class_name": "高三孝",
       "subject_code": "945",
       "subject_name": "高三加深加廣選修A",
-      "teacher_code": "",
-      "teacher_name": "",
+      "teacher_code": "nan",
+      "teacher_name": "nan",
       "day": "4",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "604_1_6",
@@ -5086,7 +5086,7 @@
       "teacher_name": "汪雪憬",
       "day": "1",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "604_3_5",
@@ -5110,7 +5110,7 @@
       "teacher_name": "廖卿妃",
       "day": "2",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "302_5_6",
@@ -5122,7 +5122,7 @@
       "teacher_name": "楊佩承",
       "day": "5",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "301_4_2",
@@ -5134,7 +5134,7 @@
       "teacher_name": "戴美倫",
       "day": "4",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "604_1_5",
@@ -5146,7 +5146,7 @@
       "teacher_name": "林柏宏",
       "day": "1",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "604_1_4",
@@ -5166,11 +5166,11 @@
       "class_name": "高三忠",
       "subject_code": "959",
       "subject_name": "高三彈性充實補強2",
-      "teacher_code": "",
-      "teacher_name": "",
+      "teacher_code": "nan",
+      "teacher_name": "nan",
       "day": "5",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "602_3_3",
@@ -5178,11 +5178,11 @@
       "class_name": "高三孝",
       "subject_code": "959",
       "subject_name": "高三彈性充實補強2",
-      "teacher_code": "",
-      "teacher_name": "",
+      "teacher_code": "nan",
+      "teacher_name": "nan",
       "day": "3",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "604_3_2",
@@ -5194,7 +5194,7 @@
       "teacher_name": "戴延諭",
       "day": "3",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "604_1_3",
@@ -5230,7 +5230,7 @@
       "teacher_name": "林秋琴",
       "day": "1",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "403_3_1",
@@ -5242,7 +5242,7 @@
       "teacher_name": "杜鴻秋",
       "day": "3",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "602_5_6",
@@ -5250,11 +5250,11 @@
       "class_name": "高三孝",
       "subject_code": "960",
       "subject_name": "高三彈性充實補強3",
-      "teacher_code": "",
-      "teacher_name": "",
+      "teacher_code": "nan",
+      "teacher_name": "nan",
       "day": "5",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "604_1_3",
@@ -5266,7 +5266,7 @@
       "teacher_name": "吳昀蓁",
       "day": "1",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "604_2_3",
@@ -5278,7 +5278,7 @@
       "teacher_name": "王映緹",
       "day": "2",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "604_1_3",
@@ -5302,7 +5302,7 @@
       "teacher_name": "杜鴻秋",
       "day": "4",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "101_2_4",
@@ -5314,7 +5314,7 @@
       "teacher_name": "林秋琴",
       "day": "2",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "501_5_4",
@@ -5322,11 +5322,11 @@
       "class_name": "高二忠",
       "subject_code": "942",
       "subject_name": "高二多元選修",
-      "teacher_code": "",
-      "teacher_name": "",
+      "teacher_code": "nan",
+      "teacher_name": "nan",
       "day": "5",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "502_5_5",
@@ -5334,11 +5334,11 @@
       "class_name": "高二孝",
       "subject_code": "942",
       "subject_name": "高二多元選修",
-      "teacher_code": "",
-      "teacher_name": "",
+      "teacher_code": "nan",
+      "teacher_name": "nan",
       "day": "5",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "504_5_7",
@@ -5362,7 +5362,7 @@
       "teacher_name": "蘇瑞梧",
       "day": "3",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "504_2_2",
@@ -5374,7 +5374,7 @@
       "teacher_name": "汪雪憬",
       "day": "2",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "401_5_4",
@@ -5386,7 +5386,7 @@
       "teacher_name": "陳冠杏",
       "day": "5",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "601_4_7",
@@ -5394,11 +5394,11 @@
       "class_name": "高三忠",
       "subject_code": "946",
       "subject_name": "高三加深加廣選修B",
-      "teacher_code": "",
-      "teacher_name": "",
+      "teacher_code": "nan",
+      "teacher_name": "nan",
       "day": "4",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "604_4_4",
@@ -5410,7 +5410,7 @@
       "teacher_name": "廖卿妃",
       "day": "4",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "604_1_2",
@@ -5422,7 +5422,7 @@
       "teacher_name": "楊敦州",
       "day": "1",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "604_1_5",
@@ -5434,7 +5434,7 @@
       "teacher_name": "吳美枝",
       "day": "1",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "401_4_2",
@@ -5446,7 +5446,7 @@
       "teacher_name": "邵書琴",
       "day": "4",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "401_4_2",
@@ -5458,7 +5458,7 @@
       "teacher_name": "郭姝欣",
       "day": "4",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "402_5_5",
@@ -5470,7 +5470,7 @@
       "teacher_name": "陳冠杏",
       "day": "5",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "402_4_4",
@@ -5482,7 +5482,7 @@
       "teacher_name": "邵書琴",
       "day": "4",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "402_4_4",
@@ -5494,7 +5494,7 @@
       "teacher_name": "郭姝欣",
       "day": "4",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "601_4_5",
@@ -5502,11 +5502,11 @@
       "class_name": "高三忠",
       "subject_code": "946",
       "subject_name": "高三加深加廣選修B",
-      "teacher_code": "",
-      "teacher_name": "",
+      "teacher_code": "nan",
+      "teacher_name": "nan",
       "day": "4",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "602_4_5",
@@ -5514,11 +5514,11 @@
       "class_name": "高三孝",
       "subject_code": "946",
       "subject_name": "高三加深加廣選修B",
-      "teacher_code": "",
-      "teacher_name": "",
+      "teacher_code": "nan",
+      "teacher_name": "nan",
       "day": "4",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "604_1_1",
@@ -5530,7 +5530,7 @@
       "teacher_name": "廖卿妃",
       "day": "1",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "604_1_1",
@@ -5540,9 +5540,9 @@
       "subject_name": "領域課程：科技應用專題",
       "teacher_code": "4.0",
       "teacher_name": "楊敦州",
-      "day": "1",
+      "day": "2",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "604_1_3",
@@ -5554,7 +5554,7 @@
       "teacher_name": "吳美枝",
       "day": "1",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "401_4_3",
@@ -5562,11 +5562,11 @@
       "class_name": "高一忠",
       "subject_code": "941",
       "subject_name": "高一多元選修",
-      "teacher_code": "",
-      "teacher_name": "",
+      "teacher_code": "nan",
+      "teacher_name": "nan",
       "day": "4",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "402_3_7",
@@ -5574,11 +5574,11 @@
       "class_name": "高一孝",
       "subject_code": "941",
       "subject_name": "高一多元選修",
-      "teacher_code": "",
-      "teacher_name": "",
+      "teacher_code": "nan",
+      "teacher_name": "nan",
       "day": "3",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "404_5_1",
@@ -5590,7 +5590,7 @@
       "teacher_name": "唐藝秦",
       "day": "5",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "404_1_3",
@@ -5602,7 +5602,7 @@
       "teacher_name": "梁念慈",
       "day": "1",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "404_1_2",
@@ -5614,7 +5614,7 @@
       "teacher_name": "陳惠芬",
       "day": "1",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "404_2_5",
@@ -5626,7 +5626,7 @@
       "teacher_name": "林蔚松",
       "day": "2",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "404_1_1",
@@ -5638,7 +5638,7 @@
       "teacher_name": "王淑誼",
       "day": "1",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "404_4_4",
@@ -5650,7 +5650,7 @@
       "teacher_name": "吳昀蓁",
       "day": "4",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "401_3_3",
@@ -5658,11 +5658,11 @@
       "class_name": "高一忠",
       "subject_code": "941",
       "subject_name": "高一多元選修",
-      "teacher_code": "",
-      "teacher_name": "",
+      "teacher_code": "nan",
+      "teacher_name": "nan",
       "day": "3",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "402_5_3",
@@ -5670,11 +5670,11 @@
       "class_name": "高一孝",
       "subject_code": "941",
       "subject_name": "高一多元選修",
-      "teacher_code": "",
-      "teacher_name": "",
+      "teacher_code": "nan",
+      "teacher_name": "nan",
       "day": "5",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "404_1_4",
@@ -5686,7 +5686,7 @@
       "teacher_name": "唐藝秦",
       "day": "1",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "404_2_2",
@@ -5698,7 +5698,7 @@
       "teacher_name": "梁念慈",
       "day": "2",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "404_1_1",
@@ -5710,7 +5710,7 @@
       "teacher_name": "陳惠芬",
       "day": "1",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "404_2_1",
@@ -5722,7 +5722,7 @@
       "teacher_name": "林蔚松",
       "day": "2",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "404_2_6",
@@ -5734,7 +5734,7 @@
       "teacher_name": "王淑誼",
       "day": "2",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "404_1_6",
@@ -5746,7 +5746,7 @@
       "teacher_name": "吳昀蓁",
       "day": "1",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "501_5_5",
@@ -5754,11 +5754,11 @@
       "class_name": "高二忠",
       "subject_code": "957",
       "subject_name": "高二彈性充實補強",
-      "teacher_code": "",
-      "teacher_name": "",
+      "teacher_code": "nan",
+      "teacher_name": "nan",
       "day": "5",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "502_5_7",
@@ -5766,11 +5766,11 @@
       "class_name": "高二孝",
       "subject_code": "957",
       "subject_name": "高二彈性充實補強",
-      "teacher_code": "",
-      "teacher_name": "",
+      "teacher_code": "nan",
+      "teacher_name": "nan",
       "day": "5",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "504_1_2",
@@ -5782,7 +5782,7 @@
       "teacher_name": "張仕芳",
       "day": "1",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "504_1_3",
@@ -5794,7 +5794,7 @@
       "teacher_name": "蘇瑞梧",
       "day": "1",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "504_2_3",
@@ -5806,7 +5806,7 @@
       "teacher_name": "陳嬿竹",
       "day": "2",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "401_4_7",
@@ -5814,11 +5814,11 @@
       "class_name": "高一忠",
       "subject_code": "935",
       "subject_name": "彈性學習-週期課程",
-      "teacher_code": "",
-      "teacher_name": "",
+      "teacher_code": "nan",
+      "teacher_name": "nan",
       "day": "4",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "402_5_1",
@@ -5826,11 +5826,11 @@
       "class_name": "高一孝",
       "subject_code": "935",
       "subject_name": "彈性學習-週期課程",
-      "teacher_code": "",
-      "teacher_name": "",
+      "teacher_code": "nan",
+      "teacher_name": "nan",
       "day": "5",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "501_4_7",
@@ -5838,11 +5838,11 @@
       "class_name": "高二忠",
       "subject_code": "935",
       "subject_name": "彈性學習-週期課程",
-      "teacher_code": "",
-      "teacher_name": "",
+      "teacher_code": "nan",
+      "teacher_name": "nan",
       "day": "4",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "502_5_1",
@@ -5850,11 +5850,11 @@
       "class_name": "高二孝",
       "subject_code": "935",
       "subject_name": "彈性學習-週期課程",
-      "teacher_code": "",
-      "teacher_name": "",
+      "teacher_code": "nan",
+      "teacher_name": "nan",
       "day": "5",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "501_1_1",
@@ -5862,11 +5862,11 @@
       "class_name": "高二忠",
       "subject_code": "928",
       "subject_name": "彈性學習-自主學習",
-      "teacher_code": "",
-      "teacher_name": "",
+      "teacher_code": "nan",
+      "teacher_name": "nan",
       "day": "1",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "502_1_1",
@@ -5874,11 +5874,11 @@
       "class_name": "高二孝",
       "subject_code": "928",
       "subject_name": "彈性學習-自主學習",
-      "teacher_code": "",
-      "teacher_name": "",
+      "teacher_code": "nan",
+      "teacher_name": "nan",
       "day": "1",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "401_1_1",
@@ -5886,11 +5886,11 @@
       "class_name": "高一忠",
       "subject_code": "956",
       "subject_name": "高一彈性充實補強",
-      "teacher_code": "",
-      "teacher_name": "",
+      "teacher_code": "nan",
+      "teacher_name": "nan",
       "day": "1",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "402_1_1",
@@ -5898,11 +5898,11 @@
       "class_name": "高一孝",
       "subject_code": "956",
       "subject_name": "高一彈性充實補強",
-      "teacher_code": "",
-      "teacher_name": "",
+      "teacher_code": "nan",
+      "teacher_name": "nan",
       "day": "1",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "404_3_1",
@@ -5914,7 +5914,7 @@
       "teacher_name": "林蔚松",
       "day": "3",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "404_1_1",
@@ -5926,7 +5926,7 @@
       "teacher_name": "唐藝秦",
       "day": "1",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "404_2_1",
@@ -5938,7 +5938,7 @@
       "teacher_name": "陳姿伊",
       "day": "2",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "504_1_2",
@@ -5950,7 +5950,7 @@
       "teacher_name": "戴嘉靚",
       "day": "1",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "504_1_2",
@@ -5962,7 +5962,7 @@
       "teacher_name": "蕭欣怡",
       "day": "1",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "504_1_1",
@@ -5974,7 +5974,7 @@
       "teacher_name": "王淑誼",
       "day": "1",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "404_4_1",
@@ -5986,7 +5986,7 @@
       "teacher_name": "郭姝欣",
       "day": "4",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "404_4_1",
@@ -5998,7 +5998,7 @@
       "teacher_name": "王淑誼",
       "day": "4",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "404_4_1",
@@ -6010,7 +6010,7 @@
       "teacher_name": "蕭欣怡",
       "day": "4",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "504_2_1",
@@ -6022,7 +6022,7 @@
       "teacher_name": "林柏宏",
       "day": "2",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "504_2_1",
@@ -6034,7 +6034,7 @@
       "teacher_name": "戴嘉靚",
       "day": "2",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "401_4_6",
@@ -6042,11 +6042,11 @@
       "class_name": "高一忠",
       "subject_code": "935",
       "subject_name": "彈性學習-週期課程",
-      "teacher_code": "",
-      "teacher_name": "",
+      "teacher_code": "nan",
+      "teacher_name": "nan",
       "day": "4",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "402_4_7",
@@ -6054,11 +6054,11 @@
       "class_name": "高一孝",
       "subject_code": "935",
       "subject_name": "彈性學習-週期課程",
-      "teacher_code": "",
-      "teacher_name": "",
+      "teacher_code": "nan",
+      "teacher_name": "nan",
       "day": "4",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "501_4_6",
@@ -6066,11 +6066,11 @@
       "class_name": "高二忠",
       "subject_code": "935",
       "subject_name": "彈性學習-週期課程",
-      "teacher_code": "",
-      "teacher_name": "",
+      "teacher_code": "nan",
+      "teacher_name": "nan",
       "day": "4",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "502_4_5",
@@ -6078,11 +6078,11 @@
       "class_name": "高二孝",
       "subject_code": "935",
       "subject_name": "彈性學習-週期課程",
-      "teacher_code": "",
-      "teacher_name": "",
+      "teacher_code": "nan",
+      "teacher_name": "nan",
       "day": "4",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "501_1_1",
@@ -6090,11 +6090,11 @@
       "class_name": "高二忠",
       "subject_code": "928",
       "subject_name": "彈性學習-自主學習",
-      "teacher_code": "",
-      "teacher_name": "",
+      "teacher_code": "nan",
+      "teacher_name": "nan",
       "day": "1",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "502_1_1",
@@ -6102,11 +6102,11 @@
       "class_name": "高二孝",
       "subject_code": "928",
       "subject_name": "彈性學習-自主學習",
-      "teacher_code": "",
-      "teacher_name": "",
+      "teacher_code": "nan",
+      "teacher_name": "nan",
       "day": "1",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "401_1_1",
@@ -6114,11 +6114,11 @@
       "class_name": "高一忠",
       "subject_code": "956",
       "subject_name": "高一彈性充實補強",
-      "teacher_code": "",
-      "teacher_name": "",
+      "teacher_code": "nan",
+      "teacher_name": "nan",
       "day": "1",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "402_1_1",
@@ -6126,11 +6126,11 @@
       "class_name": "高一孝",
       "subject_code": "956",
       "subject_name": "高一彈性充實補強",
-      "teacher_code": "",
-      "teacher_name": "",
+      "teacher_code": "nan",
+      "teacher_name": "nan",
       "day": "1",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "404_2_1",
@@ -6142,7 +6142,7 @@
       "teacher_name": "林蔚松",
       "day": "2",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "404_4_1",
@@ -6154,7 +6154,7 @@
       "teacher_name": "唐藝秦",
       "day": "4",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "404_1_3",
@@ -6166,7 +6166,7 @@
       "teacher_name": "陳姿伊",
       "day": "1",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "504_1_1",
@@ -6178,7 +6178,7 @@
       "teacher_name": "戴嘉靚",
       "day": "1",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "504_1_1",
@@ -6190,7 +6190,7 @@
       "teacher_name": "蕭欣怡",
       "day": "1",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "504_1_2",
@@ -6202,7 +6202,7 @@
       "teacher_name": "王淑誼",
       "day": "1",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "404_1_2",
@@ -6214,7 +6214,7 @@
       "teacher_name": "郭姝欣",
       "day": "1",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "404_1_2",
@@ -6226,7 +6226,7 @@
       "teacher_name": "王淑誼",
       "day": "1",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "404_1_2",
@@ -6238,7 +6238,7 @@
       "teacher_name": "蕭欣怡",
       "day": "1",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "504_5_7",
@@ -6250,7 +6250,7 @@
       "teacher_name": "林柏宏",
       "day": "5",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "504_5_7",
@@ -6262,7 +6262,7 @@
       "teacher_name": "戴嘉靚",
       "day": "5",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "101_5_8",
@@ -6274,7 +6274,7 @@
       "teacher_name": "張世宗",
       "day": "5",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "102_5_8",
@@ -6286,7 +6286,7 @@
       "teacher_name": "張世宗",
       "day": "5",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "201_4_8",
@@ -6298,7 +6298,7 @@
       "teacher_name": "楊佩承",
       "day": "4",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "202_4_8",
@@ -6310,7 +6310,7 @@
       "teacher_name": "楊佩承",
       "day": "4",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "301_5_8",
@@ -6322,7 +6322,7 @@
       "teacher_name": "黃慰華",
       "day": "5",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "302_5_8",
@@ -6334,7 +6334,7 @@
       "teacher_name": "黃慰華",
       "day": "5",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "301_4_8",
@@ -6346,7 +6346,7 @@
       "teacher_name": "林千鑫",
       "day": "4",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "302_4_8",
@@ -6358,7 +6358,7 @@
       "teacher_name": "林千鑫",
       "day": "4",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "201_5_8",
@@ -6370,7 +6370,7 @@
       "teacher_name": "黃冠寧",
       "day": "5",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "202_5_8",
@@ -6382,7 +6382,7 @@
       "teacher_name": "黃冠寧",
       "day": "5",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "101_4_8",
@@ -6394,7 +6394,7 @@
       "teacher_name": "徐毓君",
       "day": "4",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "102_4_8",
@@ -6406,7 +6406,7 @@
       "teacher_name": "徐毓君",
       "day": "4",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "402_5_2",
@@ -6418,7 +6418,7 @@
       "teacher_name": "林蔚松",
       "day": "5",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "402_4_5",
@@ -6430,7 +6430,7 @@
       "teacher_name": "唐藝秦",
       "day": "4",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "401_5_1",
@@ -6442,7 +6442,7 @@
       "teacher_name": "陳嬿竹",
       "day": "5",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "402_4_4",
@@ -6454,7 +6454,7 @@
       "teacher_name": "陳姿伊",
       "day": "4",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "401_2_4",
@@ -6514,7 +6514,7 @@
       "teacher_name": "汪雪憬",
       "day": "5",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "402_4_3",
@@ -6526,7 +6526,7 @@
       "teacher_name": "汪雪憬",
       "day": "4",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "401_4_5",
@@ -6538,7 +6538,7 @@
       "teacher_name": "陳惠芬",
       "day": "4",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "402_5_7",
@@ -6550,7 +6550,7 @@
       "teacher_name": "陳惠芬",
       "day": "5",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "401_3_7",
@@ -6586,7 +6586,7 @@
       "teacher_name": "張仕芳",
       "day": "5",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "501_4_5",
@@ -6598,7 +6598,7 @@
       "teacher_name": "蘇瑞梧",
       "day": "4",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "502_4_2",
@@ -6610,7 +6610,7 @@
       "teacher_name": "蘇瑞梧",
       "day": "4",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "501_1_2",
@@ -6646,7 +6646,7 @@
       "teacher_name": "陳惠芬",
       "day": "2",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "503_5_5",
@@ -6658,7 +6658,7 @@
       "teacher_name": "蘇瑞梧",
       "day": "5",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "603_5_4",
@@ -6670,7 +6670,7 @@
       "teacher_name": "王映緹",
       "day": "5",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "603_5_5",
@@ -6682,7 +6682,7 @@
       "teacher_name": "蔡英鈴",
       "day": "5",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "603_5_3",
@@ -6694,7 +6694,7 @@
       "teacher_name": "陳姿伊",
       "day": "5",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "601_1_7",
@@ -6706,7 +6706,7 @@
       "teacher_name": "王映緹",
       "day": "1",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "602_5_1",
@@ -6718,7 +6718,7 @@
       "teacher_name": "王映緹",
       "day": "5",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "601_3_7",
@@ -6730,7 +6730,7 @@
       "teacher_name": "蔡英鈴",
       "day": "3",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "602_5_3",
@@ -6742,7 +6742,7 @@
       "teacher_name": "蔡英鈴",
       "day": "5",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "203_3_4",
@@ -6754,7 +6754,7 @@
       "teacher_name": "劉尚澄",
       "day": "3",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "203_4_3",
@@ -6766,7 +6766,7 @@
       "teacher_name": "葉品宏",
       "day": "4",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "303_5_3",
@@ -6778,7 +6778,7 @@
       "teacher_name": "謝又安",
       "day": "5",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "303_3_2",
@@ -6790,7 +6790,7 @@
       "teacher_name": "陳冠杏",
       "day": "3",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "101_5_3",
@@ -6802,7 +6802,7 @@
       "teacher_name": "鄭吉貿",
       "day": "5",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "201_5_4",
@@ -6814,7 +6814,7 @@
       "teacher_name": "吳佳育",
       "day": "5",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "201_5_5",
@@ -6826,7 +6826,7 @@
       "teacher_name": "陳憶緻",
       "day": "5",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "201_2_6",
@@ -6838,7 +6838,7 @@
       "teacher_name": "鄭吉貿",
       "day": "2",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "101_1_7",
@@ -6874,7 +6874,7 @@
       "teacher_name": "林蔚松",
       "day": "4",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "102_4_4",
@@ -6886,7 +6886,7 @@
       "teacher_name": "吳佳育",
       "day": "4",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "103_5_4",
@@ -6898,7 +6898,7 @@
       "teacher_name": "劉尚澄",
       "day": "5",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "101_5_7",
@@ -6910,7 +6910,7 @@
       "teacher_name": "黃冠寧",
       "day": "5",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "102_2_6",
@@ -6922,7 +6922,7 @@
       "teacher_name": "黃冠寧",
       "day": "2",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "103_4_4",
@@ -6934,7 +6934,7 @@
       "teacher_name": "黃冠寧",
       "day": "4",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "102_4_5",
@@ -6946,7 +6946,7 @@
       "teacher_name": "林千鑫",
       "day": "4",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "103_5_5",
@@ -6958,7 +6958,7 @@
       "teacher_name": "林千鑫",
       "day": "5",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "201_2_3",
@@ -6970,7 +6970,7 @@
       "teacher_name": "林千鑫",
       "day": "2",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "303_4_6",
@@ -6982,7 +6982,7 @@
       "teacher_name": "林千鑫",
       "day": "4",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "301_3_1",
@@ -6994,7 +6994,7 @@
       "teacher_name": "林千鑫",
       "day": "3",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "203_5_4",
@@ -7006,7 +7006,7 @@
       "teacher_name": "林千鑫",
       "day": "5",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "302_5_1",
@@ -7018,7 +7018,7 @@
       "teacher_name": "林千鑫",
       "day": "5",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "202_4_4",
@@ -7030,7 +7030,7 @@
       "teacher_name": "林千鑫",
       "day": "4",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "201_4_5",
@@ -7042,7 +7042,7 @@
       "teacher_name": "黃冠寧",
       "day": "4",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "202_5_3",
@@ -7054,7 +7054,7 @@
       "teacher_name": "黃冠寧",
       "day": "5",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "303_5_4",
@@ -7066,7 +7066,7 @@
       "teacher_name": "楊多加",
       "day": "5",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "203_2_7",
@@ -7078,7 +7078,7 @@
       "teacher_name": "黃冠寧",
       "day": "2",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "302_3_5",
@@ -7090,7 +7090,7 @@
       "teacher_name": "楊多加",
       "day": "3",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "101_5_4",
@@ -7102,7 +7102,7 @@
       "teacher_name": "徐毓君",
       "day": "5",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "102_3_6",
@@ -7114,7 +7114,7 @@
       "teacher_name": "徐毓君",
       "day": "3",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "103_4_5",
@@ -7126,7 +7126,7 @@
       "teacher_name": "徐毓君",
       "day": "4",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "201_5_6",
@@ -7138,7 +7138,7 @@
       "teacher_name": "黃冠寧",
       "day": "5",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "303_5_1",
@@ -7150,7 +7150,7 @@
       "teacher_name": "徐毓君",
       "day": "5",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "301_4_3",
@@ -7162,7 +7162,7 @@
       "teacher_name": "黃冠寧",
       "day": "4",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "203_5_2",
@@ -7174,7 +7174,7 @@
       "teacher_name": "黃冠寧",
       "day": "5",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "302_4_6",
@@ -7186,7 +7186,7 @@
       "teacher_name": "黃冠寧",
       "day": "4",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "202_4_1",
@@ -7198,7 +7198,7 @@
       "teacher_name": "黃冠寧",
       "day": "4",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "101_4_5",
@@ -7810,7 +7810,7 @@
       "teacher_name": "徐毓君",
       "day": "4",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "201_1_3",
@@ -7822,7 +7822,7 @@
       "teacher_name": "徐毓君",
       "day": "1",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "301_4_6",
@@ -7834,7 +7834,7 @@
       "teacher_name": "徐毓君",
       "day": "4",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "203_3_5",
@@ -7846,7 +7846,7 @@
       "teacher_name": "徐毓君",
       "day": "3",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "302_1_2",
@@ -7858,7 +7858,7 @@
       "teacher_name": "徐毓君",
       "day": "1",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "102_4_2",
@@ -7870,7 +7870,7 @@
       "teacher_name": "徐毓君",
       "day": "4",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "103_1_1",
@@ -7882,7 +7882,7 @@
       "teacher_name": "徐毓君",
       "day": "1",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "101_1_1",
@@ -7894,7 +7894,7 @@
       "teacher_name": "郭姝欣",
       "day": "1",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "201_3_2",
@@ -7906,7 +7906,7 @@
       "teacher_name": "郭姝欣",
       "day": "3",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "303_4_3",
@@ -7918,7 +7918,7 @@
       "teacher_name": "郭姝欣",
       "day": "4",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "203_2_3",
@@ -7930,7 +7930,7 @@
       "teacher_name": "郭姝欣",
       "day": "2",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "302_3_4",
@@ -7942,7 +7942,7 @@
       "teacher_name": "郭姝欣",
       "day": "3",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "102_1_7",
@@ -7954,7 +7954,7 @@
       "teacher_name": "郭姝欣",
       "day": "1",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "103_3_5",
@@ -7966,7 +7966,7 @@
       "teacher_name": "郭姝欣",
       "day": "3",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "202_2_6",
@@ -7978,7 +7978,7 @@
       "teacher_name": "郭姝欣",
       "day": "2",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "201_4_1",
@@ -7990,7 +7990,7 @@
       "teacher_name": "杜鴻秋",
       "day": "4",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "203_3_2",
@@ -8002,7 +8002,7 @@
       "teacher_name": "杜鴻秋",
       "day": "3",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "102_3_7",
@@ -8014,7 +8014,7 @@
       "teacher_name": "杜鴻秋",
       "day": "3",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "103_4_2",
@@ -8026,7 +8026,7 @@
       "teacher_name": "陳冠杏",
       "day": "4",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "202_3_6",
@@ -8038,7 +8038,7 @@
       "teacher_name": "杜鴻秋",
       "day": "3",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "102_5_1",
@@ -8134,7 +8134,7 @@
       "teacher_name": "吳美枝",
       "day": "3",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "103_4_1",
@@ -8146,7 +8146,7 @@
       "teacher_name": "吳美枝",
       "day": "4",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "201_4_3",
@@ -8158,7 +8158,7 @@
       "teacher_name": "梁念慈",
       "day": "4",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "203_2_1",
@@ -8170,7 +8170,7 @@
       "teacher_name": "梁念慈",
       "day": "2",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "202_1_1",
@@ -8182,7 +8182,7 @@
       "teacher_name": "梁念慈",
       "day": "1",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "303_2_3",
@@ -8194,7 +8194,7 @@
       "teacher_name": "楊芷羽",
       "day": "2",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "301_4_4",
@@ -8206,7 +8206,7 @@
       "teacher_name": "楊芷羽",
       "day": "4",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "302_4_2",
@@ -8218,7 +8218,7 @@
       "teacher_name": "楊芷羽",
       "day": "4",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "101_3_2",
@@ -8230,7 +8230,7 @@
       "teacher_name": "謝旻勳",
       "day": "3",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "102_1_4",
@@ -8242,7 +8242,7 @@
       "teacher_name": "徐毓君",
       "day": "1",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "201_3_5",
@@ -8254,7 +8254,7 @@
       "teacher_name": "蕭欣怡",
       "day": "3",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "203_2_4",
@@ -8266,7 +8266,7 @@
       "teacher_name": "張寧",
       "day": "2",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "102_3_5",
@@ -8278,7 +8278,7 @@
       "teacher_name": "陳憶緻",
       "day": "3",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "103_2_7",
@@ -8290,7 +8290,7 @@
       "teacher_name": "張寧",
       "day": "2",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "202_3_7",
@@ -8302,7 +8302,7 @@
       "teacher_name": "蕭欣怡",
       "day": "3",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "101_4_3",
@@ -8314,7 +8314,7 @@
       "teacher_name": "吳佳育",
       "day": "4",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "202_3_4",
@@ -8326,7 +8326,7 @@
       "teacher_name": "孫佳宏",
       "day": "3",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "302_3_3",
@@ -8338,7 +8338,7 @@
       "teacher_name": "游貞維",
       "day": "3",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "101_2_6",
@@ -8350,7 +8350,7 @@
       "teacher_name": "陳憶緻",
       "day": "2",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "102_3_1",
@@ -8362,7 +8362,7 @@
       "teacher_name": "陳憶緻",
       "day": "3",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "103_2_5",
@@ -8374,7 +8374,7 @@
       "teacher_name": "張寧",
       "day": "2",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "203_1_4",
@@ -8386,7 +8386,7 @@
       "teacher_name": "張寧",
       "day": "1",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "202_2_5",
@@ -8398,7 +8398,7 @@
       "teacher_name": "蕭欣怡",
       "day": "2",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "301_3_6",
@@ -8410,7 +8410,7 @@
       "teacher_name": "戴美倫",
       "day": "3",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "302_2_7",
@@ -8422,7 +8422,7 @@
       "teacher_name": "戴美倫",
       "day": "2",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "303_4_5",
@@ -8434,7 +8434,7 @@
       "teacher_name": "張寧",
       "day": "4",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "103_2_4",
@@ -8446,7 +8446,7 @@
       "teacher_name": "涂世一",
       "day": "2",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "202_3_3",
@@ -8458,7 +8458,7 @@
       "teacher_name": "葉品宏",
       "day": "3",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "301_4_1",
@@ -8470,7 +8470,7 @@
       "teacher_name": "謝又安",
       "day": "4",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "302_4_3",
@@ -8482,7 +8482,7 @@
       "teacher_name": "謝又安",
       "day": "4",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "303_2_4",
@@ -8494,7 +8494,7 @@
       "teacher_name": "楊佩承",
       "day": "2",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "303_5_5",
@@ -8506,7 +8506,7 @@
       "teacher_name": "張寧",
       "day": "5",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "101_1_4",
@@ -8518,7 +8518,7 @@
       "teacher_name": "林千鑫",
       "day": "1",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "201_2_5",
@@ -8530,7 +8530,7 @@
       "teacher_name": "黃冠寧",
       "day": "2",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "202_2_2",
@@ -8542,7 +8542,7 @@
       "teacher_name": "黃冠寧",
       "day": "2",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "301_4_7",
@@ -8554,7 +8554,7 @@
       "teacher_name": "游貞維",
       "day": "4",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "302_2_5",
@@ -8566,7 +8566,7 @@
       "teacher_name": "謝明訓",
       "day": "2",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "101_3_8",
@@ -8578,7 +8578,7 @@
       "teacher_name": "吳佳育",
       "day": "3",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "102_2_8",
@@ -8590,7 +8590,7 @@
       "teacher_name": "吳佳育",
       "day": "2",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "101_1_8",
@@ -8602,7 +8602,7 @@
       "teacher_name": "陳憶緻",
       "day": "1",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "102_3_8",
@@ -8614,7 +8614,7 @@
       "teacher_name": "陳憶緻",
       "day": "3",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "101_2_8",
@@ -8626,7 +8626,7 @@
       "teacher_name": "鄭吉貿",
       "day": "2",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "102_1_8",
@@ -8638,7 +8638,7 @@
       "teacher_name": "鄭吉貿",
       "day": "1",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "103_2_8",
@@ -8650,7 +8650,7 @@
       "teacher_name": "劉尚澄",
       "day": "2",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "203_1_8",
@@ -8662,7 +8662,7 @@
       "teacher_name": "劉尚澄",
       "day": "1",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "203_2_8",
@@ -8674,7 +8674,7 @@
       "teacher_name": "張寧",
       "day": "2",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "103_1_8",
@@ -8686,7 +8686,7 @@
       "teacher_name": "張寧",
       "day": "1",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "102_3_4",
@@ -8698,7 +8698,7 @@
       "teacher_name": "鄭吉貿",
       "day": "3",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "103_5_6",
@@ -8710,7 +8710,7 @@
       "teacher_name": "林詩婷",
       "day": "5",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "203_5_6",
@@ -8722,7 +8722,7 @@
       "teacher_name": "王俊穎",
       "day": "5",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "303_4_1",
@@ -8734,7 +8734,7 @@
       "teacher_name": "陳景昇",
       "day": "4",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "303_5_7",
@@ -8746,7 +8746,7 @@
       "teacher_name": "王俊穎",
       "day": "5",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "203_3_7",
@@ -8758,7 +8758,7 @@
       "teacher_name": "林詩婷",
       "day": "3",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "103_2_6",
@@ -8770,7 +8770,7 @@
       "teacher_name": "陳景昇",
       "day": "2",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "103_3_7",
@@ -8818,7 +8818,7 @@
       "teacher_name": "楊佩承",
       "day": "2",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "202_2_3",
@@ -8830,7 +8830,7 @@
       "teacher_name": "楊佩承",
       "day": "2",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "201_1_8",
@@ -8842,7 +8842,7 @@
       "teacher_name": "孫佳宏",
       "day": "1",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "202_3_8",
@@ -8854,7 +8854,7 @@
       "teacher_name": "孫佳宏",
       "day": "3",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "201_3_8",
@@ -8866,7 +8866,7 @@
       "teacher_name": "葉品宏",
       "day": "3",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "202_2_8",
@@ -8878,7 +8878,7 @@
       "teacher_name": "葉品宏",
       "day": "2",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "201_2_8",
@@ -8890,7 +8890,7 @@
       "teacher_name": "蕭欣怡",
       "day": "2",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "202_1_8",
@@ -8902,7 +8902,7 @@
       "teacher_name": "蕭欣怡",
       "day": "1",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "301_5_3",
@@ -8914,7 +8914,7 @@
       "teacher_name": "游貞維",
       "day": "5",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "301_1_8",
@@ -8926,7 +8926,7 @@
       "teacher_name": "游貞維",
       "day": "1",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "302_3_8",
@@ -8938,7 +8938,7 @@
       "teacher_name": "游貞維",
       "day": "3",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "301_3_8",
@@ -8950,7 +8950,7 @@
       "teacher_name": "謝又安",
       "day": "3",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "302_2_8",
@@ -8962,7 +8962,7 @@
       "teacher_name": "謝又安",
       "day": "2",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "301_2_8",
@@ -8974,7 +8974,7 @@
       "teacher_name": "戴美倫",
       "day": "2",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "302_1_8",
@@ -8986,7 +8986,7 @@
       "teacher_name": "戴美倫",
       "day": "1",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "303_2_8",
@@ -8998,7 +8998,7 @@
       "teacher_name": "陳冠杏",
       "day": "2",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "303_1_8",
@@ -9010,7 +9010,7 @@
       "teacher_name": "謝又安",
       "day": "1",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "401_4_2",
@@ -9046,7 +9046,7 @@
       "teacher_name": "廖卿妃",
       "day": "3",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "402_3_5",
@@ -9058,7 +9058,7 @@
       "teacher_name": "廖卿妃",
       "day": "3",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "401_4_1",
@@ -9070,7 +9070,7 @@
       "teacher_name": "吳昀蓁",
       "day": "4",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "401_4_1",
@@ -9082,7 +9082,7 @@
       "teacher_name": "汪雪憬",
       "day": "4",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "402_2_6",
@@ -9094,7 +9094,7 @@
       "teacher_name": "吳昀蓁",
       "day": "2",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "402_2_6",
@@ -9106,7 +9106,7 @@
       "teacher_name": "汪雪憬",
       "day": "2",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "401_2_8",
@@ -9118,7 +9118,7 @@
       "teacher_name": "林蔚松",
       "day": "2",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "402_4_8",
@@ -9130,7 +9130,7 @@
       "teacher_name": "林蔚松",
       "day": "4",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "401_1_8",
@@ -9142,7 +9142,7 @@
       "teacher_name": "陳嬿竹",
       "day": "1",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "402_5_8",
@@ -9154,7 +9154,7 @@
       "teacher_name": "陳姿伊",
       "day": "5",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "401_5_8",
@@ -9166,7 +9166,7 @@
       "teacher_name": "唐藝秦",
       "day": "5",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "402_1_8",
@@ -9178,7 +9178,7 @@
       "teacher_name": "唐藝秦",
       "day": "1",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "401_4_8",
@@ -9190,7 +9190,7 @@
       "teacher_name": "陳惠芬",
       "day": "4",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "402_3_8",
@@ -9202,7 +9202,7 @@
       "teacher_name": "陳惠芬",
       "day": "3",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "401_3_8",
@@ -9262,7 +9262,7 @@
       "teacher_name": "林蔚松",
       "day": "5",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "403_5_2",
@@ -9274,7 +9274,7 @@
       "teacher_name": "唐藝秦",
       "day": "5",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "403_2_5",
@@ -9286,7 +9286,7 @@
       "teacher_name": "陳嬿竹",
       "day": "2",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "403_4_5",
@@ -9298,7 +9298,7 @@
       "teacher_name": "楊多加",
       "day": "4",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "403_4_4",
@@ -9310,7 +9310,7 @@
       "teacher_name": "劉祐霖",
       "day": "4",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "403_4_3",
@@ -9322,7 +9322,7 @@
       "teacher_name": "吳昀蓁",
       "day": "4",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "403_1_1",
@@ -9346,7 +9346,7 @@
       "teacher_name": "張惠俞",
       "day": "5",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "403_5_6",
@@ -9358,7 +9358,7 @@
       "teacher_name": "戴吟甄",
       "day": "5",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "403_5_1",
@@ -9370,7 +9370,7 @@
       "teacher_name": "陳景昇",
       "day": "5",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "403_3_6",
@@ -9382,7 +9382,7 @@
       "teacher_name": "陳馨怡",
       "day": "3",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "502_4_3",
@@ -9394,7 +9394,7 @@
       "teacher_name": "戴延諭",
       "day": "4",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "503_4_4",
@@ -9406,7 +9406,7 @@
       "teacher_name": "戴延諭",
       "day": "4",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "501_3_7",
@@ -9418,7 +9418,7 @@
       "teacher_name": "陳惠芬",
       "day": "3",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "502_3_7",
@@ -9430,7 +9430,7 @@
       "teacher_name": "劉祐霖",
       "day": "3",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "501_5_2",
@@ -9442,7 +9442,7 @@
       "teacher_name": "吳昀蓁",
       "day": "5",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "501_5_2",
@@ -9454,7 +9454,7 @@
       "teacher_name": "戴嘉靚",
       "day": "5",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "502_2_2",
@@ -9466,7 +9466,7 @@
       "teacher_name": "吳昀蓁",
       "day": "2",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "502_2_2",
@@ -9478,7 +9478,7 @@
       "teacher_name": "戴嘉靚",
       "day": "2",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "501_4_3",
@@ -9538,7 +9538,7 @@
       "teacher_name": "梁念慈",
       "day": "4",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "502_3_6",
@@ -9550,7 +9550,7 @@
       "teacher_name": "吳美枝",
       "day": "3",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "501_2_6",
@@ -9562,7 +9562,7 @@
       "teacher_name": "陳玉霜",
       "day": "2",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "502_5_2",
@@ -9574,7 +9574,7 @@
       "teacher_name": "陳玉霜",
       "day": "5",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "503_4_5",
@@ -9586,7 +9586,7 @@
       "teacher_name": "陳玉霜",
       "day": "4",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "501_2_7",
@@ -9598,7 +9598,7 @@
       "teacher_name": "吳昀蓁",
       "day": "2",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "501_1_3",
@@ -9634,7 +9634,7 @@
       "teacher_name": "張仕芳",
       "day": "3",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "502_5_8",
@@ -9646,7 +9646,7 @@
       "teacher_name": "張仕芳",
       "day": "5",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "501_5_8",
@@ -9658,7 +9658,7 @@
       "teacher_name": "蘇瑞梧",
       "day": "5",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "502_3_8",
@@ -9670,7 +9670,7 @@
       "teacher_name": "蘇瑞梧",
       "day": "3",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "501_2_8",
@@ -9682,7 +9682,7 @@
       "teacher_name": "陳嬿竹",
       "day": "2",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "502_4_8",
@@ -9694,7 +9694,7 @@
       "teacher_name": "戴延諭",
       "day": "4",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "501_1_8",
@@ -9706,7 +9706,7 @@
       "teacher_name": "吳昀蓁",
       "day": "1",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "501_4_8",
@@ -9730,7 +9730,7 @@
       "teacher_name": "汪雪憬",
       "day": "2",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "502_1_8",
@@ -9742,7 +9742,7 @@
       "teacher_name": "劉祐霖",
       "day": "1",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "502_4_4",
@@ -9754,7 +9754,7 @@
       "teacher_name": "張仕芳",
       "day": "4",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "502_3_3",
@@ -9766,7 +9766,7 @@
       "teacher_name": "汪雪憬",
       "day": "3",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "502_1_7",
@@ -9778,7 +9778,7 @@
       "teacher_name": "呂明蔘",
       "day": "1",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "503_1_4",
@@ -9790,7 +9790,7 @@
       "teacher_name": "汪雪憬",
       "day": "1",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "503_5_7",
@@ -9802,7 +9802,7 @@
       "teacher_name": "劉祐霖",
       "day": "5",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "503_5_4",
@@ -9814,7 +9814,7 @@
       "teacher_name": "陳寶妃",
       "day": "5",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "503_5_6",
@@ -9826,7 +9826,7 @@
       "teacher_name": "陳馨怡",
       "day": "5",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "503_4_3",
@@ -9850,7 +9850,7 @@
       "teacher_name": "戴吟甄",
       "day": "5",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "503_4_6",
@@ -9862,7 +9862,7 @@
       "teacher_name": "陳景昇",
       "day": "4",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "503_3_5",
@@ -9874,7 +9874,7 @@
       "teacher_name": "吳美枝",
       "day": "3",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "503_4_7",
@@ -9886,7 +9886,7 @@
       "teacher_name": "戴吟甄",
       "day": "4",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "503_3_4",
@@ -9898,7 +9898,7 @@
       "teacher_name": "戴延諭",
       "day": "3",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "601_3_6",
@@ -10006,7 +10006,7 @@
       "teacher_name": "郭姝欣",
       "day": "5",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "602_3_1",
@@ -10018,7 +10018,7 @@
       "teacher_name": "郭姝欣",
       "day": "3",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "601_2_3",
@@ -10054,7 +10054,7 @@
       "teacher_name": "蔡英鈴",
       "day": "5",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "602_4_3",
@@ -10066,7 +10066,7 @@
       "teacher_name": "蔡英鈴",
       "day": "4",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "601_3_4",
@@ -10078,7 +10078,7 @@
       "teacher_name": "陳姿伊",
       "day": "3",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "602_4_1",
@@ -10090,7 +10090,7 @@
       "teacher_name": "戴延諭",
       "day": "4",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "601_4_2",
@@ -10102,7 +10102,7 @@
       "teacher_name": "林柏宏",
       "day": "4",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "601_4_1",
@@ -10114,7 +10114,7 @@
       "teacher_name": "林柏宏",
       "day": "4",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "601_2_2",
@@ -10150,7 +10150,7 @@
       "teacher_name": "王映緹",
       "day": "5",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "602_4_8",
@@ -10162,7 +10162,7 @@
       "teacher_name": "王映緹",
       "day": "4",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "601_3_8",
@@ -10174,7 +10174,7 @@
       "teacher_name": "蔡英鈴",
       "day": "3",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "602_5_8",
@@ -10186,7 +10186,7 @@
       "teacher_name": "蔡英鈴",
       "day": "5",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "601_4_8",
@@ -10198,7 +10198,7 @@
       "teacher_name": "陳姿伊",
       "day": "4",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "602_3_8",
@@ -10210,7 +10210,7 @@
       "teacher_name": "戴延諭",
       "day": "3",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "601_2_8",
@@ -10222,7 +10222,7 @@
       "teacher_name": "廖卿妃",
       "day": "2",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "601_1_8",
@@ -10246,7 +10246,7 @@
       "teacher_name": "陳惠芬",
       "day": "2",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "602_1_8",
@@ -10258,7 +10258,7 @@
       "teacher_name": "汪雪憬",
       "day": "1",
       "period": "8",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "602_2_6",
@@ -10270,7 +10270,7 @@
       "teacher_name": "呂明蔘",
       "day": "2",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "602_3_5",
@@ -10282,7 +10282,7 @@
       "teacher_name": "陳惠芬",
       "day": "3",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "603_5_1",
@@ -10294,7 +10294,7 @@
       "teacher_name": "汪雪憬",
       "day": "5",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "603_4_7",
@@ -10306,7 +10306,7 @@
       "teacher_name": "陳惠芬",
       "day": "4",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "603_2_7",
@@ -10318,7 +10318,7 @@
       "teacher_name": "劉祐霖",
       "day": "2",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "603_4_3",
@@ -10342,7 +10342,7 @@
       "teacher_name": "蔡英鈴",
       "day": "4",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "603_4_1",
@@ -10354,7 +10354,7 @@
       "teacher_name": "梁念慈",
       "day": "4",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "603_4_6",
@@ -10366,7 +10366,7 @@
       "teacher_name": "張惠俞",
       "day": "4",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "603_3_7",
@@ -10378,7 +10378,7 @@
       "teacher_name": "戴嘉靚",
       "day": "3",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "603_3_3",
@@ -10390,7 +10390,7 @@
       "teacher_name": "陳姿伊",
       "day": "3",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "603_3_5",
@@ -10402,7 +10402,7 @@
       "teacher_name": "陳馨怡",
       "day": "3",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "603_4_5",
@@ -10414,7 +10414,7 @@
       "teacher_name": "陳馨怡",
       "day": "4",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "503_4_2",
@@ -10426,7 +10426,7 @@
       "teacher_name": "吳佳育",
       "day": "4",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "502_1_1",
@@ -10450,7 +10450,7 @@
       "teacher_name": "林詩婷",
       "day": "4",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "203_3_6",
@@ -10462,7 +10462,7 @@
       "teacher_name": "王俊穎",
       "day": "3",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "303_3_7",
@@ -10474,7 +10474,7 @@
       "teacher_name": "陳景昇",
       "day": "3",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "303_4_7",
@@ -10486,7 +10486,7 @@
       "teacher_name": "王俊穎",
       "day": "4",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "401_5_6",
@@ -10510,7 +10510,7 @@
       "teacher_name": "張惠俞",
       "day": "4",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "403_4_6",
@@ -10522,7 +10522,7 @@
       "teacher_name": "戴吟甄",
       "day": "4",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "501_5_1",
@@ -10534,7 +10534,7 @@
       "teacher_name": "吳昀蓁",
       "day": "5",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "501_5_1",
@@ -10546,7 +10546,7 @@
       "teacher_name": "戴嘉靚",
       "day": "5",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "502_3_4",
@@ -10558,7 +10558,7 @@
       "teacher_name": "吳昀蓁",
       "day": "3",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "502_3_4",
@@ -10570,7 +10570,7 @@
       "teacher_name": "戴嘉靚",
       "day": "3",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "502_2_5",
@@ -10582,7 +10582,7 @@
       "teacher_name": "汪雪憬",
       "day": "2",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "502_1_4",
@@ -10594,7 +10594,7 @@
       "teacher_name": "呂明蔘",
       "day": "1",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "503_3_2",
@@ -10606,7 +10606,7 @@
       "teacher_name": "陳寶妃",
       "day": "3",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "503_4_1",
@@ -10618,7 +10618,7 @@
       "teacher_name": "戴吟甄",
       "day": "4",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "601_3_3",
@@ -10630,7 +10630,7 @@
       "teacher_name": "蔡英鈴",
       "day": "3",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "602_4_4",
@@ -10642,7 +10642,7 @@
       "teacher_name": "蔡英鈴",
       "day": "4",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "602_2_7",
@@ -10654,7 +10654,7 @@
       "teacher_name": "呂明蔘",
       "day": "2",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "602_3_4",
@@ -10666,7 +10666,7 @@
       "teacher_name": "陳惠芬",
       "day": "3",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "603_3_1",
@@ -10690,7 +10690,7 @@
       "teacher_name": "蔡英鈴",
       "day": "1",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "603_2_5",
@@ -10702,7 +10702,7 @@
       "teacher_name": "梁念慈",
       "day": "2",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "603_3_6",
@@ -10714,7 +10714,7 @@
       "teacher_name": "張惠俞",
       "day": "3",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "402_3_4",
@@ -10726,7 +10726,7 @@
       "teacher_name": "林蔚松",
       "day": "3",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "401_3_2",
@@ -10738,7 +10738,7 @@
       "teacher_name": "唐藝秦",
       "day": "3",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "402_3_3",
@@ -10750,7 +10750,7 @@
       "teacher_name": "唐藝秦",
       "day": "3",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "401_3_1",
@@ -10762,8 +10762,7 @@
       "teacher_name": "陳嬿竹",
       "day": "2",
       "period": "1",
-      "room_name": "",
-      "manual_locked": true
+      "room_name": "nan"
     },
     {
       "id": "402_3_2",
@@ -10775,7 +10774,7 @@
       "teacher_name": "陳姿伊",
       "day": "3",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "401_1_4",
@@ -10835,7 +10834,7 @@
       "teacher_name": "汪雪憬",
       "day": "1",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "401_2_6",
@@ -10847,7 +10846,7 @@
       "teacher_name": "陳惠芬",
       "day": "2",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "402_2_4",
@@ -10859,7 +10858,7 @@
       "teacher_name": "陳惠芬",
       "day": "2",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "401_3_6",
@@ -10895,7 +10894,7 @@
       "teacher_name": "張仕芳",
       "day": "4",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "501_3_5",
@@ -10907,7 +10906,7 @@
       "teacher_name": "蘇瑞梧",
       "day": "3",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "502_3_2",
@@ -10919,7 +10918,7 @@
       "teacher_name": "蘇瑞梧",
       "day": "3",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "501_3_2",
@@ -10955,7 +10954,7 @@
       "teacher_name": "陳惠芬",
       "day": "5",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "503_2_4",
@@ -10967,7 +10966,7 @@
       "teacher_name": "蘇瑞梧",
       "day": "2",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "603_4_4",
@@ -10979,7 +10978,7 @@
       "teacher_name": "王映緹",
       "day": "4",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "603_3_2",
@@ -10991,7 +10990,7 @@
       "teacher_name": "蔡英鈴",
       "day": "3",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "601_3_2",
@@ -11003,7 +11002,7 @@
       "teacher_name": "王映緹",
       "day": "3",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "602_2_4",
@@ -11015,7 +11014,7 @@
       "teacher_name": "王映緹",
       "day": "2",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "601_3_1",
@@ -11027,7 +11026,7 @@
       "teacher_name": "蔡英鈴",
       "day": "3",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "602_2_3",
@@ -11039,7 +11038,7 @@
       "teacher_name": "蔡英鈴",
       "day": "2",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "203_4_4",
@@ -11051,7 +11050,7 @@
       "teacher_name": "劉尚澄",
       "day": "4",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "203_2_2",
@@ -11063,7 +11062,7 @@
       "teacher_name": "葉品宏",
       "day": "2",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "303_3_3",
@@ -11075,7 +11074,7 @@
       "teacher_name": "謝又安",
       "day": "3",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "303_4_4",
@@ -11087,7 +11086,7 @@
       "teacher_name": "陳冠杏",
       "day": "4",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "101_4_6",
@@ -11099,7 +11098,7 @@
       "teacher_name": "鄭吉貿",
       "day": "4",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "201_3_7",
@@ -11111,7 +11110,7 @@
       "teacher_name": "吳佳育",
       "day": "3",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "201_5_3",
@@ -11123,7 +11122,7 @@
       "teacher_name": "陳憶緻",
       "day": "5",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "201_3_1",
@@ -11135,7 +11134,7 @@
       "teacher_name": "鄭吉貿",
       "day": "3",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "101_2_7",
@@ -11171,7 +11170,7 @@
       "teacher_name": "林蔚松",
       "day": "2",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "102_5_6",
@@ -11183,7 +11182,7 @@
       "teacher_name": "吳佳育",
       "day": "5",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "103_4_3",
@@ -11195,7 +11194,7 @@
       "teacher_name": "劉尚澄",
       "day": "4",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "101_2_5",
@@ -11363,7 +11362,7 @@
       "teacher_name": "吳佳育",
       "day": "4",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "202_3_2",
@@ -11375,7 +11374,7 @@
       "teacher_name": "孫佳宏",
       "day": "3",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "302_3_2",
@@ -11387,7 +11386,7 @@
       "teacher_name": "游貞維",
       "day": "3",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "101_3_6",
@@ -11399,7 +11398,7 @@
       "teacher_name": "陳憶緻",
       "day": "3",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "102_2_5",
@@ -11411,7 +11410,7 @@
       "teacher_name": "陳憶緻",
       "day": "2",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "103_3_2",
@@ -11423,7 +11422,7 @@
       "teacher_name": "張寧",
       "day": "3",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "203_1_2",
@@ -11435,7 +11434,7 @@
       "teacher_name": "張寧",
       "day": "1",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "202_5_5",
@@ -11447,7 +11446,7 @@
       "teacher_name": "蕭欣怡",
       "day": "5",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "301_2_5",
@@ -11459,7 +11458,7 @@
       "teacher_name": "戴美倫",
       "day": "2",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "302_2_2",
@@ -11471,7 +11470,7 @@
       "teacher_name": "戴美倫",
       "day": "2",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "303_2_1",
@@ -11483,7 +11482,7 @@
       "teacher_name": "張寧",
       "day": "2",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "103_1_4",
@@ -11495,7 +11494,7 @@
       "teacher_name": "涂世一",
       "day": "1",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "202_2_1",
@@ -11507,7 +11506,7 @@
       "teacher_name": "葉品宏",
       "day": "2",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "301_3_2",
@@ -11519,7 +11518,7 @@
       "teacher_name": "謝又安",
       "day": "3",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "302_2_4",
@@ -11531,7 +11530,7 @@
       "teacher_name": "謝又安",
       "day": "2",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "102_2_4",
@@ -11543,7 +11542,7 @@
       "teacher_name": "鄭吉貿",
       "day": "2",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "103_3_6",
@@ -11555,7 +11554,7 @@
       "teacher_name": "林詩婷",
       "day": "3",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "203_4_6",
@@ -11567,7 +11566,7 @@
       "teacher_name": "王俊穎",
       "day": "4",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "303_2_7",
@@ -11579,7 +11578,7 @@
       "teacher_name": "陳景昇",
       "day": "2",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "203_5_7",
@@ -11591,7 +11590,7 @@
       "teacher_name": "林詩婷",
       "day": "5",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "103_2_1",
@@ -11603,7 +11602,7 @@
       "teacher_name": "陳景昇",
       "day": "2",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "301_1_2",
@@ -11615,7 +11614,7 @@
       "teacher_name": "游貞維",
       "day": "1",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "401_2_5",
@@ -11639,7 +11638,7 @@
       "teacher_name": "林蔚松",
       "day": "4",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "403_3_5",
@@ -11651,7 +11650,7 @@
       "teacher_name": "唐藝秦",
       "day": "3",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "403_4_1",
@@ -11663,7 +11662,7 @@
       "teacher_name": "陳嬿竹",
       "day": "4",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "403_3_4",
@@ -11675,7 +11674,7 @@
       "teacher_name": "劉祐霖",
       "day": "3",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "403_3_3",
@@ -11687,7 +11686,7 @@
       "teacher_name": "吳昀蓁",
       "day": "3",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "403_3_2",
@@ -11699,7 +11698,7 @@
       "teacher_name": "廖卿妃",
       "day": "3",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "403_2_7",
@@ -11711,7 +11710,7 @@
       "teacher_name": "張惠俞",
       "day": "2",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "403_3_7",
@@ -11723,7 +11722,7 @@
       "teacher_name": "戴吟甄",
       "day": "3",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "403_3_1",
@@ -11735,7 +11734,7 @@
       "teacher_name": "陳馨怡",
       "day": "3",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "501_3_3",
@@ -11747,7 +11746,7 @@
       "teacher_name": "陳嬿竹",
       "day": "3",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "502_3_1",
@@ -11759,7 +11758,7 @@
       "teacher_name": "戴延諭",
       "day": "3",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "503_2_3",
@@ -11771,7 +11770,7 @@
       "teacher_name": "戴延諭",
       "day": "2",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "501_3_1",
@@ -11783,7 +11782,7 @@
       "teacher_name": "陳惠芬",
       "day": "3",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "501_2_5",
@@ -11795,7 +11794,7 @@
       "teacher_name": "劉祐霖",
       "day": "2",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "501_2_4",
@@ -11807,7 +11806,7 @@
       "teacher_name": "吳昀蓁",
       "day": "2",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "501_3_4",
@@ -11831,7 +11830,7 @@
       "teacher_name": "張仕芳",
       "day": "5",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "503_3_7",
@@ -11843,7 +11842,7 @@
       "teacher_name": "汪雪憬",
       "day": "3",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "503_3_6",
@@ -11855,7 +11854,7 @@
       "teacher_name": "戴吟甄",
       "day": "3",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "503_3_1",
@@ -11867,7 +11866,7 @@
       "teacher_name": "陳景昇",
       "day": "3",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "503_2_7",
@@ -11879,7 +11878,7 @@
       "teacher_name": "戴吟甄",
       "day": "2",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "601_2_1",
@@ -11915,7 +11914,7 @@
       "teacher_name": "陳姿伊",
       "day": "2",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "602_2_2",
@@ -11927,7 +11926,7 @@
       "teacher_name": "戴延諭",
       "day": "2",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "601_1_3",
@@ -11939,7 +11938,7 @@
       "teacher_name": "林柏宏",
       "day": "1",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "601_4_3",
@@ -11963,7 +11962,7 @@
       "teacher_name": "呂明蔘",
       "day": "2",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "602_1_7",
@@ -11975,7 +11974,7 @@
       "teacher_name": "陳惠芬",
       "day": "1",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "603_1_4",
@@ -11987,7 +11986,7 @@
       "teacher_name": "陳惠芬",
       "day": "1",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "603_1_7",
@@ -11999,7 +11998,7 @@
       "teacher_name": "戴吟甄",
       "day": "1",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "603_2_6",
@@ -12011,7 +12010,7 @@
       "teacher_name": "陳馨怡",
       "day": "2",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "503_3_3",
@@ -12023,7 +12022,7 @@
       "teacher_name": "吳佳育",
       "day": "3",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "203_4_2",
@@ -12035,7 +12034,7 @@
       "teacher_name": "劉尚澄",
       "day": "4",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "603_2_3",
@@ -12047,7 +12046,7 @@
       "teacher_name": "陳馨怡",
       "day": "2",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "603_2_1",
@@ -12059,7 +12058,7 @@
       "teacher_name": "陳馨怡",
       "day": "2",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "402_2_2",
@@ -12071,7 +12070,7 @@
       "teacher_name": "林蔚松",
       "day": "2",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "401_2_2",
@@ -12083,7 +12082,7 @@
       "teacher_name": "唐藝秦",
       "day": "2",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "402_2_1",
@@ -12095,7 +12094,7 @@
       "teacher_name": "唐藝秦",
       "day": "2",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "401_2_1",
@@ -12107,8 +12106,7 @@
       "teacher_name": "陳嬿竹",
       "day": "3",
       "period": "1",
-      "room_name": "",
-      "manual_locked": true
+      "room_name": "nan"
     },
     {
       "id": "402_1_4",
@@ -12120,7 +12118,7 @@
       "teacher_name": "陳姿伊",
       "day": "1",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "501_2_3",
@@ -12132,7 +12130,7 @@
       "teacher_name": "張仕芳",
       "day": "2",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "501_2_1",
@@ -12144,7 +12142,7 @@
       "teacher_name": "蘇瑞梧",
       "day": "2",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "502_2_3",
@@ -12156,7 +12154,7 @@
       "teacher_name": "蘇瑞梧",
       "day": "2",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "503_2_2",
@@ -12168,7 +12166,7 @@
       "teacher_name": "蘇瑞梧",
       "day": "2",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "603_2_2",
@@ -12180,7 +12178,7 @@
       "teacher_name": "王映緹",
       "day": "2",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "601_1_4",
@@ -12192,7 +12190,7 @@
       "teacher_name": "王映緹",
       "day": "1",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "602_2_1",
@@ -12204,7 +12202,7 @@
       "teacher_name": "王映緹",
       "day": "2",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "203_4_1",
@@ -12216,7 +12214,7 @@
       "teacher_name": "劉尚澄",
       "day": "4",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "203_1_3",
@@ -12228,7 +12226,7 @@
       "teacher_name": "葉品宏",
       "day": "1",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "303_2_2",
@@ -12240,7 +12238,7 @@
       "teacher_name": "謝又安",
       "day": "2",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "303_3_1",
@@ -12252,7 +12250,7 @@
       "teacher_name": "陳冠杏",
       "day": "3",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "101_2_3",
@@ -12264,7 +12262,7 @@
       "teacher_name": "鄭吉貿",
       "day": "2",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "201_3_4",
@@ -12276,7 +12274,7 @@
       "teacher_name": "吳佳育",
       "day": "3",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "201_2_1",
@@ -12288,7 +12286,7 @@
       "teacher_name": "陳憶緻",
       "day": "2",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "201_2_2",
@@ -12300,7 +12298,7 @@
       "teacher_name": "鄭吉貿",
       "day": "2",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "401_1_2",
@@ -12312,7 +12310,7 @@
       "teacher_name": "林蔚松",
       "day": "1",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "102_1_1",
@@ -12324,7 +12322,7 @@
       "teacher_name": "吳佳育",
       "day": "1",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "103_5_3",
@@ -12336,7 +12334,7 @@
       "teacher_name": "劉尚澄",
       "day": "5",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "101_2_1",
@@ -12432,7 +12430,7 @@
       "teacher_name": "吳佳育",
       "day": "3",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "202_3_1",
@@ -12444,7 +12442,7 @@
       "teacher_name": "孫佳宏",
       "day": "3",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "302_2_3",
@@ -12456,7 +12454,7 @@
       "teacher_name": "游貞維",
       "day": "2",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "101_1_2",
@@ -12468,7 +12466,7 @@
       "teacher_name": "陳憶緻",
       "day": "1",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "102_1_3",
@@ -12480,7 +12478,7 @@
       "teacher_name": "陳憶緻",
       "day": "1",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "103_1_3",
@@ -12492,7 +12490,7 @@
       "teacher_name": "張寧",
       "day": "1",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "202_1_7",
@@ -12504,7 +12502,7 @@
       "teacher_name": "蕭欣怡",
       "day": "1",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "301_2_4",
@@ -12516,7 +12514,7 @@
       "teacher_name": "戴美倫",
       "day": "2",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "302_1_7",
@@ -12528,7 +12526,7 @@
       "teacher_name": "戴美倫",
       "day": "1",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "303_1_7",
@@ -12540,7 +12538,7 @@
       "teacher_name": "張寧",
       "day": "1",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "103_1_2",
@@ -12552,7 +12550,7 @@
       "teacher_name": "涂世一",
       "day": "1",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "202_1_4",
@@ -12564,7 +12562,7 @@
       "teacher_name": "葉品宏",
       "day": "1",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "301_2_3",
@@ -12576,7 +12574,7 @@
       "teacher_name": "謝又安",
       "day": "2",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "302_2_1",
@@ -12588,7 +12586,7 @@
       "teacher_name": "謝又安",
       "day": "2",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "102_2_1",
@@ -12600,7 +12598,7 @@
       "teacher_name": "鄭吉貿",
       "day": "2",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "301_2_2",
@@ -12612,7 +12610,7 @@
       "teacher_name": "游貞維",
       "day": "2",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "403_2_4",
@@ -12624,7 +12622,7 @@
       "teacher_name": "林蔚松",
       "day": "2",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "403_2_3",
@@ -12636,7 +12634,7 @@
       "teacher_name": "唐藝秦",
       "day": "2",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "403_2_2",
@@ -12648,7 +12646,7 @@
       "teacher_name": "陳嬿竹",
       "day": "2",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "403_2_6",
@@ -12660,7 +12658,7 @@
       "teacher_name": "張惠俞",
       "day": "2",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "403_2_1",
@@ -12672,7 +12670,7 @@
       "teacher_name": "戴吟甄",
       "day": "2",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "501_1_4",
@@ -12684,7 +12682,7 @@
       "teacher_name": "陳嬿竹",
       "day": "1",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "502_2_1",
@@ -12696,7 +12694,7 @@
       "teacher_name": "戴延諭",
       "day": "2",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "503_1_3",
@@ -12708,7 +12706,7 @@
       "teacher_name": "戴延諭",
       "day": "1",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "502_1_3",
@@ -12720,7 +12718,7 @@
       "teacher_name": "張仕芳",
       "day": "1",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "503_2_6",
@@ -12732,7 +12730,7 @@
       "teacher_name": "戴吟甄",
       "day": "2",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "503_1_7",
@@ -12744,7 +12742,7 @@
       "teacher_name": "陳景昇",
       "day": "1",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "601_1_2",
@@ -12756,7 +12754,7 @@
       "teacher_name": "陳姿伊",
       "day": "1",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "602_1_4",
@@ -12768,7 +12766,7 @@
       "teacher_name": "戴延諭",
       "day": "1",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "603_1_3",
@@ -12780,7 +12778,7 @@
       "teacher_name": "陳馨怡",
       "day": "1",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "603_3_4",
@@ -12792,7 +12790,7 @@
       "teacher_name": "陳馨怡",
       "day": "3",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "503_2_5",
@@ -12804,7 +12802,7 @@
       "teacher_name": "吳佳育",
       "day": "2",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "402_1_3",
@@ -12816,7 +12814,7 @@
       "teacher_name": "林蔚松",
       "day": "1",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "401_1_7",
@@ -12828,7 +12826,7 @@
       "teacher_name": "唐藝秦",
       "day": "1",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "402_1_2",
@@ -12840,7 +12838,7 @@
       "teacher_name": "唐藝秦",
       "day": "1",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "401_1_3",
@@ -12852,7 +12850,7 @@
       "teacher_name": "陳嬿竹",
       "day": "1",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "402_1_1",
@@ -12864,7 +12862,7 @@
       "teacher_name": "陳姿伊",
       "day": "1",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "501_2_2",
@@ -12876,7 +12874,7 @@
       "teacher_name": "張仕芳",
       "day": "2",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "501_1_7",
@@ -12888,7 +12886,7 @@
       "teacher_name": "蘇瑞梧",
       "day": "1",
       "period": "7",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "502_1_2",
@@ -12900,7 +12898,7 @@
       "teacher_name": "蘇瑞梧",
       "day": "1",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "503_1_1",
@@ -12912,7 +12910,7 @@
       "teacher_name": "蘇瑞梧",
       "day": "1",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "603_1_2",
@@ -12924,7 +12922,7 @@
       "teacher_name": "王映緹",
       "day": "1",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "601_1_1",
@@ -12936,7 +12934,7 @@
       "teacher_name": "王映緹",
       "day": "1",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "602_1_3",
@@ -12948,7 +12946,7 @@
       "teacher_name": "王映緹",
       "day": "1",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "203_3_1",
@@ -12960,7 +12958,7 @@
       "teacher_name": "劉尚澄",
       "day": "3",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "203_1_1",
@@ -12972,7 +12970,7 @@
       "teacher_name": "葉品宏",
       "day": "1",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "303_1_4",
@@ -12984,7 +12982,7 @@
       "teacher_name": "謝又安",
       "day": "1",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "303_1_3",
@@ -12996,7 +12994,7 @@
       "teacher_name": "陳冠杏",
       "day": "1",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "101_1_3",
@@ -13008,7 +13006,7 @@
       "teacher_name": "鄭吉貿",
       "day": "1",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "201_2_4",
@@ -13020,7 +13018,7 @@
       "teacher_name": "吳佳育",
       "day": "2",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "201_1_2",
@@ -13032,7 +13030,7 @@
       "teacher_name": "鄭吉貿",
       "day": "1",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "401_1_1",
@@ -13044,7 +13042,7 @@
       "teacher_name": "林蔚松",
       "day": "1",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "102_2_3",
@@ -13056,7 +13054,7 @@
       "teacher_name": "吳佳育",
       "day": "2",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "103_3_3",
@@ -13068,7 +13066,7 @@
       "teacher_name": "劉尚澄",
       "day": "3",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "101_2_2",
@@ -13080,7 +13078,7 @@
       "teacher_name": "吳佳育",
       "day": "2",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "202_1_3",
@@ -13092,7 +13090,7 @@
       "teacher_name": "孫佳宏",
       "day": "1",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "302_1_3",
@@ -13104,7 +13102,7 @@
       "teacher_name": "游貞維",
       "day": "1",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "103_3_4",
@@ -13116,7 +13114,7 @@
       "teacher_name": "涂世一",
       "day": "3",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "202_1_2",
@@ -13128,7 +13126,7 @@
       "teacher_name": "葉品宏",
       "day": "1",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "301_3_4",
@@ -13140,7 +13138,7 @@
       "teacher_name": "謝又安",
       "day": "3",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "302_1_1",
@@ -13152,7 +13150,7 @@
       "teacher_name": "謝又安",
       "day": "1",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "102_5_4",
@@ -13164,7 +13162,7 @@
       "teacher_name": "鄭吉貿",
       "day": "5",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "301_2_1",
@@ -13176,7 +13174,7 @@
       "teacher_name": "游貞維",
       "day": "2",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "403_1_4",
@@ -13188,7 +13186,7 @@
       "teacher_name": "林蔚松",
       "day": "1",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "403_1_3",
@@ -13200,7 +13198,7 @@
       "teacher_name": "唐藝秦",
       "day": "1",
       "period": "3",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "403_1_2",
@@ -13212,7 +13210,7 @@
       "teacher_name": "陳嬿竹",
       "day": "1",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "501_1_1",
@@ -13224,7 +13222,7 @@
       "teacher_name": "陳嬿竹",
       "day": "1",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "502_4_6",
@@ -13236,7 +13234,7 @@
       "teacher_name": "戴延諭",
       "day": "4",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "503_1_2",
@@ -13248,7 +13246,7 @@
       "teacher_name": "戴延諭",
       "day": "1",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "502_2_4",
@@ -13260,7 +13258,7 @@
       "teacher_name": "張仕芳",
       "day": "2",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "601_3_5",
@@ -13272,7 +13270,7 @@
       "teacher_name": "陳姿伊",
       "day": "3",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "602_5_4",
@@ -13284,7 +13282,7 @@
       "teacher_name": "戴延諭",
       "day": "5",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "503_2_1",
@@ -13296,7 +13294,7 @@
       "teacher_name": "吳佳育",
       "day": "2",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "303_5_2",
@@ -13308,7 +13306,7 @@
       "teacher_name": "陳冠杏",
       "day": "5",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "201_5_2",
@@ -13320,7 +13318,7 @@
       "teacher_name": "吳佳育",
       "day": "5",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "102_1_2",
@@ -13332,7 +13330,7 @@
       "teacher_name": "吳佳育",
       "day": "1",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "103_5_1",
@@ -13344,7 +13342,7 @@
       "teacher_name": "劉尚澄",
       "day": "5",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "101_5_1",
@@ -13356,7 +13354,7 @@
       "teacher_name": "吳佳育",
       "day": "5",
       "period": "1",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "202_5_2",
@@ -13368,7 +13366,7 @@
       "teacher_name": "孫佳宏",
       "day": "5",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "302_5_4",
@@ -13380,7 +13378,7 @@
       "teacher_name": "游貞維",
       "day": "5",
       "period": "4",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "301_5_2",
@@ -13392,7 +13390,7 @@
       "teacher_name": "游貞維",
       "day": "5",
       "period": "2",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "101_1_5",
@@ -13404,7 +13402,7 @@
       "teacher_name": "學務處",
       "day": "1",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "102_1_5",
@@ -13416,7 +13414,7 @@
       "teacher_name": "學務處",
       "day": "1",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "103_1_5",
@@ -13428,7 +13426,7 @@
       "teacher_name": "學務處",
       "day": "1",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "201_1_5",
@@ -13440,7 +13438,7 @@
       "teacher_name": "學務處",
       "day": "1",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "202_1_5",
@@ -13452,7 +13450,7 @@
       "teacher_name": "學務處",
       "day": "1",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "203_1_5",
@@ -13464,7 +13462,7 @@
       "teacher_name": "學務處",
       "day": "1",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "301_1_5",
@@ -13476,7 +13474,7 @@
       "teacher_name": "學務處",
       "day": "1",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "302_1_5",
@@ -13488,7 +13486,7 @@
       "teacher_name": "學務處",
       "day": "1",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "303_1_5",
@@ -13500,7 +13498,7 @@
       "teacher_name": "學務處",
       "day": "1",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "401_1_5",
@@ -13512,7 +13510,7 @@
       "teacher_name": "學務處",
       "day": "1",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "402_1_5",
@@ -13524,7 +13522,7 @@
       "teacher_name": "學務處",
       "day": "1",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "403_1_5",
@@ -13536,7 +13534,7 @@
       "teacher_name": "學務處",
       "day": "1",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "501_1_5",
@@ -13548,7 +13546,7 @@
       "teacher_name": "學務處",
       "day": "1",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "502_1_5",
@@ -13560,7 +13558,7 @@
       "teacher_name": "學務處",
       "day": "1",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "503_1_5",
@@ -13572,7 +13570,7 @@
       "teacher_name": "學務處",
       "day": "1",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "601_1_5",
@@ -13584,7 +13582,7 @@
       "teacher_name": "學務處",
       "day": "1",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "602_1_5",
@@ -13596,7 +13594,7 @@
       "teacher_name": "學務處",
       "day": "1",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "603_1_5",
@@ -13608,7 +13606,7 @@
       "teacher_name": "學務處",
       "day": "1",
       "period": "5",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "101_1_6",
@@ -13620,7 +13618,7 @@
       "teacher_name": "各班導師",
       "day": "1",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "102_1_6",
@@ -13632,7 +13630,7 @@
       "teacher_name": "各班導師",
       "day": "1",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "103_1_6",
@@ -13644,7 +13642,7 @@
       "teacher_name": "各班導師",
       "day": "1",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "201_1_6",
@@ -13656,7 +13654,7 @@
       "teacher_name": "各班導師",
       "day": "1",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "202_1_6",
@@ -13668,7 +13666,7 @@
       "teacher_name": "各班導師",
       "day": "1",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "203_1_6",
@@ -13680,7 +13678,7 @@
       "teacher_name": "各班導師",
       "day": "1",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "301_1_6",
@@ -13692,7 +13690,7 @@
       "teacher_name": "各班導師",
       "day": "1",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "302_1_6",
@@ -13704,7 +13702,7 @@
       "teacher_name": "各班導師",
       "day": "1",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "303_1_6",
@@ -13716,7 +13714,7 @@
       "teacher_name": "各班導師",
       "day": "1",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "401_1_6",
@@ -13728,7 +13726,7 @@
       "teacher_name": "各班導師",
       "day": "1",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "402_1_6",
@@ -13740,7 +13738,7 @@
       "teacher_name": "各班導師",
       "day": "1",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "403_1_6",
@@ -13752,7 +13750,7 @@
       "teacher_name": "各班導師",
       "day": "1",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "501_1_6",
@@ -13764,7 +13762,7 @@
       "teacher_name": "各班導師",
       "day": "1",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "502_1_6",
@@ -13776,7 +13774,7 @@
       "teacher_name": "各班導師",
       "day": "1",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "503_1_6",
@@ -13788,7 +13786,7 @@
       "teacher_name": "各班導師",
       "day": "1",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "601_1_6",
@@ -13800,7 +13798,7 @@
       "teacher_name": "各班導師",
       "day": "1",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "602_1_6",
@@ -13812,7 +13810,7 @@
       "teacher_name": "各班導師",
       "day": "1",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     },
     {
       "id": "603_1_6",
@@ -13824,7 +13822,7 @@
       "teacher_name": "各班導師",
       "day": "1",
       "period": "6",
-      "room_name": ""
+      "room_name": "nan"
     }
   ],
   "class_consecutive_rules": [],
@@ -15548,5 +15546,6 @@
       "fixed_day": "1",
       "fixed_period": "6"
     }
-  ]
+  ],
+  "swap_history": []
 }
