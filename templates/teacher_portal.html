@@ -11,7 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
     <!-- Stylesheet -->
     <link rel="icon" type="image/png" href="/static/images/icon.png">
-    <link rel="stylesheet" href="/static/css/style.css?v=20260820_v230">
+    <link rel="stylesheet" href="/static/css/style.css?v=20260820_v240">
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
@@ -2127,7 +2127,12 @@
                         <p class="sub-text" style="margin: 2px 0 0 0; font-size: 0.82rem; color: var(--text-secondary);">記錄所有手動調課、微調與連鎖對調動作，支援隨時一鍵反向復原</p>
                     </div>
                 </div>
-                <button type="button" class="close-modal-btn" onclick="document.getElementById('swapHistoryModal').style.display='none'" style="font-size: 1.5rem; background: none; border: none; cursor: pointer; color: var(--text-secondary);">&times;</button>
+                <div class="modal-header-actions">
+                    <button class="maximize-modal-btn" onclick="toggleModalMaximize('swapHistoryModal')" title="全螢幕最大化展開/還原視窗">
+                        <i class="fa-solid fa-expand"></i>
+                    </button>
+                    <button type="button" class="close-modal-btn" onclick="document.getElementById('swapHistoryModal').style.display='none'">&times;</button>
+                </div>
             </div>
             <div class="modal-body" style="max-height: 55vh; overflow-y: auto; padding: 20px 24px;">
                 <div id="swapHistoryList">
@@ -2146,6 +2151,6 @@
     </div>
 
     <!-- JS Scripts with Cache-Buster -->
-    <script src="/static/js/app.js?v=20260820_v230"></script>
+    <script src="/static/js/app.js?v=20260820_v240"></script>
 </body>
 </html>
