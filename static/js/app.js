@@ -1359,6 +1359,11 @@ async function clearSwapHistory() {
     }
 }
 
+// Global exports for modal inline handlers
+window.openSwapHistoryModal = openSwapHistoryModal;
+window.undoManualSwap = undoManualSwap;
+window.clearSwapHistory = clearSwapHistory;
+
 function openSwapSlipModal() {
     const modal = document.getElementById('swapSlipModal');
     const content = document.getElementById('swapSlipContent');
