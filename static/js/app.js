@@ -672,11 +672,13 @@ function renderScheduleGrid(type, code, slots) {
                     if (type === 'class') {
                         // Class view: link to teacher and classroom with Dual-View Modal trigger
                         targetLink = lesson.teacher_name ? `<a href="#teacher/${encodeURIComponent(lesson.teacher_code || lesson.teacher_name)}" onclick="openDualViewModal('${code}', '${lesson.teacher_code || lesson.teacher_name}'); return false;" class="meta-link" title="開啟雙視窗課表對照與調課助手"><i class="fa-solid fa-chalkboard-user"></i> ${lesson.teacher_name} <i class="fa-solid fa-columns" style="font-size:0.7rem; opacity:0.7;"></i></a>` : '';
-                        roomLink = lesson.room_name ? `<a href="#room/${encodeURIComponent(lesson.room_code || lesson.room_name)}" class="room-lbl meta-link"><i class="fa-solid fa-location-dot"></i> ${lesson.room_name}</a>` : '';
+                        const hasRoom = lesson.room_name && String(lesson.room_name).trim() !== '' && String(lesson.room_name).toLowerCase() !== 'nan' && String(lesson.room_name).toLowerCase() !== 'none' && String(lesson.room_name).toLowerCase() !== 'null';
+                        roomLink = hasRoom ? `<a href="#room/${encodeURIComponent(lesson.room_code || lesson.room_name)}" class="room-lbl meta-link"><i class="fa-solid fa-location-dot"></i> ${lesson.room_name}</a>` : '';
                     } else if (type === 'teacher') {
                         // Teacher view: link to class and classroom with Dual-View Modal trigger
                         targetLink = lesson.class_name ? `<a href="#class/${encodeURIComponent(lesson.class_code || lesson.class_name)}" onclick="openDualViewModal('${lesson.class_code || lesson.class_name}', '${code}'); return false;" class="meta-link" title="開啟雙視窗課表對照與調課助手"><i class="fa-solid fa-users"></i> ${lesson.class_name} <i class="fa-solid fa-columns" style="font-size:0.7rem; opacity:0.7;"></i></a>` : '';
-                        roomLink = lesson.room_name ? `<a href="#room/${encodeURIComponent(lesson.room_code || lesson.room_name)}" class="room-lbl meta-link"><i class="fa-solid fa-location-dot"></i> ${lesson.room_name}</a>` : '';
+                        const hasRoom = lesson.room_name && String(lesson.room_name).trim() !== '' && String(lesson.room_name).toLowerCase() !== 'nan' && String(lesson.room_name).toLowerCase() !== 'none' && String(lesson.room_name).toLowerCase() !== 'null';
+                        roomLink = hasRoom ? `<a href="#room/${encodeURIComponent(lesson.room_code || lesson.room_name)}" class="room-lbl meta-link"><i class="fa-solid fa-location-dot"></i> ${lesson.room_name}</a>` : '';
                     } else if (type === 'room') {
                         // Room view: link to class and teacher
                         targetLink = lesson.class_name ? `<a href="#class/${encodeURIComponent(lesson.class_code || lesson.class_name)}" class="meta-link"><i class="fa-solid fa-users"></i> ${lesson.class_name}</a>` : '';
@@ -6158,10 +6160,12 @@ function renderDualClassGrid() {
                 td.innerHTML = lessons.map(l => {
                     const tCode = l.teacher_code || l.teacher_name || '';
                     const tName = l.teacher_name || l.teacher_code || '';
-                    const tLink = tName ? `<span onclick="event.stopPropagation(); switchDualRightTeacher('${tCode}', ${d}, ${p});" style="color:#818cf8; font-weight:bold; cursor:pointer; text-decoration:underline;" title="👉 點擊讓右視窗切換顯示 ${tName} 老師課表"><i class="fa-solid fa-arrow-right" style="font-size:0.68rem;"></i> ${tName}</span>` : '';
-                    return `<div style="font-weight:bold; color:#38bdf8;">${l.subject_name}</div>
-                            <div style="font-size:0.72rem; margin-top:2px;">${tLink} ${l.room_name ? '<span style="color:#94a3b8;">['+l.room_name+']</span>' : ''}</div>`;
-                }).join('<hr style="border:0; border-top:1px dashed rgba(255,255,255,0.1); margin:2px 0;">');
+                    const tLink = tName ? `<span onclick="event.stopPropagation(); switchDualRightTeacher('${tCode}', ${d}, ${p});" style="color:#0071e3; font-weight:bold; cursor:pointer; text-decoration:underline;" title="👉 點擊讓右視窗切換顯示 ${tName} 老師課表"><i class="fa-solid fa-arrow-right" style="font-size:0.68rem;"></i> ${tName}</span>` : '';
+                    const hasRoom = l.room_name && String(l.room_name).trim() !== '' && String(l.room_name).toLowerCase() !== 'nan' && String(l.room_name).toLowerCase() !== 'none' && String(l.room_name).toLowerCase() !== 'null';
+                    const roomTag = hasRoom ? ` <span style="color:#64748b; font-size:0.75rem;">[${l.room_name}]</span>` : '';
+                    return `<div style="font-weight:bold; color:#1d1d1f;">${l.subject_name}</div>
+                            <div style="font-size:0.75rem; margin-top:2px;">${tLink}${roomTag}</div>`;
+                }).join('<hr style="border:0; border-top:1px dashed rgba(0,0,0,0.1); margin:4px 0;">');
             }
 
             td.addEventListener('click', () => {
@@ -6200,7 +6204,7 @@ function renderDualTeacherGrid() {
     tbody.innerHTML = '';
     for (let p = 1; p <= 8; p++) {
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td style="font-weight:bold; background:rgba(255,255,255,0.02); text-align:center;">第${p}節</td>`;
+        tr.innerHTML = `<td style="font-weight:bold; background:rgba(0,0,0,0.02); text-align:center;">第${p}節</td>`;
         for (let d = 1; d <= 5; d++) {
             const td = document.createElement('td');
             td.style.cursor = 'pointer';
@@ -6210,15 +6214,17 @@ function renderDualTeacherGrid() {
 
             const lessons = grid[p-1][d-1];
             if (lessons.length === 0) {
-                td.innerHTML = '<span style="color:#34d399; font-size:0.7rem; font-weight:bold;">🟢 空堂 (無課)</span>';
+                td.innerHTML = '<span style="color:#28a745; font-size:0.75rem; font-weight:bold;">🟢 空堂 (無課)</span>';
             } else {
                 td.innerHTML = lessons.map(l => {
                     const cCode = l.class_code || l.class_name || '';
                     const cName = l.class_name || l.class_code || '';
-                    const cLink = cName ? `<span onclick="event.stopPropagation(); switchDualLeftClass('${cCode}', ${d}, ${p});" style="color:#38bdf8; font-weight:bold; cursor:pointer; text-decoration:underline;" title="👈 點擊讓左視窗切換顯示 ${cName} 班級課表"><i class="fa-solid fa-arrow-left" style="font-size:0.68rem;"></i> ${cName}</span>` : '';
-                    return `<div style="font-weight:bold; color:#818cf8;">${cLink} ${l.subject_name}</div>
-                            <div style="font-size:0.72rem; color:#94a3b8;">${l.room_name ? '['+l.room_name+']' : ''}</div>`;
-                }).join('<hr style="border:0; border-top:1px dashed rgba(255,255,255,0.1); margin:2px 0;">');
+                    const cLink = cName ? `<span onclick="event.stopPropagation(); switchDualLeftClass('${cCode}', ${d}, ${p});" style="color:#0071e3; font-weight:bold; cursor:pointer; text-decoration:underline;" title="👈 點擊讓左視窗切換顯示 ${cName} 班級課表"><i class="fa-solid fa-arrow-left" style="font-size:0.68rem;"></i> ${cName}</span>` : '';
+                    const hasRoom = l.room_name && String(l.room_name).trim() !== '' && String(l.room_name).toLowerCase() !== 'nan' && String(l.room_name).toLowerCase() !== 'none' && String(l.room_name).toLowerCase() !== 'null';
+                    const roomTag = hasRoom ? ` <span style="color:#64748b; font-size:0.75rem;">[${l.room_name}]</span>` : '';
+                    return `<div style="font-weight:bold; color:#1d1d1f;">${cLink} ${l.subject_name}</div>
+                            <div style="font-size:0.75rem; color:#64748b; margin-top:2px;">${roomTag}</div>`;
+                }).join('<hr style="border:0; border-top:1px dashed rgba(0,0,0,0.1); margin:4px 0;">');
             }
 
             td.addEventListener('click', () => {
