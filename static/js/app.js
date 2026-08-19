@@ -6025,13 +6025,22 @@ async function openDualViewModal(classCode, teacherCode) {
         }).join('');
     }
 
+    const cleanTeacherKey = String(teacherCode || '').trim().replace(/\.0$/, '');
+    let tMatch = metadata.teachers ? metadata.teachers.find(t => {
+        const c = String(typeof t === 'object' ? t.code : t).trim().replace(/\.0$/, '');
+        const n = String(typeof t === 'object' ? t.name : t).trim();
+        return c === cleanTeacherKey || n === cleanTeacherKey || c === String(teacherCode).trim() || n === String(teacherCode).trim();
+    }) : null;
+
     // Populate teacherSelect dropdown safely
     if (teacherSelect && metadata.teachers) {
         teacherSelect.innerHTML = metadata.teachers.map(t => {
             const code = typeof t === 'object' ? (t.code || t.name) : t;
             const name = typeof t === 'object' ? (t.name || t.code) : t;
             const role = typeof t === 'object' && t.role ? ` (${t.role})` : '';
-            return `<option value="${code}" ${code === teacherCode || name === teacherCode ? 'selected' : ''}>${name}${role}</option>`;
+            const cClean = String(code).trim().replace(/\.0$/, '');
+            const isSel = cClean === cleanTeacherKey || String(name).trim() === cleanTeacherKey || String(code).trim() === String(teacherCode).trim();
+            return `<option value="${code}" ${isSel ? 'selected' : ''}>${name}${role}</option>`;
         }).join('');
     }
 
@@ -6039,9 +6048,7 @@ async function openDualViewModal(classCode, teacherCode) {
     dualViewCurrentClass = classCode || firstCls;
     
     const firstTch = metadata.teachers && metadata.teachers[0] ? (typeof metadata.teachers[0] === 'object' ? metadata.teachers[0].code : metadata.teachers[0]) : '';
-    
-    let tMatch = metadata.teachers ? metadata.teachers.find(t => (typeof t === 'object' ? (t.code === teacherCode || t.name === teacherCode) : t === teacherCode)) : null;
-    dualViewCurrentTeacher = tMatch ? (typeof tMatch === 'object' ? tMatch.code : tMatch) : (teacherCode || firstTch);
+    dualViewCurrentTeacher = tMatch ? (typeof tMatch === 'object' ? (tMatch.code || tMatch.name) : tMatch) : (cleanTeacherKey || firstTch);
 
     if (classSelect) classSelect.value = dualViewCurrentClass;
     if (teacherSelect) teacherSelect.value = dualViewCurrentTeacher;
@@ -6210,8 +6217,13 @@ function renderDualTeacherGrid() {
 
     if (!tbody) return;
 
-    const t = metadata.teachers ? metadata.teachers.find(x => typeof x === 'object' ? (x.code === dualViewCurrentTeacher || x.name === dualViewCurrentTeacher) : x === dualViewCurrentTeacher) : null;
-    const tName = t ? (typeof t === 'object' ? t.name : t) : dualViewCurrentTeacher;
+    const cleanTKey = String(dualViewCurrentTeacher || '').trim().replace(/\.0$/, '');
+    const t = metadata.teachers ? metadata.teachers.find(x => {
+        const c = String(typeof x === 'object' ? x.code : x).trim().replace(/\.0$/, '');
+        const n = String(typeof x === 'object' ? x.name : x).trim();
+        return c === cleanTKey || n === cleanTKey;
+    }) : null;
+    const tName = resolveTeacherDisplayName(t ? t.name : dualViewCurrentTeacher, dualViewCurrentTeacher);
     const tRole = t && typeof t === 'object' && t.role ? t.role : '';
 
     if (titleEl) titleEl.innerHTML = `<span><i class="fa-solid fa-user-graduate"></i> ${tName} 老師課表</span>`;
