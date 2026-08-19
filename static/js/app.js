@@ -5,6 +5,7 @@ let metadata = {
     classrooms: [],
     period_times: {}
 };
+let isManualEditMode = false;
 let selectedSourceItem = null;
 
 function findTeacherInMetadata(teacherKey) {
