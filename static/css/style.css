@@ -1434,3 +1434,38 @@ body {
     from { transform: scale(0.96); opacity: 0; }
     to { transform: scale(1); opacity: 1; }
 }
+
+/* ==========================================================================
+   Dual View Modal (Split Timetable & Swap Assistant) Wide Layout
+   ========================================================================== */
+#dualViewModal .modal-content {
+    max-width: 1420px !important;
+    width: 96vw !important;
+}
+
+#dualViewModal .modal-content.fullscreen-modal {
+    max-width: 98vw !important;
+    width: 98vw !important;
+    height: 96vh !important;
+    max-height: 96vh !important;
+}
+
+#dualViewGridSplit {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 16px !important;
+}
+
+.dual-cell-slot {
+    padding: 6px 8px !important;
+    min-height: 52px !important;
+    text-align: center !important;
+    vertical-align: middle !important;
+    border: 1px solid rgba(0, 0, 0, 0.08) !important;
+    background: #ffffff !important;
+    transition: all 0.15s ease !important;
+}
+
+.dual-cell-slot:hover {
+    background: rgba(0, 113, 227, 0.06) !important;
+}
