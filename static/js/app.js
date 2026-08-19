@@ -7,6 +7,12 @@ let metadata = {
 };
 let isManualEditMode = false;
 let selectedSourceItem = null;
+let serverSwapHistory = [];
+let manualSwapUndoStack = [];
+let manualSwapRedoStack = [];
+let swapSlipRecords = [];
+let isConsecutiveLinkMode = false;
+let lessonNotes = {};
 
 function findTeacherInMetadata(teacherKey) {
     if (!teacherKey || !metadata || !metadata.teachers) return null;
@@ -976,10 +982,6 @@ function setupSolverPanel() {
 }
 
 // Manual Scheduling State & Optimization
-let manualSwapUndoStack = [];
-let manualSwapRedoStack = [];
-let swapSlipRecords = [];
-let isConsecutiveLinkMode = true;
 async function fetchSwapHistory() {
     try {
         const response = await fetch('/api/swap-history');
@@ -6579,8 +6581,6 @@ if (document.readyState === 'loading') {
 }
 
 // --- Lesson Notes System ---
-let lessonNotes = {};
-
 async function fetchLessonNotes() {
     try {
         const resp = await fetch('/api/notes');
@@ -6890,6 +6890,14 @@ async function renderCrossSwapTargetGrid() {
         console.error("renderCrossSwapTargetGrid error:", e);
         container.innerHTML = `<div style="color:#f87171; text-align:center; padding:24px;">載入目標課表失敗：${e.message}</div>`;
     }
+}
+
+async function executeCrossSwapClick(day, period, targetIdStr) {
+    if (!selectedSourceItem) return;
+    const targetId = (targetIdStr === 'null' || !targetIdStr) ? null : targetIdStr;
+    const modal = document.getElementById('crossClassSwapModal');
+    if (modal) modal.style.display = 'none';
+    await executeSwap(selectedSourceItem.id, day, period, targetId);
 }
 
 window.openCrossSwapModal = openCrossSwapModal;
