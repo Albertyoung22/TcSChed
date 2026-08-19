@@ -153,10 +153,10 @@
                     <button id="manualEditToggleBtn" class="action-btn manual-edit-btn-prominent" title="開啟手動調課與拖曳微調模式">
                         <i class="fa-solid fa-hand-pointer"></i> 🛠️ 手動調課 / 拖曳微調
                     </button>
-                    <button id="manualUndoBtn" class="action-btn" title="復原上一筆手動調課 (Ctrl+Z)" style="display: none; background: rgba(148, 163, 184, 0.15); border: 1px solid rgba(148, 163, 184, 0.3); color: #cbd5e1;">
+                    <button id="manualUndoBtn" class="action-btn" onclick="undoManualSwap()" title="復原上一筆手動調課 (Ctrl+Z)" style="display: none; background: rgba(148, 163, 184, 0.15); border: 1px solid rgba(148, 163, 184, 0.3); color: #cbd5e1;">
                         <i class="fa-solid fa-rotate-left"></i> 復原
                     </button>
-                    <button id="swapHistoryBtn" class="action-btn" title="查看調課歷史紀錄與復原日誌" style="display: none; background: rgba(14, 165, 233, 0.12); border: 1px solid rgba(14, 165, 233, 0.3); color: #0284c7; font-weight: 600;">
+                    <button id="swapHistoryBtn" class="action-btn" onclick="openSwapHistoryModal()" title="查看調課歷史紀錄與復原日誌" style="display: none; background: rgba(14, 165, 233, 0.12); border: 1px solid rgba(14, 165, 233, 0.3); color: #0284c7; font-weight: 600;">
                         <i class="fa-solid fa-clock-rotate-left"></i> 調課紀錄 (<span id="swapHistoryCount">0</span>)
                     </button>
                     <button id="manualRedoBtn" class="action-btn" title="重做下一筆手動調課 (Ctrl+Y)" style="display: none; background: rgba(148, 163, 184, 0.15); border: 1px solid rgba(148, 163, 184, 0.3); color: #cbd5e1;">
@@ -2121,6 +2121,6 @@
     </div>
 
     <!-- JS Scripts with Cache-Buster -->
-    <script src="/static/js/app.js?v=20260819_v140"></script>
+    <script src="/static/js/app.js?v=20260820_v150"></script>
 </body>
 </html>
