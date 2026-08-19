@@ -7,25 +7,41 @@ let metadata = {
 };
 let selectedSourceItem = null;
 
+function findTeacherInMetadata(teacherKey) {
+    if (!teacherKey || !metadata || !metadata.teachers) return null;
+    const keyStr = String(teacherKey).trim().replace(/\.0$/, '');
+    const keyInt = parseInt(keyStr, 10);
+    const keyPadded = !isNaN(keyInt) ? String(keyInt).padStart(3, '0') : keyStr;
+
+    return metadata.teachers.find(t => {
+        if (!t) return false;
+        const codeStr = String(typeof t === 'object' ? (t.code || t.name) : t).trim().replace(/\.0$/, '');
+        const nameStr = String(typeof t === 'object' ? (t.name || t.code) : t).trim();
+        const codeInt = parseInt(codeStr, 10);
+        const codePadded = !isNaN(codeInt) ? String(codeInt).padStart(3, '0') : codeStr;
+
+        if (nameStr === keyStr) return true;
+        if (codeStr === keyStr) return true;
+        if (codePadded === keyPadded) return true;
+        if (!isNaN(keyInt) && !isNaN(codeInt) && keyInt === codeInt) return true;
+        return false;
+    }) || null;
+}
+
 function resolveTeacherDisplayName(name, code) {
     if (!name && !code) return '';
-    let n = String(name || '').trim();
-    let c = String(code || '').trim();
-
-    if (n.endsWith('.0')) n = n.slice(0, -2);
-    if (c.endsWith('.0')) c = c.slice(0, -2);
+    let n = String(name || '').trim().replace(/\.0$/, '');
+    let c = String(code || '').trim().replace(/\.0$/, '');
 
     if (n && n.toLowerCase() !== 'nan' && n.toLowerCase() !== 'null' && !/^\d+$/.test(n)) {
         return n;
     }
 
-    const lookupCode = c || n;
-    if (typeof metadata !== 'undefined' && metadata.teachers) {
-        const found = metadata.teachers.find(t => String(t.code).trim() === lookupCode || String(t.code).trim() === lookupCode + '.0');
-        if (found && found.name && !/^\d+$/.test(found.name)) {
-            return found.name;
-        }
+    const found = findTeacherInMetadata(c) || findTeacherInMetadata(n);
+    if (found && found.name && !/^\d+$/.test(found.name)) {
+        return found.name;
     }
+
     return n || c;
 }
 
@@ -6025,12 +6041,12 @@ async function openDualViewModal(classCode, teacherCode) {
         }).join('');
     }
 
-    const cleanTeacherKey = String(teacherCode || '').trim().replace(/\.0$/, '');
-    let tMatch = metadata.teachers ? metadata.teachers.find(t => {
-        const c = String(typeof t === 'object' ? t.code : t).trim().replace(/\.0$/, '');
-        const n = String(typeof t === 'object' ? t.name : t).trim();
-        return c === cleanTeacherKey || n === cleanTeacherKey || c === String(teacherCode).trim() || n === String(teacherCode).trim();
-    }) : null;
+    const firstCls = metadata.classes && metadata.classes[0] ? (typeof metadata.classes[0] === 'object' ? metadata.classes[0].code : metadata.classes[0]) : '';
+    dualViewCurrentClass = classCode || firstCls;
+
+    const firstTch = metadata.teachers && metadata.teachers[0] ? (typeof metadata.teachers[0] === 'object' ? metadata.teachers[0].code : metadata.teachers[0]) : '';
+    let tMatch = findTeacherInMetadata(teacherCode);
+    dualViewCurrentTeacher = tMatch ? (typeof tMatch === 'object' ? (tMatch.code || tMatch.name) : tMatch) : (teacherCode || firstTch);
 
     // Populate teacherSelect dropdown safely
     if (teacherSelect && metadata.teachers) {
@@ -6038,20 +6054,19 @@ async function openDualViewModal(classCode, teacherCode) {
             const code = typeof t === 'object' ? (t.code || t.name) : t;
             const name = typeof t === 'object' ? (t.name || t.code) : t;
             const role = typeof t === 'object' && t.role ? ` (${t.role})` : '';
-            const cClean = String(code).trim().replace(/\.0$/, '');
-            const isSel = cClean === cleanTeacherKey || String(name).trim() === cleanTeacherKey || String(code).trim() === String(teacherCode).trim();
+            const isSel = (tMatch && t === tMatch) || code === dualViewCurrentTeacher || name === dualViewCurrentTeacher;
             return `<option value="${code}" ${isSel ? 'selected' : ''}>${name}${role}</option>`;
         }).join('');
     }
 
-    const firstCls = metadata.classes && metadata.classes[0] ? (typeof metadata.classes[0] === 'object' ? metadata.classes[0].code : metadata.classes[0]) : '';
-    dualViewCurrentClass = classCode || firstCls;
-    
-    const firstTch = metadata.teachers && metadata.teachers[0] ? (typeof metadata.teachers[0] === 'object' ? metadata.teachers[0].code : metadata.teachers[0]) : '';
-    dualViewCurrentTeacher = tMatch ? (typeof tMatch === 'object' ? (tMatch.code || tMatch.name) : tMatch) : (cleanTeacherKey || firstTch);
-
     if (classSelect) classSelect.value = dualViewCurrentClass;
-    if (teacherSelect) teacherSelect.value = dualViewCurrentTeacher;
+    if (teacherSelect) {
+        teacherSelect.value = dualViewCurrentTeacher;
+        // If exact value wasn't found in options, match by findTeacherInMetadata
+        if (!teacherSelect.value && tMatch) {
+            teacherSelect.value = tMatch.code;
+        }
+    }
 
     await loadDualViewData();
 }
@@ -6217,12 +6232,7 @@ function renderDualTeacherGrid() {
 
     if (!tbody) return;
 
-    const cleanTKey = String(dualViewCurrentTeacher || '').trim().replace(/\.0$/, '');
-    const t = metadata.teachers ? metadata.teachers.find(x => {
-        const c = String(typeof x === 'object' ? x.code : x).trim().replace(/\.0$/, '');
-        const n = String(typeof x === 'object' ? x.name : x).trim();
-        return c === cleanTKey || n === cleanTKey;
-    }) : null;
+    const t = findTeacherInMetadata(dualViewCurrentTeacher);
     const tName = resolveTeacherDisplayName(t ? t.name : dualViewCurrentTeacher, dualViewCurrentTeacher);
     const tRole = t && typeof t === 'object' && t.role ? t.role : '';
 
