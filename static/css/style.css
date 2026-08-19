@@ -1393,8 +1393,36 @@ body {
     gap: 16px !important;
 }
 
+#dualViewModal .schedule-table {
+    min-width: 0 !important;
+    width: 100% !important;
+    table-layout: fixed !important;
+}
+
+#dualViewModal .table-responsive {
+    overflow-x: hidden !important;
+    margin-bottom: 0 !important;
+}
+
+#dualViewModal .schedule-table th,
+#dualViewModal .schedule-table td {
+    padding: 6px 4px !important;
+    font-size: 0.82rem !important;
+    word-break: break-all !important;
+}
+
+#dualViewModal .schedule-table th:first-child,
+#dualViewModal .schedule-table td:first-child {
+    width: 13% !important;
+}
+
+#dualViewModal .schedule-table th:not(:first-child),
+#dualViewModal .schedule-table td:not(:first-child) {
+    width: 17.4% !important;
+}
+
 .dual-cell-slot {
-    padding: 6px 8px !important;
+    padding: 6px 4px !important;
     min-height: 52px !important;
     text-align: center !important;
     vertical-align: middle !important;
