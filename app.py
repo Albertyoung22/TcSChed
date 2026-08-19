@@ -1758,12 +1758,43 @@ def api_execute_swap():
             target_item["day"] = str(old_day)
             target_item["period"] = str(old_period)
             target_item["manual_locked"] = True
-            msg = f"成功對調課程！【{source_item.get('subject_name')}】與【{target_item.get('subject_name')}】已互相調換時段。"
+            msg = f"成功對調課程！【{source_item.get('class_name', '')} {source_item.get('subject_name')} ({source_item.get('teacher_name')})】與【{target_item.get('class_name', '')} {target_item.get('subject_name')} ({target_item.get('teacher_name')})】已互相調換時段。"
         else:
             source_item["day"] = str(target_day)
             source_item["period"] = str(target_period)
             source_item["manual_locked"] = True
-            msg = f"成功微調課程！【{source_item.get('subject_name')}】已調整至 週{target_day} 第{target_period}節。"
+            msg = f"成功微調課程！【{source_item.get('class_name', '')} {source_item.get('subject_name')} ({source_item.get('teacher_name')})】已由週{old_day}第{old_period}節調整至週{target_day}第{target_period}節。"
+            
+        # Record Swap History
+        import time, datetime
+        swap_record = {
+            "id": f"swap_{int(time.time() * 1000)}",
+            "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "time_short": datetime.datetime.now().strftime("%H:%M:%S"),
+            "type": "two_way_swap" if target_item else "single_shift",
+            "message": msg,
+            "source_id": str(source_item.get("id")),
+            "source_subject": str(source_item.get("subject_name", "")),
+            "source_teacher": str(source_item.get("teacher_name", "")),
+            "source_class": str(source_item.get("class_name", "")),
+            "source_old_day": str(old_day),
+            "source_old_period": str(old_period),
+            "source_new_day": str(target_day),
+            "source_new_period": str(target_period),
+            "target_id": str(target_item.get("id")) if target_item else None,
+            "target_subject": str(target_item.get("subject_name", "")) if target_item else None,
+            "target_teacher": str(target_item.get("teacher_name", "")) if target_item else None,
+            "target_class": str(target_item.get("class_name", "")) if target_item else None,
+            "target_old_day": str(target_day) if target_item else None,
+            "target_old_period": str(target_period) if target_item else None,
+            "target_new_day": str(old_day) if target_item else None,
+            "target_new_period": str(old_period) if target_item else None
+        }
+        if "swap_history" not in cfg:
+            cfg["swap_history"] = []
+        cfg["swap_history"].append(swap_record)
+        if len(cfg["swap_history"]) > 150:
+            cfg["swap_history"] = cfg["swap_history"][-150:]
             
         cfg["solved_schedules"] = solved
         save_config_rules(cfg)
@@ -1782,12 +1813,112 @@ def api_execute_swap():
         return jsonify({
             "status": "success",
             "message": msg,
-            "solved": solved
+            "solved": solved,
+            "history_count": len(cfg["swap_history"])
         })
     except Exception as e:
         import traceback
         traceback.print_exc()
         return jsonify({"status": "error", "message": f"手調失敗: {str(e)}"}), 500
+
+@app.route("/api/swap-history")
+def api_get_swap_history():
+    try:
+        cfg = load_config_rules()
+        history = cfg.get("swap_history", [])
+        return jsonify({
+            "status": "success",
+            "history": history,
+            "count": len(history)
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/undo-swap", methods=["POST"])
+def api_undo_swap():
+    try:
+        cfg = load_config_rules()
+        history = cfg.get("swap_history", [])
+        if not history:
+            return jsonify({"status": "error", "message": "目前尚無任何可復原的調課紀錄！"}), 400
+        
+        req = request.get_json(silent=True) or {}
+        record_id = req.get("record_id")
+        
+        record = None
+        if record_id:
+            for r in reversed(history):
+                if r.get("id") == record_id:
+                    record = r
+                    break
+        else:
+            record = history[-1]
+            
+        if not record:
+            return jsonify({"status": "error", "message": "找不到該筆調課紀錄"}), 404
+            
+        solved = get_current_solved_schedules()
+        
+        # 1. Revert source item
+        s_id = str(record.get("source_id"))
+        s_old_d = str(record.get("source_old_day"))
+        s_old_p = str(record.get("source_old_period"))
+        
+        for s in solved:
+            if str(s.get("id")) == s_id:
+                s["day"] = s_old_d
+                s["period"] = s_old_p
+                break
+                
+        # 2. Revert target item if two-way swap
+        t_id = record.get("target_id")
+        if t_id:
+            t_id = str(t_id)
+            t_old_d = str(record.get("target_old_day"))
+            t_old_p = str(record.get("target_old_period"))
+            for s in solved:
+                if str(s.get("id")) == t_id:
+                    s["day"] = t_old_d
+                    s["period"] = t_old_p
+                    break
+                    
+        # Remove this record from history
+        history.remove(record)
+        cfg["swap_history"] = history
+        cfg["solved_schedules"] = solved
+        save_config_rules(cfg)
+        
+        global _cached_data
+        _cached_data = None
+        
+        try:
+            solved_excel = os.path.join(os.path.dirname(__file__), "School_Schedule_Solved.xlsx")
+            import pandas as pd
+            df = pd.DataFrame(solved)
+            df.to_excel(solved_excel, index=False)
+        except Exception:
+            pass
+            
+        undo_msg = f"↩️ 成功復原上一筆調課！已將【{record.get('source_subject', '')}】還原至原時段。"
+        return jsonify({
+            "status": "success",
+            "message": undo_msg,
+            "history": history,
+            "count": len(history),
+            "solved": solved
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": f"復原失敗: {str(e)}"}), 500
+
+@app.route("/api/clear-swap-history", methods=["POST"])
+def api_clear_swap_history():
+    try:
+        cfg = load_config_rules()
+        cfg["swap_history"] = []
+        save_config_rules(cfg)
+        return jsonify({"status": "success", "message": "已清空所有調課歷史紀錄"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 def get_valid_data_dir():
     env_dir = os.environ.get("DATA_DIR", "")
