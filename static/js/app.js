@@ -4372,19 +4372,20 @@ function setupSubstituteHandlers() {
 
                     res.candidates.forEach(cand => {
                         const tr = document.createElement('tr');
-                        let priorityBadge = '<span style="color:#38bdf8;"><i class="fa-solid fa-circle-check"></i> 空閒可用</span>';
+                        let priorityBadge = '<span style="color:#0071e3;"><i class="fa-solid fa-circle-check"></i> 空閒可用</span>';
                         if (cand.is_same_class) {
-                            priorityBadge = `<span style="color:#fbbf24; font-weight:bold;"><i class="fa-solid fa-star"></i> ⭐ 最優先：同班任課教師</span>`;
+                            priorityBadge = `<span style="color:#d97706; font-weight:bold;"><i class="fa-solid fa-star"></i> ⭐ 最優先：同班任課教師</span>`;
                         } else if (cand.is_same_domain) {
-                            priorityBadge = `<span style="color:#34d399; font-weight:bold;"><i class="fa-solid fa-check-double"></i> 次優先：同學科專長</span>`;
+                            priorityBadge = `<span style="color:#10b981; font-weight:bold;"><i class="fa-solid fa-check-double"></i> 次優先：同學科專長</span>`;
                         }
 
+                        const dispCandName = resolveTeacherDisplayName(cand.teacher_name, cand.teacher_code);
                         tr.innerHTML = `
-                            <td style="font-weight:bold; color:#38bdf8;">${cand.teacher_name} (${cand.teacher_code})</td>
-                            <td><span style="color:#818cf8; font-size:0.8rem;">[${cand.role}]</span> ${cand.assigned_classes_str}</td>
+                            <td style="font-weight:bold; color:#0071e3;">${dispCandName} (${cand.teacher_code})</td>
+                            <td><span style="color:#5856d6; font-size:0.8rem;">[${cand.role || '專任'}]</span> ${cand.assigned_classes_str || ''}</td>
                             <td>${priorityBadge}</td>
                             <td>
-                                <button class="solver-action-btn primary-btn" style="padding:4px 10px; font-size:0.8rem; background:#10b981;" onclick="assignSubstitute('${absentTeacher}', '${cand.teacher_code}', '${cand.teacher_name}', '${day}', '${period}', '${c ? c.class_name : ''}', '${c ? c.subject_name : ''}')">
+                                <button class="solver-action-btn primary-btn" style="padding:4px 10px; font-size:0.8rem; background:#10b981;" onclick="assignSubstitute('${absentTeacher}', '${cand.teacher_code}', '${dispCandName}', '${day}', '${period}', '${c ? c.class_name : ''}', '${c ? c.subject_name : ''}')">
                                     <i class="fa-solid fa-user-check"></i> 指派代課
                                 </button>
                             </td>
@@ -6364,33 +6365,35 @@ async function updateDualSwapAssistant(d, p) {
             const sameSubjCands = candidates.filter(c => c.is_same_domain || c.ai_fit === 'high');
             
             if (sameSubjCands.length > 0) {
-                col1.innerHTML = sameSubjCands.slice(0, 6).map(tch => 
-                    `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; padding:4px 8px; background:rgba(16,185,129,0.08); border-radius:6px; border:1px solid rgba(16,185,129,0.2);">
+                col1.innerHTML = sameSubjCands.slice(0, 6).map(tch => {
+                    const dispT = resolveTeacherDisplayName(tch.teacher_name, tch.teacher_code);
+                    return `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; padding:6px 10px; background:#ffffff; border-radius:8px; border:1px solid rgba(16,185,129,0.3); box-shadow:0 1px 3px rgba(0,0,0,0.03);">
                         <div>
-                            <span style="color:#e2e8f0; font-weight:bold;">${tch.teacher_name}</span>
-                            <span style="font-size:0.7rem; color:#34d399; margin-left:4px;" title="任教：${tch.teach_subjects}">⭐ 同學科空堂</span>
+                            <span style="color:#1d1d1f; font-weight:bold;">${dispT}</span>
+                            <span style="font-size:0.75rem; color:#10b981; font-weight:600; margin-left:4px;" title="任教：${tch.teach_subjects || ''}">⭐ 同學科空堂</span>
                         </div>
-                        <button class="solver-action-btn primary-btn" style="flex:none; width:auto; padding:2px 10px; font-size:0.72rem; background:#0284c7; border-radius:4px; cursor:pointer; white-space:nowrap;" onclick="executeAssignSubstitute('${tch.teacher_name}', '${tch.teacher_code}', ${d}, ${p}, '${subjName}')">選為代課</button>
-                     </div>`
-                ).join('');
+                        <button class="solver-action-btn primary-btn" style="flex:none; width:auto; padding:3px 12px; font-size:0.75rem; background:#0071e3; border-radius:6px; cursor:pointer; white-space:nowrap;" onclick="executeAssignSubstitute('${dispT}', '${tch.teacher_code}', ${d}, ${p}, '${subjName}')">選為代課</button>
+                     </div>`;
+                }).join('');
             } else if (candidates.length > 0) {
                 col1.innerHTML = `
-                    <div style="color:#fbbf24; font-size:0.72rem; margin-bottom:4px;"><i class="fa-solid fa-triangle-exclamation"></i> 當節無同學科空堂教師 (顯示其他當節空堂教師)：</div>
-                    ${candidates.slice(0, 4).map(tch => 
-                        `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; padding:4px 8px; background:rgba(255,255,255,0.03); border-radius:6px; border:1px solid rgba(255,255,255,0.06);">
+                    <div style="color:#d97706; font-size:0.75rem; font-weight:600; margin-bottom:6px;"><i class="fa-solid fa-triangle-exclamation"></i> 當節無同學科空堂教師 (顯示其他空堂教師)：</div>
+                    ${candidates.slice(0, 4).map(tch => {
+                        const dispT = resolveTeacherDisplayName(tch.teacher_name, tch.teacher_code);
+                        return `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; padding:6px 10px; background:#ffffff; border-radius:8px; border:1px solid rgba(0,0,0,0.1); box-shadow:0 1px 3px rgba(0,0,0,0.03);">
                             <div>
-                                <span style="color:#e2e8f0; font-weight:bold;">${tch.teacher_name}</span>
-                                <span style="font-size:0.68rem; color:#94a3b8; margin-left:4px;">(${tch.teach_subjects || '跨科'})</span>
+                                <span style="color:#1d1d1f; font-weight:bold;">${dispT}</span>
+                                <span style="font-size:0.75rem; color:#64748b; margin-left:4px;">(${tch.teach_subjects || '跨科'})</span>
                             </div>
-                            <button class="solver-action-btn primary-btn" style="flex:none; width:auto; padding:2px 10px; font-size:0.72rem; background:#0284c7; border-radius:4px; cursor:pointer; white-space:nowrap;" onclick="executeAssignSubstitute('${tch.teacher_name}', '${tch.teacher_code}', ${d}, ${p}, '${subjName}')">選為代課</button>
-                         </div>`
-                    ).join('')}
+                            <button class="solver-action-btn primary-btn" style="flex:none; width:auto; padding:3px 12px; font-size:0.75rem; background:#0071e3; border-radius:6px; cursor:pointer; white-space:nowrap;" onclick="executeAssignSubstitute('${dispT}', '${tch.teacher_code}', ${d}, ${p}, '${subjName}')">選為代課</button>
+                         </div>`;
+                    }).join('')}
                 `;
             } else {
                 col1.innerHTML = '<div style="color:#64748b; padding:6px;">當前時段無全校可用空堂教師</div>';
             }
         } else {
-            col1.innerHTML = '<div style="color:#34d399; font-weight:bold; padding:8px; background:rgba(52,211,153,0.1); border-radius:6px;">🟢 此節次班級無課 (空堂)，無需請假調代課</div>';
+            col1.innerHTML = '<div style="color:#10b981; font-weight:bold; padding:8px; background:rgba(16,185,129,0.1); border-radius:6px;">🟢 此節次班級無課 (空堂)，無需請假調代課</div>';
         }
     }
 
@@ -6398,16 +6401,17 @@ async function updateDualSwapAssistant(d, p) {
         if (classLessons.length > 0) {
             const activeLesson = classLessons[0];
             const subj1 = activeLesson.subject_name || '課程';
-            const tch1 = activeLesson.teacher_name || activeLesson.teacher_code || '';
+            const tch1 = resolveTeacherDisplayName(activeLesson.teacher_name, activeLesson.teacher_code);
             const otherSlots = dualClassSlotsData.filter(s => !(parseInt(s.day) === d && parseInt(s.period) === p));
             
             if (otherSlots.length > 0) {
-                col2.innerHTML = otherSlots.slice(0, 5).map(s => 
-                    `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; padding:4px 8px; background:rgba(255,255,255,0.03); border-radius:6px; border:1px solid rgba(255,255,255,0.06);">
-                        <span><strong style="color:#fbbf24;">${daysMap[s.day]}第${s.period}節</strong> ${s.subject_name} (${s.teacher_name})</span>
-                        <button class="solver-action-btn primary-btn" style="flex:none; width:auto; padding:2px 10px; font-size:0.72rem; background:#d97706; border-radius:4px; cursor:pointer; white-space:nowrap;" onclick="executePerformSlotSwap(${d}, ${p}, ${s.day}, ${s.period}, '${subj1}', '${tch1}', '${s.subject_name}', '${s.teacher_name}')">對調此節</button>
-                     </div>`
-                ).join('');
+                col2.innerHTML = otherSlots.slice(0, 5).map(s => {
+                    const dispST = resolveTeacherDisplayName(s.teacher_name, s.teacher_code);
+                    return `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; padding:6px 10px; background:#ffffff; border-radius:8px; border:1px solid rgba(0,0,0,0.1); box-shadow:0 1px 3px rgba(0,0,0,0.03);">
+                        <span><strong style="color:#0071e3;">${daysMap[s.day]}第${s.period}節</strong> ${s.subject_name} (${dispST})</span>
+                        <button class="solver-action-btn primary-btn" style="flex:none; width:auto; padding:3px 12px; font-size:0.75rem; background:#d97706; border-radius:6px; cursor:pointer; white-space:nowrap;" onclick="executePerformSlotSwap(${d}, ${p}, ${s.day}, ${s.period}, '${subj1}', '${tch1}', '${s.subject_name}', '${dispST}')">對調此節</button>
+                     </div>`;
+                }).join('');
             } else {
                 col2.innerHTML = '<div style="color:#64748b;">無可對調節次</div>';
             }
