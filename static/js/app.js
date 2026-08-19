@@ -7131,53 +7131,73 @@ function toggleModalMaximize(modalId) {
     const maxBtnIcon = modal.querySelector('.maximize-modal-btn i');
 
     const isMaximized = modal.classList.toggle('is-maximized');
+    modal.classList.toggle('modal-overlay-fullscreen', isMaximized);
+    if (content) content.classList.toggle('fullscreen-modal', isMaximized);
 
     if (isMaximized) {
+        modal.style.padding = '0';
+        modal.style.margin = '0';
         if (content) {
-            content.dataset.origMaxWidth = content.style.maxWidth || '';
-            content.dataset.origWidth = content.style.width || '';
-            content.style.maxWidth = '98vw';
-            content.style.width = '98vw';
-            content.style.height = '96vh';
+            content.style.position = 'fixed';
+            content.style.top = '0';
+            content.style.left = '0';
+            content.style.right = '0';
+            content.style.bottom = '0';
+            content.style.width = '100vw';
+            content.style.maxWidth = '100vw';
+            content.style.height = '100vh';
+            content.style.maxHeight = '100vh';
+            content.style.borderRadius = '0';
+            content.style.margin = '0';
+            content.style.border = 'none';
             content.style.display = 'flex';
             content.style.flexDirection = 'column';
+            content.style.zIndex = '9999999';
         }
         if (body) {
-            body.dataset.origMaxHeight = body.style.maxHeight || '';
-            body.dataset.origHeight = body.style.height || '';
-            body.style.maxHeight = 'none';
+            body.style.maxHeight = 'calc(100vh - 75px)';
+            body.style.height = 'calc(100vh - 75px)';
             body.style.flex = '1';
-            body.style.display = 'flex';
-            body.style.flexDirection = 'column';
             body.style.overflowY = 'auto';
+            body.style.padding = '16px 24px';
         }
         if (tableResp) {
-            tableResp.dataset.origMaxHeight = tableResp.style.maxHeight || '';
-            tableResp.style.maxHeight = 'calc(96vh - 160px)';
+            tableResp.style.maxHeight = 'calc(100vh - 150px)';
             tableResp.style.flex = '1';
         }
         if (maxBtnIcon) {
             maxBtnIcon.className = 'fa-solid fa-compress';
         }
-        showToast("已展開全螢幕最大化模式");
+        showToast("已進入 100% 滿版全螢幕模式");
     } else {
+        modal.style.padding = '';
+        modal.style.margin = '';
         if (content) {
-            content.style.maxWidth = content.dataset.origMaxWidth || '';
-            content.style.width = content.dataset.origWidth || '';
+            content.style.position = '';
+            content.style.top = '';
+            content.style.left = '';
+            content.style.right = '';
+            content.style.bottom = '';
+            content.style.width = '';
+            content.style.maxWidth = '';
             content.style.height = '';
+            content.style.maxHeight = '';
+            content.style.borderRadius = '';
+            content.style.margin = '';
+            content.style.border = '';
             content.style.display = '';
             content.style.flexDirection = '';
+            content.style.zIndex = '';
         }
         if (body) {
-            body.style.maxHeight = body.dataset.origMaxHeight || '';
-            body.style.height = body.dataset.origHeight || '';
+            body.style.maxHeight = '';
+            body.style.height = '';
             body.style.flex = '';
-            body.style.display = '';
-            body.style.flexDirection = '';
             body.style.overflowY = '';
+            body.style.padding = '';
         }
         if (tableResp) {
-            tableResp.style.maxHeight = tableResp.dataset.origMaxHeight || '480px';
+            tableResp.style.maxHeight = '';
             tableResp.style.flex = '';
         }
         if (maxBtnIcon) {
