@@ -1302,10 +1302,29 @@ async function redoManualSwap() {
 async function openSwapHistoryModal() {
     const modal = document.getElementById('swapHistoryModal');
     const container = document.getElementById('swapHistoryList');
-    if (!modal || !container) return;
+    if (!modal || !container) {
+        console.error("swapHistoryModal not found in DOM");
+        return;
+    }
 
-    await fetchSwapHistory();
+    // 1. Immediately display the modal
+    modal.style.display = 'flex';
+    container.innerHTML = '<div style="text-align: center; padding: 30px; color: var(--text-secondary);"><i class="fa-solid fa-spinner fa-spin fa-xl" style="color: var(--primary); margin-bottom: 10px; display: block;"></i>正在讀取調課紀錄日誌...</div>';
 
+    // 2. Fetch history from server
+    try {
+        const response = await fetch('/api/swap-history');
+        const res = await response.json();
+        if (res.status === 'success') {
+            serverSwapHistory = res.history || [];
+            const countBadge = document.getElementById('swapHistoryCount');
+            if (countBadge) countBadge.textContent = serverSwapHistory.length;
+        }
+    } catch (e) {
+        console.warn("Fetch swap history failed, using local cache:", e);
+    }
+
+    // 3. Render content
     if (!serverSwapHistory || serverSwapHistory.length === 0) {
         container.innerHTML = `
             <div style="text-align: center; padding: 40px 20px; color: var(--text-secondary);">
@@ -1340,7 +1359,6 @@ async function openSwapHistoryModal() {
         html += `</div>`;
         container.innerHTML = html;
     }
-    modal.style.display = 'flex';
 }
 
 async function clearSwapHistory() {
