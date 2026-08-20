@@ -699,6 +699,13 @@ function renderScheduleGrid(type, code, slots) {
                         highlightSlots(lesson.id);
                     });
                     
+                    // Shin-Her style right-click context menu
+                    lessonDiv.addEventListener('contextmenu', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        openCellContextMenu(e, lesson, d, p, type, code);
+                    });
+
                     if (index > 0) {
                         lessonDiv.style.borderTop = '1px dashed rgba(255,255,255,0.15)';
                         lessonDiv.style.paddingTop = '4px';
@@ -727,12 +734,18 @@ function renderScheduleGrid(type, code, slots) {
                         roomLink = dispTName ? `<span class="room-lbl" style="font-size:0.85rem;"><a href="#teacher/${encodeURIComponent(lesson.teacher_code || dispTName)}" onclick="openDualViewModal('${lesson.class_code}', '${lesson.teacher_code || dispTName}'); return false;" class="meta-link"><i class="fa-solid fa-chalkboard-user"></i> ${dispTName}</a></span>` : '';
                     }
 
-                    // Week Mode Banner
+                    // Week Mode & Status Badges
                     let badge = '';
+                    if (lesson.manual_locked) {
+                        badge += '<span class="week-badge" style="background: rgba(234, 179, 8, 0.2); color: #d97706; border: 1px solid rgba(234, 179, 8, 0.4);" title="🔒 此課程已手動鎖定">🔒 鎖定</span>';
+                    }
+                    if (p === 8) {
+                        badge += '<span class="week-badge" style="background: rgba(59, 130, 246, 0.15); color: #2563eb; border: 1px solid rgba(59, 130, 246, 0.3);">第8節</span>';
+                    }
                     if (lesson.week_mode === 1) {
-                        badge = '<span class="week-badge odd">單</span>';
+                        badge += '<span class="week-badge odd">單</span>';
                     } else if (lesson.week_mode === 2) {
-                        badge = '<span class="week-badge even">雙</span>';
+                        badge += '<span class="week-badge even">雙</span>';
                     }
 
                     // Lesson Note Badge
@@ -1738,6 +1751,19 @@ function setupSettingsPanel() {
                 ruleTabRestore.style.display = 'block';
                 ruleTabRestore.classList.add('active');
             }
+        } else if (tabName === 'classbind') {
+            const tabRuleClassBindBtn = document.getElementById('tabRuleClassBindBtn');
+            const ruleTabClassBind = document.getElementById('ruleTabClassBind');
+            if (tabRuleClassBindBtn) {
+                tabRuleClassBindBtn.classList.add('active');
+                tabRuleClassBindBtn.style.background = 'rgba(249, 115, 22, 0.2)';
+                tabRuleClassBindBtn.style.color = '#f97316';
+            }
+            if (ruleTabClassBind) {
+                ruleTabClassBind.style.display = 'block';
+                ruleTabClassBind.classList.add('active');
+            }
+            if (typeof loadClassBindRules === 'function') loadClassBindRules();
         }
     }
 
@@ -4257,6 +4283,137 @@ function renderSimGroupsTable() {
         tdAct.appendChild(delBtn);
         tr.appendChild(tdAct);
 
+        tbody.appendChild(tr);
+    });
+}
+
+// --- 07. 綁班限制 (Teacher Class Allow) JS ---
+
+let currentClassBindData = {}; // { teacher_code: [class_codes] }
+
+async function loadClassBindRules() {
+    // Populate teacher dropdown
+    const teacherSel = document.getElementById('classBindTeacherSelect');
+    if (teacherSel && metadata && metadata.teachers) {
+        const currentVal = teacherSel.value;
+        teacherSel.innerHTML = '<option value="">— 選擇教師 —</option>';
+        metadata.teachers.forEach(t => {
+            const opt = document.createElement('option');
+            opt.value = t.code;
+            opt.textContent = `${t.name} (${t.code})`;
+            if (t.code === currentVal) opt.selected = true;
+            teacherSel.appendChild(opt);
+        });
+    }
+
+    // Wire save button
+    const addBtn = document.getElementById('addClassBindBtn');
+    if (addBtn && addBtn.dataset.listener !== 'true') {
+        addBtn.dataset.listener = 'true';
+        addBtn.addEventListener('click', async () => {
+            const tSel = document.getElementById('classBindTeacherSelect');
+            const cInput = document.getElementById('classBindClassInput');
+            const tCode = tSel ? tSel.value.trim() : '';
+            const rawClasses = cInput ? cInput.value.trim() : '';
+            if (!tCode) { showToast('請先選擇教師！'); return; }
+            const allowedClasses = rawClasses ? rawClasses.split(/[,，\s]+/).map(s => s.trim()).filter(Boolean) : [];
+            try {
+                const resp = await fetch('/api/teacher-class-allow/save', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ teacher_code: tCode, allowed_classes: allowedClasses })
+                });
+                const res = await resp.json();
+                if (res.status === 'success') {
+                    showToast(res.message);
+                    currentClassBindData = res.data || {};
+                    renderClassBindTable();
+                    if (cInput) cInput.value = '';
+                } else {
+                    showToast('儲存失敗：' + res.message);
+                }
+            } catch(e) { showToast('伺服器連線異常。'); }
+        });
+    }
+
+    // Load existing data
+    try {
+        const resp = await fetch('/api/teacher-class-allow');
+        const data = await resp.json();
+        if (data.status === 'success') {
+            currentClassBindData = data.data || {};
+            renderClassBindTable();
+        }
+    } catch(e) {
+        console.error('Load class bind rules failed:', e);
+    }
+}
+
+function renderClassBindTable() {
+    const tbody = document.getElementById('classBindTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    const entries = Object.entries(currentClassBindData);
+    if (entries.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:16px;">尚未設定任何綁班限制。</td></tr>';
+        return;
+    }
+
+    const teacherMap = {};
+    if (metadata && metadata.teachers) {
+        metadata.teachers.forEach(t => { teacherMap[t.code] = t.name; });
+    }
+
+    entries.forEach(([tCode, classes]) => {
+        const tr = document.createElement('tr');
+
+        // Teacher Code
+        const tdCode = document.createElement('td');
+        tdCode.textContent = tCode;
+        tdCode.style.fontWeight = 'bold';
+        tr.appendChild(tdCode);
+
+        // Teacher Name
+        const tdName = document.createElement('td');
+        tdName.textContent = teacherMap[tCode] || '-';
+        tdName.style.color = '#0071e3';
+        tr.appendChild(tdName);
+
+        // Allowed Classes
+        const tdClasses = document.createElement('td');
+        tdClasses.innerHTML = classes.map(c =>
+            `<span style="background:rgba(249,115,22,0.15); color:#f97316; border:1px solid rgba(249,115,22,0.4); padding:2px 8px; border-radius:4px; font-size:0.8rem; margin:2px; display:inline-block;">${c}</span>`
+        ).join('');
+        tr.appendChild(tdClasses);
+
+        // Actions
+        const tdAct = document.createElement('td');
+        tdAct.style.textAlign = 'center';
+        const delBtn = document.createElement('button');
+        delBtn.className = 'solver-action-btn secondary-btn';
+        delBtn.style.cssText = 'padding:3px 10px; font-size:0.78rem; background:rgba(239,68,68,0.15); border-color:rgba(239,68,68,0.4); color:#ef4444;';
+        delBtn.innerHTML = '<i class="fa-solid fa-trash"></i> 移除';
+        delBtn.addEventListener('click', async () => {
+            if (!confirm(`確定要移除「${teacherMap[tCode] || tCode}」的所有綁班限制嗎？`)) return;
+            try {
+                const resp = await fetch('/api/teacher-class-allow/delete', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ teacher_code: tCode })
+                });
+                const res = await resp.json();
+                if (res.status === 'success') {
+                    showToast(res.message);
+                    delete currentClassBindData[tCode];
+                    renderClassBindTable();
+                } else {
+                    showToast('移除失敗：' + res.message);
+                }
+            } catch(e) { showToast('伺服器連線異常。'); }
+        });
+        tdAct.appendChild(delBtn);
+        tr.appendChild(tdAct);
         tbody.appendChild(tr);
     });
 }
@@ -7318,6 +7475,257 @@ document.addEventListener('DOMContentLoaded', () => {
     initRestrictPeriod8Toggle();
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Shin-Her Style Context Menu & Stash Handling
+// ─────────────────────────────────────────────────────────────────────────────
+let contextMenuTargetLesson = null;
+let contextMenuTargetSlot = { day: 1, period: 1, type: 'class', code: '' };
+
+function openCellContextMenu(e, lesson, day, period, type, code) {
+    contextMenuTargetLesson = lesson;
+    contextMenuTargetSlot = { day, period, type, code };
+
+    const menu = document.getElementById('cellContextMenu');
+    if (!menu) return;
+
+    const titleEl = document.getElementById('ctxLessonTitle');
+    if (titleEl) {
+        titleEl.textContent = `【${lesson.subject_name || '課程'}】${lesson.teacher_name ? '(' + lesson.teacher_name + ')' : ''}`;
+    }
+
+    const lockText = document.getElementById('ctxLockText');
+    if (lockText) {
+        lockText.textContent = lesson.manual_locked ? '解除鎖定此課程' : '鎖定此課程 (禁止調課)';
+    }
+
+    // Position menu safely within viewport
+    let x = e.clientX;
+    let y = e.clientY;
+    const menuWidth = 200;
+    const menuHeight = 220;
+
+    if (x + menuWidth > window.innerWidth) x = window.innerWidth - menuWidth - 10;
+    if (y + menuHeight > window.innerHeight) y = window.innerHeight - menuHeight - 10;
+
+    menu.style.left = `${x}px`;
+    menu.style.top = `${y}px`;
+    menu.style.display = 'block';
+}
+
+function closeCellContextMenu() {
+    const menu = document.getElementById('cellContextMenu');
+    if (menu) menu.style.display = 'none';
+}
+
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('#cellContextMenu')) {
+        closeCellContextMenu();
+    }
+});
+
+async function handleCtxAction(action) {
+    const lesson = contextMenuTargetLesson;
+    const slot = contextMenuTargetSlot;
+    closeCellContextMenu();
+    if (!lesson) return;
+
+    if (action === 'lock') {
+        // Toggle lock
+        const newLockState = !lesson.manual_locked;
+        try {
+            const res = await fetch('/api/lock-lesson', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: lesson.id, locked: newLockState })
+            });
+            const data = await res.json();
+            if (data.status === 'success') {
+                showToast(data.message);
+                loadSchedule(slot.type, slot.code);
+            } else {
+                showToast("❌ " + (data.message || "鎖定失敗"), "error");
+            }
+        } catch (e) {
+            showToast("❌ 連線失敗", "error");
+        }
+    } else if (action === 'stash') {
+        // Put in stash area
+        try {
+            const res = await fetch('/api/stash-lesson', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: lesson.id })
+            });
+            const data = await res.json();
+            if (data.status === 'success') {
+                showToast("📥 " + data.message);
+                loadSchedule(slot.type, slot.code);
+                // Also trigger holding pool refresh
+                if (typeof fetchHoldingPool === 'function') fetchHoldingPool();
+            } else {
+                showToast("❌ " + (data.message || "暫存失敗"), "error");
+            }
+        } catch (e) {
+            showToast("❌ 連線失敗", "error");
+        }
+    } else if (action === 'swap') {
+        // Select for manual swap
+        if (!isManualEditMode) {
+            const toggleBtn = document.getElementById('manualEditToggleBtn');
+            if (toggleBtn) toggleBtn.click();
+        }
+        selectedSourceItem = lesson;
+        highlightSlots(lesson.id);
+        showToast(`已選取【${lesson.subject_name}】，請點選欲對調的目標節次。`, "info");
+    } else if (action === 'dual') {
+        // Open dual view modal
+        const classCode = lesson.class_code || slot.code;
+        const teacherCode = lesson.teacher_code || lesson.teacher_name || '';
+        if (typeof openDualViewModal === 'function') {
+            openDualViewModal(classCode, teacherCode);
+        }
+    } else if (action === 'note') {
+        // Open note modal
+        const noteKey = `${slot.type}_${slot.code}_${slot.day}_${slot.period}`;
+        if (typeof openNoteModal === 'function') {
+            openNoteModal(noteKey, lesson.subject_name, slot.day, slot.period);
+        }
+    } else if (action === 'rescue') {
+        // Open smart rescue page
+        window.open('/smart-rescue', '_blank');
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Shin-Her Style 02.超鐘點與基本鐘點總表前端邏輯
+// ─────────────────────────────────────────────────────────────────────────────
+let allWorkloadData = [];
+let currentWorkloadFilter = 'all';
+
+async function openWorkloadModal() {
+    const modal = document.getElementById('workloadModal');
+    if (!modal) return;
+    modal.style.display = 'flex';
+    await loadWorkloadData();
+}
+
+async function loadWorkloadData() {
+    const tbody = document.getElementById('workloadTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="12" style="text-align: center; padding: 24px; color: #94a3b8;"><i class="fa-solid fa-spinner fa-spin"></i> 計算全校鐘點中...</td></tr>';
+
+    try {
+        const res = await fetch('/api/teacher-workload-summary');
+        const data = await res.json();
+        if (data.status === 'success') {
+            allWorkloadData = data.teachers || [];
+            
+            // Update Stat Cards
+            const st = data.stats || {};
+            document.getElementById('wlStatTeachers').textContent = (st.total_teachers || allWorkloadData.length) + ' 位';
+            document.getElementById('wlStatTotalHours').textContent = (st.total_school_hours || 0) + ' 節';
+            document.getElementById('wlStatOvertimeTeachers').textContent = (st.overtime_teachers || 0) + ' 位';
+            document.getElementById('wlStatDeficitTeachers').textContent = (st.deficit_teachers || 0) + ' 位';
+
+            renderWorkloadTable();
+        } else {
+            tbody.innerHTML = `<tr><td colspan="12" style="text-align: center; padding: 24px; color: #ef4444;">載入失敗：${data.message}</td></tr>`;
+        }
+    } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="12" style="text-align: center; padding: 24px; color: #ef4444;">連線異常：${e.message}</td></tr>`;
+    }
+}
+
+function renderWorkloadTable() {
+    const tbody = document.getElementById('workloadTableBody');
+    if (!tbody) return;
+
+    const query = (document.getElementById('wlSearchInput')?.value || '').toLowerCase().trim();
+
+    let filtered = allWorkloadData.filter(t => {
+        // Query match
+        const matchQuery = !query || 
+            t.name.toLowerCase().includes(query) || 
+            t.role.toLowerCase().includes(query) || 
+            t.classes.toLowerCase().includes(query) || 
+            t.subjects.toLowerCase().includes(query);
+
+        // Filter state match
+        let matchFilter = true;
+        if (currentWorkloadFilter === 'overtime') {
+            matchFilter = t.overtime_hours > 0 || t.period8_hours > 0;
+        } else if (currentWorkloadFilter === 'deficit') {
+            matchFilter = t.status_color === 'danger';
+        }
+
+        return matchQuery && matchFilter;
+    });
+
+    if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="12" style="text-align: center; padding: 32px; color: #94a3b8;"><i class="fa-solid fa-folder-open" style="font-size: 1.8rem; margin-bottom: 8px; display: block;"></i>查無符合條件的教師鐘點資料</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = '';
+    filtered.forEach((t, idx) => {
+        const tr = document.createElement('tr');
+        
+        let statusBadge = '';
+        if (t.status_color === 'success') {
+            statusBadge = `<span style="background: rgba(16, 185, 129, 0.15); color: #059669; padding: 2px 8px; border-radius: 6px; font-weight: 700; font-size: 0.78rem;">超鐘點 (+${t.total_extra_hours})</span>`;
+        } else if (t.status_color === 'danger') {
+            statusBadge = `<span style="background: rgba(239, 68, 68, 0.15); color: #dc2626; padding: 2px 8px; border-radius: 6px; font-weight: 700; font-size: 0.78rem;">${t.status}</span>`;
+        } else {
+            statusBadge = `<span style="background: #f1f5f9; color: #64748b; padding: 2px 8px; border-radius: 6px; font-size: 0.78rem;">達標</span>`;
+        }
+
+        const overtimeDisplay = t.overtime_hours > 0 ? `<b style="color: #10b981;">+${t.overtime_hours}</b>` : '0';
+        const totalExtraDisplay = t.total_extra_hours > 0 ? `<b style="color: #059669; font-size: 0.95rem;">+${t.total_extra_hours}</b>` : '0';
+
+        tr.innerHTML = `
+            <td style="text-align: center; color: #94a3b8; font-size: 0.8rem;">${idx + 1}</td>
+            <td>
+                <a href="#teacher/${encodeURIComponent(t.code || t.name)}" onclick="document.getElementById('workloadModal').style.display='none';" style="font-weight: 700; color: #4f46e5; text-decoration: none; display: flex; align-items: center; gap: 4px;">
+                    <i class="fa-solid fa-chalkboard-user" style="font-size: 0.78rem; opacity: 0.7;"></i> ${t.name}
+                </a>
+            </td>
+            <td style="color: #475569; font-size: 0.82rem;">${t.role}</td>
+            <td style="text-align: center; font-weight: 600;">${t.base_hours}</td>
+            <td style="text-align: center; font-weight: 700; color: #0ea5e9;">${t.regular_hours}</td>
+            <td style="text-align: center; color: #64748b;">${t.period8_hours || 0}</td>
+            <td style="text-align: center; color: #64748b;">${t.club_hours || 0}</td>
+            <td style="text-align: center; font-weight: 800; color: #0f172a; font-size: 0.92rem;">${t.total_hours}</td>
+            <td style="text-align: center;">${overtimeDisplay}</td>
+            <td style="text-align: center;">${totalExtraDisplay}</td>
+            <td style="text-align: center;">${statusBadge}</td>
+            <td style="font-size: 0.78rem; color: #64748b; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${t.classes || ''}">${t.classes || '無'}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function filterWorkloadTable() {
+    renderWorkloadTable();
+}
+
+function setWorkloadFilter(type) {
+    currentWorkloadFilter = type;
+    ['All', 'Overtime', 'Deficit'].forEach(name => {
+        const btn = document.getElementById(`wlFilter${name}`);
+        if (btn) btn.classList.remove('active');
+    });
+    const activeBtn = document.getElementById(`wlFilter${type.charAt(0).toUpperCase() + type.slice(1)}`);
+    if (activeBtn) activeBtn.classList.add('active');
+    renderWorkloadTable();
+}
+
+window.openWorkloadModal = openWorkloadModal;
+window.loadWorkloadData = loadWorkloadData;
+window.filterWorkloadTable = filterWorkloadTable;
+window.setWorkloadFilter = setWorkloadFilter;
+window.openCellContextMenu = openCellContextMenu;
+window.closeCellContextMenu = closeCellContextMenu;
+window.handleCtxAction = handleCtxAction;
 window.runGlobalCPModelSolver = runGlobalCPModelSolver;
 window.toggleModalMaximize = toggleModalMaximize;
 window.openDataDebugModal = openDataDebugModal;
@@ -7327,6 +7735,7 @@ window.runGlobalHealthInspector = runGlobalHealthInspector;
 window.addSelectedToHoldingPool = addSelectedToHoldingPool;
 window.removeFromHoldingPool = removeFromHoldingPool;
 window.selectHoldingItem = selectHoldingItem;
+
 
 
 
