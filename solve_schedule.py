@@ -491,6 +491,20 @@ def run_solver():
                     except ValueError:
                         pass
 
+    # 7. Teacher Class Allow (綁班限制 - HARD CONSTRAINT)
+    # If a teacher has an allow-list, they can ONLY teach those specified classes.
+    teacher_class_allow = custom_rules.get("teacher_class_allow", {})
+    for t_code, allowed_classes in teacher_class_allow.items():
+        if not allowed_classes or t_code not in teacher_units:
+            continue
+        allowed_set = set(str(c).strip() for c in allowed_classes)
+        for u in teacher_units[t_code]:
+            if u["class_code"] not in allowed_set:
+                # Hard block: this teacher CANNOT be placed for this class in any slot
+                for d in days:
+                    for p in periods:
+                        model.Add(x[u["unit_id"], d, p] == 0)
+
     # Subject Blocked Times
     for rule in db_no_sub:
         c_code = rule.get("CLASS_NO", "").strip()
@@ -625,6 +639,17 @@ def run_solver():
                 for o_uid in matched_uids[1:]:
                     model2.Add(day_vars2[f_uid] == day_vars2[o_uid])
                     model2.Add(period_vars2[f_uid] == period_vars2[o_uid])
+
+        # Teacher Class Allow (綁班限制 - Pass-2 HARD CONSTRAINT)
+        for t_code, allowed_classes in teacher_class_allow.items():
+            if not allowed_classes or t_code not in teacher_units:
+                continue
+            allowed_set = set(str(c).strip() for c in allowed_classes)
+            for u in teacher_units[t_code]:
+                if u["class_code"] not in allowed_set:
+                    for d in days:
+                        for p in periods:
+                            model2.Add(x2[u["unit_id"], d, p] == 0)
 
         # Class Conflicts
         for cc, ulist in cls_units.items():
