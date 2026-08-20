@@ -51,6 +51,12 @@
                 <button id="examModalBtn" class="solver-panel-btn" onclick="document.getElementById('examInvigilationModal').style.display='flex'" style="background: rgba(245, 158, 11, 0.15); border-color: rgba(245, 158, 11, 0.3); color: #fbbf24; padding: 5px 12px; font-size: 0.85rem; height: 36px;" title="開啟全校段考監考課表矩陣與 AI 自動監考排程">
                     <i class="fa-solid fa-clipboard-user"></i> 段考監考排程
                 </button>
+                <a href="/smart-rescue" target="_blank" class="solver-panel-btn" style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(245, 158, 11, 0.15)); border-color: rgba(245, 158, 11, 0.4); color: #fbbf24; padding: 5px 12px; font-size: 0.85rem; height: 36px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; font-weight: 700;" title="仿欣河智慧排課：開啟智慧失敗調整頁面 (未排課程清單、時段衝突色碼診斷、一鍵排入與暫存區)">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> 智慧失敗調整
+                </a>
+                <button id="workloadSummaryBtn" class="solver-panel-btn" onclick="openWorkloadModal()" style="background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.35); color: #10b981; padding: 5px 12px; font-size: 0.85rem; height: 36px; font-weight: 700;" title="仿欣河『02.超鐘點總表』：查看全校教師基本鐘點、實排節數與兼課超鐘點統計">
+                    <i class="fa-solid fa-calculator"></i> 超鐘點總表
+                </button>
                 <button id="healthCheckBtn" class="solver-panel-btn" onclick="openDataDebugModal()" style="background: rgba(236, 72, 153, 0.15); border-color: rgba(236, 72, 153, 0.3); color: #f472b6; padding: 5px 12px; font-size: 0.85rem; height: 36px;" title="開啟州董式全校排課資料邏輯與衝突除錯稽核">
                     <i class="fa-solid fa-bug"></i> 資料邏輯除錯
                 </button>
@@ -398,6 +404,9 @@
                     </button>
                     <button id="tabRuleSemesterBtn" class="rule-tab-btn" data-ruletab="semester">
                         <i class="fa-solid fa-folder-open" style="color: #c084fc;"></i> ⑬ 學期切換與歷史還原
+                    </button>
+                    <button id="tabRuleClassBindBtn" class="rule-tab-btn" data-ruletab="classbind">
+                        <i class="fa-solid fa-link-slash" style="color: #f97316;"></i> ⑭ 綁班限制（教師只教指定班級）
                     </button>
 
 
@@ -1289,6 +1298,57 @@
                             </thead>
 
                             <tbody id="simGroupsTableBody">
+                                <!-- JS Populated -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Tab ⑭: 綁班限制 (Teacher Class Allow) -->
+                <div id="ruleTabClassBind" class="rule-tab-content" style="display: none;">
+                    <div style="background: linear-gradient(135deg, rgba(249,115,22,0.12), rgba(234,88,12,0.08)); border: 1px solid rgba(249,115,22,0.35); padding: 14px 18px; border-radius: 12px; margin-bottom: 16px;">
+                        <h4 style="margin: 0 0 6px 0; font-size: 0.95rem; color: #f97316; display: flex; align-items: center; gap: 8px;">
+                            <i class="fa-solid fa-link-slash"></i> 07. 綁班限制 — 教師只教指定班級
+                        </h4>
+                        <p style="margin: 0; font-size: 0.82rem; color: #64748b; line-height: 1.55;">
+                            設定後，AI 排課時該教師<strong>只會被排入允許的班級</strong>，其餘班級的課程一律不配給此教師（硬性約束）。<br>
+                            適用於：代課教師只教特定年級、外聘教師只授特定班級等情境。
+                        </p>
+                    </div>
+
+                    <!-- Add New Bind Rule -->
+                    <div style="background: #f8fafc; padding: 14px; border-radius: 10px; border: 1px solid var(--border-color); margin-bottom: 16px;">
+                        <h4 style="font-size: 0.88rem; color: #f97316; margin-bottom: 12px;"><i class="fa-solid fa-plus-circle"></i> 新增綁班限制</h4>
+                        <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 10px;">
+                            <div style="display: flex; gap: 8px; align-items: center; min-width: 220px;">
+                                <label style="font-size: 0.85rem; min-width: 60px; color: #475569;">教師：</label>
+                                <select id="classBindTeacherSelect" style="flex:1; padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.85rem; background:#fff;">
+                                    <option value="">— 選擇教師 —</option>
+                                </select>
+                            </div>
+                            <div style="display: flex; gap: 8px; align-items: center; flex: 1; min-width: 280px;">
+                                <label style="font-size: 0.85rem; min-width: 80px; color: #475569;">允許班級：</label>
+                                <input type="text" id="classBindClassInput" placeholder="用逗號分隔班級代碼，例如：101,102,103" style="flex:1; padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 0.85rem; background:#fff;">
+                            </div>
+                            <button id="addClassBindBtn" class="solver-action-btn primary-btn" style="padding: 6px 16px; font-size: 0.85rem; background: #f97316; min-width: 90px;">
+                                <i class="fa-solid fa-floppy-disk"></i> 儲存
+                            </button>
+                        </div>
+                        <div style="font-size: 0.78rem; color: #94a3b8;"><i class="fa-solid fa-circle-info"></i> 留空允許班級欄位並儲存 = 移除該教師的綁班限制。班級代碼需與 DBF 資料一致（如 101、401 等）。</div>
+                    </div>
+
+                    <!-- Existing Bind Rules Table -->
+                    <div class="table-responsive glass" style="max-height: 350px; overflow-y: auto;">
+                        <table class="modal-setting-table" style="font-size: 0.85rem;">
+                            <thead>
+                                <tr>
+                                    <th style="width: 12%;">教師代碼</th>
+                                    <th style="width: 20%;">教師姓名</th>
+                                    <th style="width: 52%;">允許授課班級</th>
+                                    <th style="width: 16%;">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="classBindTableBody">
                                 <!-- JS Populated -->
                             </tbody>
                         </table>
@@ -2264,7 +2324,116 @@
         </button>
     </div>
 
+    <!-- Teacher Workload & Overtime Matrix Modal (仿欣河02.超鐘點總表) -->
+    <div id="workloadModal" class="modal-overlay" style="display: none; z-index: 100010;">
+        <div class="modal-content glass" style="max-width: 1100px; width: 95vw; border-radius: 16px;">
+            <div class="modal-header" style="background: #ffffff; padding: 14px 20px; border-bottom: 1px solid var(--border-color);">
+                <div class="modal-title">
+                    <i class="fa-solid fa-calculator modal-icon" style="color: #10b981;"></i>
+                    <div>
+                        <h3 style="font-size: 1.15rem; margin: 0; color: #0f172a;">全校教師超鐘點與基本鐘點核算總表</h3>
+                        <span style="font-size: 0.78rem; color: #64748b;">即時統計每位教師之基本鐘點、正課實排、第8節輔導課、兼課超鐘點與鐘點達標狀態</span>
+                    </div>
+                </div>
+                <div class="modal-header-actions">
+                    <a href="/api/export-workload-excel" class="action-btn primary" style="padding: 6px 14px; font-size: 0.85rem; background: #10b981; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; font-weight: 700;">
+                        <i class="fa-solid fa-file-excel"></i> 匯出 Excel 總表
+                    </a>
+                    <button class="maximize-modal-btn" onclick="toggleModalMaximize('workloadModal')" title="全螢幕最大化展開/還原視窗">
+                        <i class="fa-solid fa-expand"></i>
+                    </button>
+                    <button class="close-modal-btn" onclick="document.getElementById('workloadModal').style.display='none'">&times;</button>
+                </div>
+            </div>
+            <div class="modal-body" style="padding: 16px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 14px;">
+                
+                <!-- Stat Cards -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+                    <div style="background: #ffffff; padding: 12px 16px; border-radius: 10px; border: 1px solid #e2e8f0; box-shadow: 0 2px 6px rgba(0,0,0,0.02);">
+                        <div style="font-size: 0.78rem; color: #64748b;">全校統計教師總數</div>
+                        <div id="wlStatTeachers" style="font-size: 1.5rem; font-weight: 800; color: #6366f1; margin-top: 2px;">--</div>
+                    </div>
+                    <div style="background: #ffffff; padding: 12px 16px; border-radius: 10px; border: 1px solid #e2e8f0; box-shadow: 0 2px 6px rgba(0,0,0,0.02);">
+                        <div style="font-size: 0.78rem; color: #64748b;">正課實排總節數</div>
+                        <div id="wlStatTotalHours" style="font-size: 1.5rem; font-weight: 800; color: #0ea5e9; margin-top: 2px;">--</div>
+                    </div>
+                    <div style="background: rgba(16, 185, 129, 0.06); padding: 12px 16px; border-radius: 10px; border: 1px solid rgba(16, 185, 129, 0.25);">
+                        <div style="font-size: 0.78rem; color: #065f46;">超鐘點教師人數</div>
+                        <div id="wlStatOvertimeTeachers" style="font-size: 1.5rem; font-weight: 800; color: #10b981; margin-top: 2px;">--</div>
+                    </div>
+                    <div style="background: rgba(239, 68, 68, 0.06); padding: 12px 16px; border-radius: 10px; border: 1px solid rgba(239, 68, 68, 0.25);">
+                        <div style="font-size: 0.78rem; color: #991b1b;">未達基本鐘點人數</div>
+                        <div id="wlStatDeficitTeachers" style="font-size: 1.5rem; font-weight: 800; color: #ef4444; margin-top: 2px;">--</div>
+                    </div>
+                </div>
+
+                <!-- Filter & Search Toolbar -->
+                <div style="display: flex; gap: 10px; align-items: center; background: #ffffff; padding: 10px 14px; border-radius: 10px; border: 1px solid #e2e8f0; flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 220px; display: flex; align-items: center; gap: 8px;">
+                        <i class="fa-solid fa-magnifying-glass" style="color: #94a3b8;"></i>
+                        <input type="text" id="wlSearchInput" placeholder="快速搜尋教師姓名、職務或科目..." oninput="filterWorkloadTable()" style="flex: 1; border: none; outline: none; font-size: 0.88rem; font-family: inherit;">
+                    </div>
+                    <div style="display: flex; gap: 6px; align-items: center;">
+                        <button class="action-btn active" id="wlFilterAll" onclick="setWorkloadFilter('all')" style="padding: 4px 10px; font-size: 0.78rem;">全部</button>
+                        <button class="action-btn" id="wlFilterOvertime" onclick="setWorkloadFilter('overtime')" style="padding: 4px 10px; font-size: 0.78rem; color: #10b981;">僅看超鐘點</button>
+                        <button class="action-btn" id="wlFilterDeficit" onclick="setWorkloadFilter('deficit')" style="padding: 4px 10px; font-size: 0.78rem; color: #ef4444;">僅看不足</button>
+                    </div>
+                </div>
+
+                <!-- Workload Table -->
+                <div class="table-responsive" style="max-height: 480px; overflow-y: auto; background: #ffffff; border-radius: 10px; border: 1px solid #e2e8f0;">
+                    <table class="schedule-table" style="font-size: 0.85rem; width: 100%;">
+                        <thead>
+                            <tr style="position: sticky; top: 0; z-index: 2;">
+                                <th style="width: 55px;">序號</th>
+                                <th>教師姓名</th>
+                                <th>學校職務</th>
+                                <th>基本鐘點</th>
+                                <th>正課實排</th>
+                                <th>第8節</th>
+                                <th>社團</th>
+                                <th>實排總計</th>
+                                <th>正課超鐘點</th>
+                                <th>合計兼課</th>
+                                <th>鐘點狀態</th>
+                                <th>任教班級</th>
+                            </tr>
+                        </thead>
+                        <tbody id="workloadTableBody">
+                            <tr><td colspan="12" style="text-align: center; padding: 24px; color: #94a3b8;"><i class="fa-solid fa-spinner fa-spin"></i> 載入中...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Shin-Her Style Context Menu (右鍵快捷選單) -->
+    <div id="cellContextMenu" style="display: none; position: fixed; z-index: 100050; background: #ffffff; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.18); border: 1px solid rgba(0,0,0,0.12); padding: 6px 0; min-width: 190px; font-size: 0.86rem; color: #1e293b;">
+        <div id="ctxLessonTitle" style="padding: 6px 14px; font-weight: 700; font-size: 0.82rem; color: #6366f1; border-bottom: 1px solid #f1f5f9; background: #f8fafc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">課程選項</div>
+        <div class="ctx-item" onclick="handleCtxAction('lock')" style="padding: 8px 14px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: .15s;">
+            <i class="fa-solid fa-lock" style="color: #eab308; width: 16px;"></i> <span id="ctxLockText">鎖定此課程</span>
+        </div>
+        <div class="ctx-item" onclick="handleCtxAction('stash')" style="padding: 8px 14px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: .15s;">
+            <i class="fa-solid fa-inbox" style="color: #0284c7; width: 16px;"></i> 放入待排剪貼籃 (暫存)
+        </div>
+        <div class="ctx-item" onclick="handleCtxAction('swap')" style="padding: 8px 14px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: .15s;">
+            <i class="fa-solid fa-right-left" style="color: #10b981; width: 16px;"></i> 選取進行手動對調
+        </div>
+        <div class="ctx-item" onclick="handleCtxAction('dual')" style="padding: 8px 14px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: .15s;">
+            <i class="fa-solid fa-columns" style="color: #38bdf8; width: 16px;"></i> 開啟雙視窗課表對照
+        </div>
+        <div class="ctx-item" onclick="handleCtxAction('note')" style="padding: 8px 14px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: .15s;">
+            <i class="fa-solid fa-pen-to-square" style="color: #a855f7; width: 16px;"></i> 課表事項備忘註記
+        </div>
+        <div style="border-top: 1px solid #f1f5f9; margin: 4px 0;"></div>
+        <div class="ctx-item" onclick="handleCtxAction('rescue')" style="padding: 8px 14px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: #d97706; transition: .15s;">
+            <i class="fa-solid fa-wand-magic-sparkles" style="color: #f59e0b; width: 16px;"></i> 前往智慧失敗調整頁
+        </div>
+    </div>
+
     <!-- JS Scripts with Cache-Buster -->
-    <script src="/static/js/app.js?v=20260820_v340"></script>
+    <script src="/static/js/app.js?v=20260820_v341"></script>
 </body>
 </html>
