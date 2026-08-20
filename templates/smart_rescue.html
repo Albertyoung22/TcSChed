@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智慧失敗調整 – 舟歌AI排課</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --g: #10b981; --y: #f59e0b; --r: #ef4444; --b: #3b82f6; --p: #6366f1;
+        }
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: 'Noto Sans TC', sans-serif; background: #f8fafc; color: #1e293b; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        
+        .topbar { background: linear-gradient(135deg, #0f172a, #1e293b); color: #f8fafc; padding: 10px 20px; display: flex; align-items: center; gap: 14px; border-bottom: 2px solid rgba(99,102,241,.5); flex-shrink: 0; }
+        .topbar .logo { font-size: 1.1rem; font-weight: 800; color: #818cf8; display: flex; align-items: center; gap: 8px; }
+        .topbar h1 { margin: 0; font-size: 1rem; font-weight: 700; color: #fbbf24; display: flex; align-items: center; gap: 8px; }
+        .topbar-right { margin-left: auto; display: flex; gap: 8px; }
+        .tbtn { padding: 6px 14px; border-radius: 7px; border: 1px solid rgba(255,255,255,.25); background: rgba(255,255,255,.1); color: #f8fafc; cursor: pointer; font-size: .82rem; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; font-family: inherit; transition: .2s; }
+        .tbtn:hover { background: rgba(255,255,255,.2); color: #fff; }
+        
+        .progress-bar { background: #1e293b; padding: 8px 20px; display: flex; align-items: center; gap: 16px; font-size: .82rem; color: #94a3b8; flex-shrink: 0; border-bottom: 1px solid rgba(255,255,255,.08); }
+        .ps { display: flex; align-items: center; gap: 5px; } .ps .v { font-weight: 700; font-size: .95rem; }
+        .ps .vs { color: #10b981; } .ps .vf { color: #ef4444; } .ps .vb { color: #38bdf8; }
+        .ptrack { flex: 1; height: 8px; background: rgba(255,255,255,.1); border-radius: 4px; overflow: hidden; }
+        .pfill { height: 100%; background: linear-gradient(90deg, #10b981, #6366f1); transition: width .5s; }
+        
+        .layout { display: grid; grid-template-columns: 340px 1fr; flex: 1; overflow: hidden; }
+        
+        .lp { background: #fff; border-right: 1px solid #e2e8f0; display: flex; flex-direction: column; overflow: hidden; }
+        .lh { padding: 12px 14px; background: linear-gradient(135deg, #4f46e5, #7c3aed); color: #fff; font-weight: 700; font-size: .9rem; display: flex; align-items: center; justify-content: space-between; }
+        .ls { padding: 8px 10px; border-bottom: 1px solid #e2e8f0; }
+        .ls input { width: 100%; padding: 7px 10px; border-radius: 7px; border: 1px solid #cbd5e1; font-size: .83rem; outline: none; font-family: inherit; }
+        .ll { flex: 1; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 8px; }
+        
+        .ri { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 9px; padding: 10px 12px; cursor: pointer; transition: all .18s; }
+        .ri:hover { border-color: #6366f1; background: #f0f4ff; }
+        .ri.active { border-color: #6366f1; background: linear-gradient(135deg, #f0f4ff, #ede9fe); box-shadow: 0 2px 8px rgba(99,102,241,.2); }
+        .ri.stashed { border-color: #38bdf8; background: #f0f9ff; }
+        .ri.placed { opacity: .55; pointer-events: none; border-color: #10b981; }
+        .is { font-weight: 700; font-size: .92rem; color: #0f172a; } 
+        .im { font-size: .78rem; color: #64748b; margin-top: 4px; display: flex; gap: 8px; }
+        .ia { display: flex; gap: 6px; margin-top: 8px; }
+        .ib { flex: 1; padding: 5px 8px; border-radius: 6px; border: 1px solid; font-size: .75rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; font-family: inherit; transition: .15s; }
+        .ibg { background: #dcfce7; border-color: #10b981; color: #065f46; } .ibg:hover { background: #10b981; color: #fff; }
+        .ibp { background: #ede9fe; border-color: #8b5cf6; color: #5b21b6; } .ibp:hover { background: #8b5cf6; color: #fff; }
+        .ibb { background: #e0f2fe; border-color: #38bdf8; color: #0369a1; } .ibb:hover { background: #0284c7; color: #fff; }
+        
+        .rp { display: flex; flex-direction: column; overflow: hidden; background: #f8fafc; }
+        .ban { background: linear-gradient(135deg, #4f46e5, #7c3aed); color: #fff; padding: 8px 18px; font-size: .88rem; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+        .ban.hidden { display: none; }
+        .rh { padding: 10px 18px; background: #fff; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .rh h2 { margin: 0; font-size: .95rem; font-weight: 700; }
+        .leg { display: flex; gap: 10px; flex-wrap: wrap; font-size: .78rem; }
+        .li { display: flex; align-items: center; gap: 4px; color: #475569; }
+        .ld { width: 13px; height: 13px; border-radius: 2px; }
+        
+        .tta { flex: 1; overflow: auto; padding: 14px; }
+        .tbl { width: 100%; border-collapse: collapse; background: #fff; border-radius: 11px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,.06); }
+        .tbl th { background: linear-gradient(135deg, #4f46e5, #7c3aed); color: #fff; padding: 10px 6px; text-align: center; font-size: .85rem; font-weight: 700; }
+        .tbl .tc { background: #f1f5f9; color: #475569; padding: 8px 10px; font-size: .8rem; font-weight: 600; text-align: center; border-right: 2px solid #e2e8f0; min-width: 70px; }
+        .tbl td { border: 1px solid #e2e8f0; padding: 0; vertical-align: top; min-width: 120px; }
+        
+        .sb { min-height: 72px; padding: 6px; cursor: pointer; transition: .15s; display: flex; flex-direction: column; gap: 2px; position: relative; }
+        .sb:hover { filter: brightness(.94); }
+        .sf { background: rgba(16, 185, 129, 0.14); } 
+        .sw { background: rgba(245, 158, 11, 0.14); }
+        .sft { background: repeating-linear-gradient(45deg, rgba(239,68,68,0.16), rgba(239,68,68,0.16) 5px, rgba(255,255,255,0.6) 5px, rgba(255,255,255,0.6) 10px); }
+        .sfs { background: repeating-linear-gradient(45deg, rgba(59,130,246,0.16), rgba(59,130,246,0.16) 5px, rgba(255,255,255,0.6) 5px, rgba(255,255,255,0.6) 10px); }
+        .sfo { background: rgba(239, 68, 68, 0.1); }
+        .sc { background: rgba(139, 92, 246, 0.15); border: 2px dashed #8b5cf6 !important; }
+        
+        .sn { font-size: .82rem; font-weight: 700; color: #0f172a; } 
+        .st { font-size: .74rem; color: #64748b; } 
+        .sm { font-size: .7rem; margin-top: 3px; font-weight: 500; }
+        .smok { color: #10b981; } .smwn { color: #d97706; } .smer { color: #ef4444; }
+        
+        .ind { position: absolute; top: 3px; right: 3px; width: 15px; height: 15px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: .62rem; font-weight: 900; }
+        .ig { background: #10b981; color: #fff; } .iw { background: #f59e0b; color: #fff; } .ib2 { background: #ef4444; color: #fff; } .ic { background: #8b5cf6; color: #fff; }
+        
+        .ov { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 9999; display: flex; align-items: center; justify-content: center; }
+        .cb { background: #fff; border-radius: 14px; padding: 24px; max-width: 420px; width: 90%; box-shadow: 0 20px 50px rgba(0,0,0,.3); }
+        .cb h3 { margin: 0 0 8px; color: #0f172a; } .cb p { margin: 0 0 16px; color: #475569; font-size: .88rem; white-space: pre-wrap; line-height: 1.5; }
+        .ca { display: flex; gap: 8px; justify-content: flex-end; }
+        .bcc { background: transparent; border: 1px solid #e2e8f0; color: #475569; padding: 8px 18px; border-radius: 7px; cursor: pointer; font-family: inherit; font-weight: 600; }
+        .bfr { background: #ef4444; color: #fff; border: none; padding: 8px 18px; border-radius: 7px; cursor: pointer; font-weight: 700; font-family: inherit; }
+        .bcf { background: #4f46e5; color: #fff; border: none; padding: 8px 18px; border-radius: 7px; cursor: pointer; font-weight: 700; font-family: inherit; }
+        
+        .toast { position: fixed; bottom: 22px; right: 22px; background: #0f172a; color: #f8fafc; padding: 12px 20px; border-radius: 10px; font-size: .88rem; font-weight: 600; box-shadow: 0 8px 24px rgba(0,0,0,.3); z-index: 9998; transform: translateY(60px); opacity: 0; transition: all .3s; border-left: 4px solid #6366f1; }
+        .toast.show { transform: translateY(0); opacity: 1; }
+    </style>
+</head>
+<body>
+<div class="topbar">
+    <div class="logo"><i class="fa-solid fa-calendar-days"></i> 舟歌AI排課</div>
+    <h1><i class="fa-solid fa-wand-magic-sparkles"></i> 智慧失敗調整 (Smart Rescue)</h1>
+    <div class="topbar-right">
+        <button class="tbtn" onclick="refreshAll()"><i class="fa-solid fa-rotate"></i> 重新整理</button>
+        <a href="/" class="tbtn"><i class="fa-solid fa-arrow-left"></i> 返回主課表</a>
+    </div>
+</div>
+<div class="progress-bar">
+    <div class="ps"><span>待排課程：</span><span class="v vf" id="failCnt">--</span><span> 節</span></div>
+    <div class="ps"><span>已排入：</span><span class="v vs" id="okCnt">0</span><span> 節</span></div>
+    <div class="ps"><span>暫存區：</span><span class="v vb" id="bCnt">0</span><span> 節</span></div>
+    <div class="ptrack"><div class="pfill" id="pfill" style="width:0%"></div></div>
+    <span id="ppct" style="font-weight:700;color:#f8fafc;min-width:45px;text-align:right;">0%</span>
+</div>
+<div class="layout">
+    <div class="lp">
+        <div class="lh"><span><i class="fa-solid fa-list"></i> 待排課程清單</span><span id="lbadge" style="background:rgba(255,255,255,.2);padding:2px 9px;border-radius:10px;font-size:.82rem;">0 節</span></div>
+        <div class="ls"><input id="si" placeholder="搜尋科目 / 班級 / 教師..." oninput="filterList()"></div>
+        <div class="ll" id="rl"><div style="text-align:center;padding:30px;color:#94a3b8;"><i class="fa-solid fa-spinner fa-spin"></i><div style="margin-top:8px;">讀取中...</div></div></div>
+    </div>
+    <div class="rp">
+        <div class="ban hidden" id="sbanner">
+            <i class="fa-solid fa-crosshairs"></i>
+            <span id="sbt">請從左側選擇待排課程</span>
+            <span id="sbc" style="opacity:.8;font-weight:400;"></span>
+            <button onclick="clearSel()" style="margin-left:auto;background:rgba(255,255,255,.2);border:none;color:#fff;padding:4px 10px;border-radius:5px;cursor:pointer;font-size:.8rem;font-family:inherit;"><i class="fa-solid fa-xmark"></i> 取消選擇</button>
+        </div>
+        <div class="rh">
+            <h2 id="rtitle"><i class="fa-solid fa-table-cells"></i> 班級課表</h2>
+            <div class="leg">
+                <div class="li"><div class="ld" style="background:#10b981;"></div> 可排入 (綠)</div>
+                <div class="li"><div class="ld" style="background:#f59e0b;"></div> 有軟衝突 (黃)</div>
+                <div class="li"><div class="ld" style="background:repeating-linear-gradient(45deg,#ef4444,#ef4444 3px,#fff 3px,#fff 6px);border:1px solid #ef4444;"></div> 教師衝堂 (紅斜線)</div>
+                <div class="li"><div class="ld" style="background:repeating-linear-gradient(45deg,#3b82f6,#3b82f6 3px,#fff 3px,#fff 6px);border:1px solid #3b82f6;"></div> 科目限制 (藍斜線)</div>
+                <div class="li"><div class="ld" style="background:#8b5cf6;"></div> 目前選中 (紫)</div>
+            </div>
+            <div style="margin-left:auto;display:flex;gap:7px;align-items:center;">
+                <label style="font-size:.8rem;color:#475569;">切換班級：</label>
+                <select id="cls" onchange="changeClass()" style="padding:5px 10px;border-radius:6px;border:1px solid #cbd5e1;font-size:.83rem;background:#fff;font-family:inherit;"><option value="">請選擇班級</option></select>
+            </div>
+        </div>
+        <div class="tta"><table class="tbl" id="tbl"><thead><tr><th style="width:70px;">節次</th><th>星期一</th><th>星期二</th><th>星期三</th><th>星期四</th><th>星期五</th></tr></thead><tbody id="tbd"></tbody></table></div>
+    </div>
+</div>
+<div class="ov" id="cov" style="display:none;"><div class="cb"><h3 id="ct">確認操作</h3><p id="cm"></p><div class="ca"><button class="bcc" onclick="hc()">取消</button><button class="bfr" id="fb" onclick="df()" style="display:none;">強制排入</button><button class="bcf" id="cfb" onclick="dc()">確認</button></div></div></div>
+<div class="toast" id="rt"></div>
+<script>
+let ul=[],sl=[],sel=null,ssm={},cc="",ccs=[],md=null,ok=0,cCb=null,fCb=null;
+async function init(){
+    try{
+        const mr=await fetch("/api/metadata");md=await mr.json();
+        if(md&&md.classes){const cs=document.getElementById("cls");md.classes.forEach(c=>{const o=document.createElement("option");o.value=c.code;o.textContent=c.name||c.code;cs.appendChild(o);});}
+        await loadUL();renderTT([],{});
+    }catch(e){toast("載入失敗: "+e.message,"e");}
+}
+async function loadUL(){
+    try{const r=await fetch("/api/unscheduled-lessons");const d=await r.json();if(d.status==="success"){ul=d.unscheduled||[];sl=d.stashed||[];renderList();updateProg();}}catch(e){}
+}
+function filterList(){const q=document.getElementById("si").value.toLowerCase();document.querySelectorAll(".ri").forEach(el=>{el.style.display=el.textContent.toLowerCase().includes(q)?"":"none";});}
+function renderList(){
+    const l=document.getElementById("rl");document.getElementById("lbadge").textContent=ul.length+" 節";
+    if(!ul.length){l.innerHTML="<div style='text-align:center;padding:30px;color:#10b981;font-weight:700;'><i class='fa-solid fa-circle-check' style='font-size:2rem;display:block;margin-bottom:8px;'></i>全部課程已排課完成！</div>";return;}
+    l.innerHTML="";
+    ul.forEach(item=>{
+        const d=document.createElement("div");d.className="ri"+(item._stashed?" stashed":"");d.dataset.id=item.id;
+        const sb=item._stashed?`<button class="ib ibb" style="flex:.4" title="從暫存區取回" onclick="event.stopPropagation();uns('${item.id}')"><i class="fa-solid fa-rotate-left"></i></button>`:`<button class="ib ibb" title="放入暫存區" onclick="event.stopPropagation();sta('${item.id}')"><i class="fa-solid fa-inbox"></i></button>`;
+        d.innerHTML=`<div class="is">${item._stashed?'<i class="fa-solid fa-inbox" style="color:#0284c7;font-size:.78rem;"></i> ':''}${item.subject_name||"?"}</div><div class="im"><span><i class="fa-solid fa-graduation-cap" style="color:#6366f1;"></i> ${item.class_name||item.class_code||"?"}</span><span><i class="fa-solid fa-chalkboard-user" style="color:#64748b;"></i> ${item.teacher_name||"未指派"}</span></div><div class="ia"><button class="ib ibg" onclick="event.stopPropagation();qp('${item.id}')"><i class="fa-solid fa-bolt"></i> 一鍵排入</button><button class="ib ibp" onclick="event.stopPropagation();selIt(ul.find(x=>String(x.id)==='${item.id}'))"><i class="fa-solid fa-hand-pointer"></i> 手動選格</button>${sb}</div>`;
+        d.addEventListener("click",()=>selIt(item));l.appendChild(d);
+    });
+}
+function updateProg(){const t=ul.length+ok;document.getElementById("failCnt").textContent=ul.length;document.getElementById("okCnt").textContent=ok;document.getElementById("bCnt").textContent=sl.length;const p=t>0?Math.round(ok/t*100):0;document.getElementById("pfill").style.width=p+"%";document.getElementById("ppct").textContent=p+"%";}
+async function selIt(item){
+    if(!item)return;
+    sel=item;document.querySelectorAll(".ri").forEach(el=>el.classList.remove("active"));
+    const el=document.querySelector(`.ri[data-id="${item.id}"]`);if(el)el.classList.add("active");
+    document.getElementById("sbanner").classList.remove("hidden");
+    document.getElementById("sbt").textContent=`已選：${item.subject_name}（${item.teacher_name||"未指派"}）`;
+    document.getElementById("sbc").textContent="｜"+(item.class_name||item.class_code||"");
+    if(item.class_code&&item.class_code!==cc){cc=item.class_code;document.getElementById("cls").value=cc;await loadCS(cc);}
+    else await fetchCM(item.id,cc);
+}
+function clearSel(){sel=null;ssm={};document.querySelectorAll(".ri").forEach(el=>el.classList.remove("active"));document.getElementById("sbanner").classList.add("hidden");renderTT(ccs,{});}
+async function changeClass(){cc=document.getElementById("cls").value;if(!cc)return;await loadCS(cc);}
+async function loadCS(code){
+    try{const r=await fetch(`/api/schedule/class/${encodeURIComponent(code)}`);ccs=await r.json();document.getElementById("rtitle").innerHTML=`<i class="fa-solid fa-table-cells"></i> ${code} 班級課表`;if(sel)await fetchCM(sel.id,code);else renderTT(ccs,{});}catch(e){}
+}
+async function fetchCM(iid,code){
+    try{const r=await fetch("/api/conflict-check-slot",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({item_id:iid,class_code:code})});const d=await r.json();if(d.status==="success"){ssm=d.slots||{};renderTT(ccs,ssm);}}catch(e){}
+}
+function renderTT(slots,sm){
+    const tb=document.getElementById("tbd");tb.innerHTML="";const g={};
+    (slots||[]).forEach(s=>{const dv=parseInt(s.day),pv=parseInt(s.period);if(dv>=1&&dv<=5&&pv>=1&&pv<=8){if(!g[pv])g[pv]={};if(!g[pv][dv])g[pv][dv]=[];g[pv][dv].push(s);}});
+    const pt=(md&&md.period_times)||{};
+    for(let p=1;p<=8;p++){
+        const tr=document.createElement("tr");const tt=document.createElement("td");tt.className="tc";const pti=pt[String(p)]||{name:`第${p}節`,time:""};
+        tt.innerHTML=`<div style="font-weight:700;">${pti.name}</div><div style="font-size:.68rem;color:#94a3b8;">${pti.time}</div>`;tr.appendChild(tt);
+        for(let d=1;d<=5;d++){
+            const td=document.createElement("td");const k=`${d}-${p}`;const st=sm[k]||null;const ls=(g[p]&&g[p][d])||[];
+            const sbx=document.createElement("div");sbx.className="sb";
+            if(st){const cm={feasible:"sf",warning:"sw",forbidden:"sfo",forbidden_teacher:"sft",forbidden_subject:"sfs",current:"sc"};sbx.classList.add(cm[st.color]||"");const im={feasible:"ig",warning:"iw",forbidden:"ib2",forbidden_teacher:"ib2",forbidden_subject:"ib2",current:"ic"};const ic={feasible:"✓",warning:"!",forbidden:"✕",forbidden_teacher:"✕",forbidden_subject:"✕",current:"●"};if(im[st.color]){const ind=document.createElement("div");ind.className="ind "+im[st.color];ind.textContent=ic[st.color];sbx.appendChild(ind);}}
+            ls.forEach(l=>{const n=document.createElement("div");n.className="sn";n.textContent=l.subject_name||"";sbx.appendChild(n);const t=document.createElement("div");t.className="st";t.textContent=l.teacher_name||"";sbx.appendChild(t);});
+            if(st&&st.status!=="current"){const mv=document.createElement("div");if(st.status==="feasible"){mv.className="sm smok";mv.textContent=ls.length>0?"↕ 可對調":"✓ 可排入";}else if(st.status==="soft_conflict"){mv.className="sm smwn";mv.textContent="⚠ "+(st.message||"").substring(0,16);}else{mv.className="sm smer";mv.textContent="✕ "+(st.message||"").substring(0,16);}sbx.appendChild(mv);}
+            sbx.addEventListener("click",()=>{
+                if(!sel){toast("請先從左側選擇待排課程！","w");return;}
+                if(!st||st.status==="current")return;
+                if(st.status.startsWith("forbidden")){showCnf("⛔ 衝突警告！",`排入 週${d}第${p}節 將違反：\n${st.message}\n\n是否仍要強制排入？`,null,()=>doPlace(sel.id,d,p,true));}
+                else{const tl=ls[0];showCnf("確認排入",tl?`確定要將【${sel.subject_name}】移至 週${d}第${p}節，與【${tl.subject_name}】對調嗎？`:`確定要將【${sel.subject_name}】排入 週${d}第${p}節（空堂）嗎？`,()=>doPlace(sel.id,d,p,false));}
+            });
+            td.appendChild(sbx);tr.appendChild(td);
+        }
+        tb.appendChild(tr);
+    }
+}
+async function qp(iid){toast("🔍 正在尋找最佳時段...","i");try{const r=await fetch("/api/smart-rescue/place-lesson",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({item_id:iid,prefer_morning:true})});const d=await r.json();if(d.status==="success"){toast("✅ "+d.message);markOk(iid);await loadUL();if(cc)await loadCS(cc);}else if(d.status==="no_slot")toast("⚠ "+d.message,"w");else toast("❌ "+(d.message||"失敗"),"e");}catch(e){toast("❌ 連線失敗","e");}}
+async function doPlace(iid,td,tp,force){hc();try{const r=await fetch("/api/execute-swap",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({source_id:iid,target_day:td,target_period:tp,force:force})});const d=await r.json();if(d.status==="success"){toast("✅ "+d.message);markOk(iid);sel=null;ssm={};document.getElementById("sbanner").classList.add("hidden");await loadUL();if(cc)await loadCS(cc);}else toast("❌ "+(d.message||"失敗"),"e");}catch(e){toast("❌ 連線失敗","e");}}
+async function sta(iid){try{const r=await fetch("/api/stash-lesson",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:iid})});const d=await r.json();if(d.status==="success"){toast("📥 "+d.message);await loadUL();}}catch(e){toast("❌ 暫存失敗","e");}}
+async function uns(iid){try{const r=await fetch("/api/unstash-lesson",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:iid,target_day:"0",target_period:"0"})});const d=await r.json();if(d.status==="success"){toast("📤 已取回，請點選時段排入","i");await loadUL();}}catch(e){toast("❌ 取回失敗","e");}}
+function markOk(iid){ok++;const el=document.querySelector(`.ri[data-id="${iid}"]`);if(el){el.classList.add("placed");el.innerHTML="<div class=is>✅ 已排課完成</div>";}}
+async function refreshAll(){sel=null;ssm={};ok=0;document.getElementById("sbanner").classList.add("hidden");await loadUL();if(cc)await loadCS(cc);toast("已重新整理！");}
+function showCnf(t,m,oc,of){document.getElementById("ct").textContent=t;document.getElementById("cm").textContent=m;cCb=oc;fCb=of;document.getElementById("fb").style.display=of?"":"none";document.getElementById("cfb").style.display=oc?"":"none";document.getElementById("cov").style.display="flex";}
+function hc(){document.getElementById("cov").style.display="none";cCb=null;fCb=null;}
+function dc(){if(cCb)cCb();hc();}
+function df(){if(fCb)fCb();hc();}
+function toast(msg,t="s"){const e=document.getElementById("rt");const c={s:"#10b981",e:"#ef4444",w:"#f59e0b",i:"#6366f1"};e.style.borderLeftColor=c[t]||"#6366f1";e.textContent=msg;e.classList.add("show");setTimeout(()=>e.classList.remove("show"),3000);}
+init();
+</script>
+</body>
+</html>
