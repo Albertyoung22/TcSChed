@@ -758,6 +758,107 @@ def api_select_folder():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
+# =====================================================================
+# API: 07. 綁班限制 (Teacher Class Allow)
+# teacher_class_allow: { "teacher_code": ["class_code1", "class_code2", ...] }
+# =====================================================================
+
+@app.route("/api/teacher-class-allow", methods=["GET"])
+def api_get_teacher_class_allow():
+    try:
+        cfg = load_config_rules()
+        return jsonify({"status": "success", "data": cfg.get("teacher_class_allow", {})})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/teacher-class-allow/save", methods=["POST"])
+def api_save_teacher_class_allow():
+    try:
+        req = request.get_json() or {}
+        teacher_code = str(req.get("teacher_code", "")).strip()
+        allowed_classes = req.get("allowed_classes", [])
+        if not teacher_code:
+            return jsonify({"status": "error", "message": "缺少教師代碼"}), 400
+        cfg = load_config_rules()
+        if "teacher_class_allow" not in cfg:
+            cfg["teacher_class_allow"] = {}
+        if allowed_classes:
+            cfg["teacher_class_allow"][teacher_code] = [str(c).strip() for c in allowed_classes if str(c).strip()]
+        else:
+            cfg["teacher_class_allow"].pop(teacher_code, None)
+        save_config_rules(cfg)
+        sync_to_github_cloud("config_rules.json", json.dumps(cfg, ensure_ascii=False, indent=2), "Update teacher_class_allow")
+        return jsonify({"status": "success", "message": f"教師 {teacher_code} 綁班設定已儲存", "data": cfg["teacher_class_allow"]})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/teacher-class-allow/delete", methods=["POST"])
+def api_delete_teacher_class_allow():
+    try:
+        req = request.get_json() or {}
+        teacher_code = str(req.get("teacher_code", "")).strip()
+        if not teacher_code:
+            return jsonify({"status": "error", "message": "缺少教師代碼"}), 400
+        cfg = load_config_rules()
+        cfg.get("teacher_class_allow", {}).pop(teacher_code, None)
+        save_config_rules(cfg)
+        sync_to_github_cloud("config_rules.json", json.dumps(cfg, ensure_ascii=False, indent=2), "Delete teacher_class_allow")
+        return jsonify({"status": "success", "message": f"教師 {teacher_code} 綁班限制已移除"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+# =====================================================================
+# API: 01/04. 同時上課群組 / 全校共同科目 (Custom Simultaneous Groups)
+# custom_simultaneous_groups: [ { label, fixed_day, fixed_period, members: [{class_code, subject_code}] } ]
+# =====================================================================
+
+@app.route("/api/sim-groups", methods=["GET"])
+def api_get_sim_groups():
+    try:
+        cfg = load_config_rules()
+        return jsonify({"status": "success", "data": cfg.get("custom_simultaneous_groups", [])})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/sim-groups/save", methods=["POST"])
+def api_save_sim_group():
+    """Add or update a simultaneous group. Pass index=-1 to add new."""
+    try:
+        req = request.get_json() or {}
+        group = req.get("group", {})
+        index = req.get("index", -1)
+        if not group or not group.get("members"):
+            return jsonify({"status": "error", "message": "群組資料不完整"}), 400
+        cfg = load_config_rules()
+        groups = cfg.get("custom_simultaneous_groups", [])
+        if index >= 0 and index < len(groups):
+            groups[index] = group
+        else:
+            groups.append(group)
+        cfg["custom_simultaneous_groups"] = groups
+        save_config_rules(cfg)
+        sync_to_github_cloud("config_rules.json", json.dumps(cfg, ensure_ascii=False, indent=2), "Update sim_groups")
+        return jsonify({"status": "success", "message": "同時上課群組已儲存", "data": groups})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/sim-groups/delete", methods=["POST"])
+def api_delete_sim_group():
+    try:
+        req = request.get_json() or {}
+        index = req.get("index", -1)
+        cfg = load_config_rules()
+        groups = cfg.get("custom_simultaneous_groups", [])
+        if 0 <= index < len(groups):
+            removed = groups.pop(index)
+            cfg["custom_simultaneous_groups"] = groups
+            save_config_rules(cfg)
+            sync_to_github_cloud("config_rules.json", json.dumps(cfg, ensure_ascii=False, indent=2), "Delete sim_group")
+            return jsonify({"status": "success", "message": f"群組 {removed.get('label', index)} 已刪除", "data": groups})
+        return jsonify({"status": "error", "message": "群組索引無效"}), 400
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 
 
 
@@ -5778,7 +5879,586 @@ def api_ai_chat():
         return jsonify({"status": "error", "message": f"AI 對談處理異常: {str(e)}"}), 500
 
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 欣河智慧排課參考功能 – Stash Area / Smart Rescue / Conflict Color-check
+# ─────────────────────────────────────────────────────────────────────────────
+# In-memory stash area (session-level; cleared on server restart)
+_stash_area = []   # list of lesson-dicts temporarily removed from grid
+
+@app.route("/smart-rescue")
+def smart_rescue_page():
+    """智慧失敗調整頁面 – 仿欣河左右分割面板"""
+    return render_template("smart_rescue.html")
+
+@app.route("/api/unscheduled-lessons", methods=["GET"])
+def api_unscheduled_lessons():
+    """回傳尚未排入時段（day=0 或 period=0）的課程清單，同時包含暫存區課程。"""
+    try:
+        solved = get_current_solved_schedules()
+        unscheduled = []
+        for idx, s in enumerate(solved):
+            d = str(s.get("day", "0")).strip().split(".")[0]
+            p = str(s.get("period", "0")).strip().split(".")[0]
+            if d in ("0", "", "None", "nan") or p in ("0", "", "None", "nan"):
+                item = dict(s)
+                item["id"] = s.get("id", idx)
+                unscheduled.append(item)
+
+        # Also include stashed items (they were removed from grid)
+        for item in _stash_area:
+            item["_stashed"] = True
+            unscheduled.append(item)
+
+        return jsonify({
+            "status": "success",
+            "unscheduled": unscheduled,
+            "stashed": _stash_area,
+            "total_unscheduled": len(unscheduled)
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/stash-lesson", methods=["POST"])
+def api_stash_lesson():
+    """
+    暫存區：將某節課從課表移除，放入暫存籃（day=0, period=0），
+    方便之後從暫存區取回放到其他時段。
+    """
+    global _stash_area
+    try:
+        req = request.get_json(silent=True) or {}
+        item_id = req.get("id")
+        if item_id is None:
+            return jsonify({"status": "error", "message": "缺少課程 id"}), 400
+
+        solved = get_current_solved_schedules()
+        item = None
+        for s in solved:
+            if str(s.get("id")) == str(item_id):
+                item = s
+                break
+
+        if not item:
+            return jsonify({"status": "error", "message": "找不到課程"}), 404
+
+        # Save original slot
+        item["_stash_orig_day"] = str(item.get("day", "0"))
+        item["_stash_orig_period"] = str(item.get("period", "0"))
+
+        # Remove from solved timetable (set day/period to 0)
+        item["day"] = "0"
+        item["period"] = "0"
+        item["manual_locked"] = False
+
+        # Clone into stash (avoid duplicates)
+        _stash_area = [x for x in _stash_area if str(x.get("id")) != str(item_id)]
+        _stash_area.append(dict(item))
+
+        # Persist to config
+        cfg = load_config_rules()
+        cfg["solved_schedules"] = solved
+        save_config_rules(cfg)
+
+        return jsonify({
+            "status": "success",
+            "message": f"已將【{item.get('subject_name','')} / {item.get('class_name','')}】加入暫存區",
+            "stash_count": len(_stash_area)
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/unstash-lesson", methods=["POST"])
+def api_unstash_lesson():
+    """
+    從暫存區取回課程，排入指定時段（target_day, target_period）。
+    若目標時段有其他課，則執行對調。
+    """
+    global _stash_area
+    try:
+        req = request.get_json(silent=True) or {}
+        item_id = req.get("id")
+        target_day = str(req.get("target_day", "0"))
+        target_period = str(req.get("target_period", "0"))
+
+        if not item_id:
+            return jsonify({"status": "error", "message": "缺少課程 id"}), 400
+
+        solved = get_current_solved_schedules()
+        cfg = load_config_rules()
+
+        # Find in stash
+        stash_item = None
+        for x in _stash_area:
+            if str(x.get("id")) == str(item_id):
+                stash_item = x
+                break
+
+        if not stash_item:
+            return jsonify({"status": "error", "message": "暫存區找不到此課程"}), 404
+
+        # Find in solved list
+        source_item = None
+        for s in solved:
+            if str(s.get("id")) == str(item_id):
+                source_item = s
+                break
+
+        if source_item:
+            source_item["day"] = target_day
+            source_item["period"] = target_period
+            source_item["manual_locked"] = True
+
+        # Remove from stash
+        _stash_area = [x for x in _stash_area if str(x.get("id")) != str(item_id)]
+
+        cfg["solved_schedules"] = solved
+        save_config_rules(cfg)
+
+        return jsonify({
+            "status": "success",
+            "message": f"已從暫存區取回課程並排入週{target_day}第{target_period}節",
+            "stash_count": len(_stash_area)
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/conflict-check-slot", methods=["POST"])
+def api_conflict_check_slot():
+    """
+    衝突色碼檢查：給定一個 class_code 和目標時段，
+    回傳整個 5×8 課表格的可排入狀態（仿欣河綠/黃/紅/藍分色）。
+    供智慧失敗調整面板使用。
+    """
+    try:
+        req = request.get_json(silent=True) or {}
+        item_id = req.get("item_id")
+        class_code = req.get("class_code", "")
+
+        solved = get_current_solved_schedules()
+        cfg = load_config_rules()
+
+        # Find the item to place
+        source_item = None
+        for s in solved:
+            if str(s.get("id")) == str(item_id):
+                source_item = s
+                break
+
+        if not source_item:
+            # Try to find in stash
+            for x in _stash_area:
+                if str(x.get("id")) == str(item_id):
+                    source_item = x
+                    break
+
+        if not source_item:
+            return jsonify({"status": "error", "message": "找不到課程"}), 404
+
+        # Build slot status map for the 5×8 grid
+        slots_status = {}
+        for d in range(1, 6):
+            for p in range(1, 9):
+                slot_key = f"{d}-{p}"
+                curr_d = str(source_item.get("day", "0"))
+                curr_p = str(source_item.get("period", "0"))
+
+                if str(d) == curr_d and str(p) == curr_p:
+                    slots_status[slot_key] = {"status": "current", "color": "current", "message": "目前時段"}
+                    continue
+
+                # Find what's in this slot for same class
+                target_item = None
+                for s in solved:
+                    if str(s.get("id")) == str(source_item.get("id")):
+                        continue
+                    sd = str(s.get("day", "")).split(".")[0]
+                    sp = str(s.get("period", "")).split(".")[0]
+                    sc = str(s.get("class_code", "")).strip()
+                    if sd == str(d) and sp == str(p) and sc == str(source_item.get("class_code", "")).strip():
+                        target_item = s
+                        break
+
+                is_forbidden, warns = check_manual_swap_conflicts(source_item, d, p, target_item, solved, cfg)
+
+                # Determine color code (仿欣河)
+                if is_forbidden:
+                    # Check if teacher conflict (紅斜線) or subject blocked (藍斜線)
+                    warn_text = " ".join(warns)
+                    if "教師衝堂" in warn_text or "教師不可排" in warn_text:
+                        color = "forbidden_teacher"   # 紅斜線
+                    elif "科目" in warn_text or "不排時段" in warn_text:
+                        color = "forbidden_subject"   # 藍斜線
+                    else:
+                        color = "forbidden"           # 紅底
+                    slots_status[slot_key] = {
+                        "status": "forbidden",
+                        "color": color,
+                        "message": warns[0] if warns else "衝突"
+                    }
+                elif warns:
+                    slots_status[slot_key] = {
+                        "status": "soft_conflict",
+                        "color": "warning",           # 黃色
+                        "message": warns[0]
+                    }
+                else:
+                    slots_status[slot_key] = {
+                        "status": "feasible",
+                        "color": "feasible",          # 綠色
+                        "message": "可排入"
+                    }
+
+        return jsonify({
+            "status": "success",
+            "item": source_item,
+            "slots": slots_status
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/smart-rescue/place-lesson", methods=["POST"])
+def api_smart_rescue_place():
+    """
+    智慧失敗調整：一鍵排入 – 自動找第一個無衝突的時段排入未排課程。
+    """
+    try:
+        req = request.get_json(silent=True) or {}
+        item_id = req.get("item_id")
+        prefer_morning = bool(req.get("prefer_morning", True))
+
+        solved = get_current_solved_schedules()
+        cfg = load_config_rules()
+
+        source_item = None
+        for s in solved:
+            if str(s.get("id")) == str(item_id):
+                source_item = s
+                break
+
+        if not source_item:
+            return jsonify({"status": "error", "message": "找不到課程"}), 404
+
+        # Try to find a feasible slot (prefer mornings first)
+        period_order = list(range(1, 8)) if prefer_morning else list(range(7, 0, -1))
+        day_order = [1, 2, 3, 4, 5]
+
+        best_slot = None
+        for d in day_order:
+            for p in period_order:
+                curr_d = str(source_item.get("day", "0"))
+                curr_p = str(source_item.get("period", "0"))
+                if str(d) == curr_d and str(p) == curr_p:
+                    continue
+                # Find target item
+                target = None
+                for s in solved:
+                    if str(s.get("id")) == str(source_item.get("id")):
+                        continue
+                    sd = str(s.get("day", "")).split(".")[0]
+                    sp = str(s.get("period", "")).split(".")[0]
+                    sc = str(s.get("class_code", "")).strip()
+                    if sd == str(d) and sp == str(p) and sc == str(source_item.get("class_code", "")).strip():
+                        target = s
+                        break
+
+                is_forb, warns = check_manual_swap_conflicts(source_item, d, p, target, solved, cfg)
+                if not is_forb:
+                    best_slot = (d, p, target)
+                    break
+            if best_slot:
+                break
+
+        if not best_slot:
+            return jsonify({
+                "status": "no_slot",
+                "message": "找不到完全無衝突的時段，請手動選擇時段或使用強制排入。"
+            })
+
+        bd, bp, btarget = best_slot
+        old_d = str(source_item.get("day", "0"))
+        old_p = str(source_item.get("period", "0"))
+
+        source_item["day"] = str(bd)
+        source_item["period"] = str(bp)
+        source_item["manual_locked"] = True
+
+        if btarget:
+            btarget["day"] = old_d
+            btarget["period"] = old_p
+            btarget["manual_locked"] = True
+            msg = f"已排入週{bd}第{bp}節（與【{btarget.get('subject_name','')}】對調）"
+        else:
+            msg = f"已排入週{bd}第{bp}節（原為空堂）"
+
+        # Persist
+        cfg["solved_schedules"] = solved
+        save_config_rules(cfg)
+
+        # Try Excel
+        try:
+            import pandas as pd
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            local_output = os.path.join(base_dir, "School_Schedule_Solved.xlsx")
+            pd.DataFrame(solved).to_excel(local_output, index=False)
+        except Exception:
+            pass
+
+        return jsonify({
+            "status": "success",
+            "message": msg,
+            "placed_day": bd,
+            "placed_period": bp
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/lock-lesson", methods=["POST"])
+def api_lock_lesson():
+    """鎖定/解鎖課程（標記禁止調課）。"""
+    try:
+        req = request.get_json(silent=True) or {}
+        item_id = req.get("id")
+        lock_state = bool(req.get("locked", True))
+
+        solved = get_current_solved_schedules()
+        cfg = load_config_rules()
+
+        item = None
+        for s in solved:
+            if str(s.get("id")) == str(item_id):
+                item = s
+                break
+
+        if not item:
+            return jsonify({"status": "error", "message": "找不到課程"}), 404
+
+        item["manual_locked"] = lock_state
+        cfg["solved_schedules"] = solved
+        save_config_rules(cfg)
+
+        state_str = "鎖定（禁止調課）" if lock_state else "解除鎖定"
+        return jsonify({
+            "status": "success",
+            "message": f"【{item.get('subject_name','')} / {item.get('class_name','')}】已{state_str}",
+            "locked": lock_state
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 欣河參考功能 – 02.全校教師超鐘點與基本鐘點核算總表
+# ─────────────────────────────────────────────────────────────────────────────
+@app.route("/api/teacher-workload-summary", methods=["GET"])
+def api_teacher_workload_summary():
+    """
+    仿欣河『02.超鐘點總表』：計算全校每位教師的基本鐘點、實排節數、
+    超鐘點（兼課）、第8節輔導課、社團課與鐘點狀態。
+    """
+    try:
+        data = load_schedule_data()
+        solved = get_current_solved_schedules()
+        cfg = load_config_rules()
+
+        teachers = data.get("teachers", [])
+        custom_base_hours = cfg.get("teacher_base_hours", {})
+
+        # Tally teaching periods for each teacher
+        teacher_stats = {}
+        for t in teachers:
+            t_name = t.get("name", "").strip()
+            t_code = t.get("code", "").strip()
+            if not t_name or t_name.startswith("備用"):
+                continue
+
+            role = t.get("role", "專任教師")
+
+            # Determine base hours (Priority: config override > teacher.dbf > role default)
+            if t_name in custom_base_hours:
+                base_h = float(custom_base_hours[t_name])
+            elif t.get("base_hours", 0) > 0:
+                base_h = float(t.get("base_hours", 0))
+            else:
+                # Role-based default standard in Taiwan High/Junior Schools
+                if "導師" in role:
+                    base_h = 12.0 if "高" in role else 14.0
+                elif "主任" in role:
+                    base_h = 4.0
+                elif "組長" in role or "幹事" in role:
+                    base_h = 8.0
+                elif "輔導" in role:
+                    base_h = 10.0
+                else:
+                    base_h = 16.0  # 專任教師標準基本鐘點
+
+            teacher_stats[t_name] = {
+                "name": t_name,
+                "code": t_code,
+                "role": role,
+                "base_hours": int(base_h) if base_h.is_integer() else base_h,
+                "regular_hours": 0,    # 正課 (週一~五 第1~7節)
+                "period8_hours": 0,    # 第8節輔導課
+                "club_hours": 0,       # 社團活動
+                "total_hours": 0,      # 總實排節數
+                "classes": set(),
+                "subjects": set(),
+                "details": []
+            }
+
+        PSEUDO = {"學務處", "各班導師", "教務處", "輔導室", "體育組", "總務處", "校長室", "無", "未指定", "待定", "自習"}
+
+        for s in solved:
+            d = str(s.get("day", "0")).split(".")[0]
+            p = str(s.get("period", "0")).split(".")[0]
+            t_name = s.get("teacher_name", "").strip()
+            c_name = str(s.get("class_name") or s.get("class_code") or "").strip()
+            subj = str(s.get("subject_name", "")).strip()
+
+            if not d or not p or d == "0" or p == "0" or not t_name or t_name in PSEUDO:
+                continue
+
+            if t_name not in teacher_stats:
+                teacher_stats[t_name] = {
+                    "name": t_name,
+                    "code": s.get("teacher_code", ""),
+                    "role": "專任教師",
+                    "base_hours": 16,
+                    "regular_hours": 0,
+                    "period8_hours": 0,
+                    "club_hours": 0,
+                    "total_hours": 0,
+                    "classes": set(),
+                    "subjects": set(),
+                    "details": []
+                }
+
+            st = teacher_stats[t_name]
+            st["total_hours"] += 1
+            if c_name: st["classes"].add(c_name)
+            if subj: st["subjects"].add(subj)
+
+            if p == "8":
+                st["period8_hours"] += 1
+            elif "社團" in subj:
+                st["club_hours"] += 1
+            else:
+                st["regular_hours"] += 1
+
+            st["details"].append(f"週{d}第{p}節 {c_name} {subj}")
+
+        # Compute overtime and status
+        summary_list = []
+        total_school_hours = 0
+        total_overtime_hours = 0
+        overtime_teacher_count = 0
+        deficit_teacher_count = 0
+
+        for t_name, st in teacher_stats.items():
+            base_h = st["base_hours"]
+            reg_h = st["regular_hours"]
+            overtime_h = max(0, reg_h - int(base_h))
+            deficit_h = max(0, int(base_h) - reg_h)
+
+            if overtime_h > 0 or st["period8_hours"] > 0:
+                status = "超鐘點"
+                status_color = "success"
+                overtime_teacher_count += 1
+            elif deficit_h > 0:
+                status = f"缺 {deficit_h} 節"
+                status_color = "danger"
+                deficit_teacher_count += 1
+            else:
+                status = "剛好達標"
+                status_color = "neutral"
+
+            total_school_hours += st["total_hours"]
+            total_overtime_hours += (overtime_h + st["period8_hours"])
+
+            summary_list.append({
+                "name": t_name,
+                "code": st["code"],
+                "role": st["role"],
+                "base_hours": base_h,
+                "regular_hours": reg_h,
+                "period8_hours": st["period8_hours"],
+                "club_hours": st["club_hours"],
+                "total_hours": st["total_hours"],
+                "overtime_hours": overtime_h,
+                "total_extra_hours": overtime_h + st["period8_hours"],
+                "status": status,
+                "status_color": status_color,
+                "classes": ", ".join(sorted(list(st["classes"]))),
+                "subjects": ", ".join(sorted(list(st["subjects"])))
+            })
+
+        summary_list.sort(key=lambda x: (0 if "主任" in x["role"] else 1 if "組長" in x["role"] else 2 if "導師" in x["role"] else 3, x["name"]))
+
+        return jsonify({
+            "status": "success",
+            "teachers": summary_list,
+            "stats": {
+                "total_teachers": len(summary_list),
+                "overtime_teachers": overtime_teacher_count,
+                "deficit_teachers": deficit_teacher_count,
+                "total_school_hours": total_school_hours,
+                "total_overtime_hours": total_overtime_hours
+            }
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": f"超鐘點統計計算失敗: {str(e)}"}), 500
+
+@app.route("/api/export-workload-excel", methods=["GET"])
+def api_export_workload_excel():
+    """匯出全校教師超鐘點與基本鐘點核算總表 Excel。"""
+    try:
+        import io
+        import pandas as pd
+        
+        res = api_teacher_workload_summary()
+        json_data = res.get_json()
+        if json_data.get("status") != "success":
+            return jsonify({"status": "error", "message": "取得資料失敗"}), 500
+
+        teachers = json_data.get("teachers", [])
+        rows = []
+        for idx, t in enumerate(teachers, 1):
+            rows.append({
+                "編號": idx,
+                "教師姓名": t["name"],
+                "教師代碼": t["code"],
+                "學校職務": t["role"],
+                "基本鐘點": t["base_hours"],
+                "正課實排節數": t["regular_hours"],
+                "第8節輔導課": t["period8_hours"],
+                "社團活動": t["club_hours"],
+                "全週實排總節數": t["total_hours"],
+                "正課超鐘點": t["overtime_hours"],
+                "合計兼課/超額節數": t["total_extra_hours"],
+                "鐘點狀態": t["status"],
+                "任教班級": t["classes"],
+                "任教科目": t["subjects"]
+            })
+
+        df = pd.DataFrame(rows)
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False, sheet_name="全校教師超鐘點總表")
+        output.seek(0)
+
+        filename = "全校教師超鐘點與基本鐘點總表.xlsx"
+        return send_file(
+            output,
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            as_attachment=True,
+            download_name=filename
+        )
+    except Exception as e:
+        return jsonify({"status": "error", "message": f"匯出失敗: {str(e)}"}), 500
+
+
 if __name__ == "__main__":
+
     if len(sys.argv) > 1 and ("desktop" in sys.argv[1].lower() or "--desktop" in sys.argv[1].lower()):
         import desktop_app
         desktop_app.main()
