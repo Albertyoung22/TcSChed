@@ -1073,6 +1073,12 @@ body {
     z-index: 999;
 }
 
+/* Shin-Her Context Menu Item Styling */
+.ctx-item:hover {
+    background: #f1f5f9;
+    color: #4f46e5;
+}
+
 /* Toast Notifications (macOS Notification Center Style) */
 .toast-container {
     position: fixed;
@@ -1103,6 +1109,11 @@ body {
 @keyframes slideInRight {
     from { opacity: 0; transform: translateX(30px); }
     to { opacity: 1; transform: translateX(0); }
+}
+
+/* Only print element helper (hidden on screen) */
+.only-print {
+    display: none !important;
 }
 
 /* Publication-Grade Print Stylesheet */
