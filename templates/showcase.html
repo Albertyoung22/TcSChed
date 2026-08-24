@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>舟歌 AI 智慧排課系統 - 系統亮點與 AI 導覽 (Microsoft Edge TTS)</title>
+    <title>智慧排課系統 - 系統亮點與 AI 導覽</title>
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -604,7 +604,7 @@
             <span>BOAT SONG AI 舟歌排課</span>
         </div>
         <div class="audio-controls">
-            <div style="display: flex; align-items: center; gap: 6px; background: rgba(0, 240, 255, 0.1); border: 1px solid var(--primary); padding: 4px 10px; border-radius: 20px;">
+            <div id="edge-voice-control" style="display: none; align-items: center; gap: 6px; background: rgba(0, 240, 255, 0.1); border: 1px solid var(--primary); padding: 4px 10px; border-radius: 20px;">
                 <i class="fa-solid fa-microphone-lines" style="color: var(--primary); font-size: 0.85rem;"></i>
                 <select id="edge-voice-select" style="background: transparent; color: #fff; border: none; font-size: 0.82rem; font-weight: 600; outline: none; cursor: pointer;">
                     <option value="zh-TW-HsiaoChenNeural" style="background: #080b14; color: #fff;">🎙️ Edge 曉臻 (台灣極致女聲)</option>
@@ -613,13 +613,13 @@
                 </select>
             </div>
 
-            <button class="btn-audio" id="btn-tts-all" onclick="toggleVoiceGuide()">
+            <button class="btn-audio" id="btn-tts-all" onclick="toggleVoiceGuide()" title="播放或停止語音導覽" aria-label="播放或停止語音導覽">
                 <i class="fa-solid fa-volume-high" id="tts-icon"></i>
-                <span id="tts-label">啟動 Edge TTS 語音導覽</span>
+                <span id="tts-label" aria-hidden="true" style="display: none;">啟動語音導覽</span>
             </button>
-            <button class="btn-audio" id="btn-ambient" onclick="toggleAmbientSound()">
+            <button class="btn-audio" id="btn-ambient" onclick="toggleAmbientSound()" title="開啟或關閉背景音效" aria-label="開啟或關閉背景音效">
                 <i class="fa-solid fa-music" id="ambient-icon"></i>
-                <span id="ambient-label">背景科幻音效：關閉</span>
+                <span id="ambient-label" aria-hidden="true" style="display: none;">背景音效：關閉</span>
             </button>
         </div>
     </div>
@@ -632,9 +632,9 @@
                 <div class="hero-badge">
                     <i class="fa-solid fa-bolt"></i> GOOGLE OR-TOOLS CP-SAT 核心驅動
                 </div>
-                <h1 class="hero-title">舟歌 AI 智慧排課系統</h1>
+                <h1 class="hero-title">智慧排課系統</h1>
                 <p class="hero-subtitle">
-                    聲色俱佳、運算極速、精準解決全校課表衝突。專為高級中學與國中小學量身打造的下一代 AI 智慧排課與教師請假調課全方位解決方案。
+                    聲色俱佳、運算極速、精準解決全校課表衝突。專為學校排課與教師調課量身打造的下一代 AI 解決方案。
                 </p>
                 <div class="hero-btns">
                     <button class="btn-glow" onclick="runSimulatedSolver()">
@@ -646,7 +646,7 @@
                 </div>
             </div>
             <div class="hero-image-wrapper">
-                <img src="/static/images/hero_banner.jpg" alt="舟歌 AI 智慧排課 Hero Banner" onerror="this.src='https://picsum.photos/800/450?dark'">
+                <img src="/static/images/hero_banner.jpg" alt="智慧排課系統 Hero Banner" onerror="this.src='https://picsum.photos/800/450?dark'">
             </div>
         </section>
 
@@ -727,7 +727,7 @@
                 <div class="section-tag">
                     <span>SIX CORE ADVANTAGES</span>
                     <button class="btn-read-section" onclick="speakText('舟歌 AI 智慧排課系統的六大核心優勢包括：一、毫秒級 OR-Tools CP-SAT 最佳化解算引擎；二、靈活多元限制條件；三、跨班選修與合班同排同步化調度；四、DBF與Excel資料完全相容與備份；五、教師專屬雲端課表與線上調課Portal；六、跨平台雙軌部署。')">
-                        <i class="fa-solid fa-volume-low"></i> 朗讀本區 (Edge TTS)
+                        <i class="fa-solid fa-volume-low"></i> 朗讀本區
                     </button>
                 </div>
                 <h2 class="section-title">六大核心亮點與強大優勢</h2>
