@@ -569,6 +569,111 @@ def run_solver():
                     uid = u["unit_id"]
                     model.Add(active >= sum(x[uid, d, p] for p in periods))
 
+    # 8. Teacher Preferences (教師排課偏好)
+    teacher_prefs = custom_rules.get("teacher_preferences", {})
+    pref_slot_rewards = []
+    avoid_first_last_penalties = []
+    split_shift_violations = []
+    gap_violations = []
+    heavy_days = []
+
+    for t_code, pref in teacher_prefs.items():
+        if t_code not in teacher_units:
+            continue
+            
+        t_units = teacher_units[t_code]
+        
+        # A. Blocked slots (絕對禁排 - Hard Constraint)
+        blocked = pref.get("blocked_slots", [])
+        for slot in blocked:
+            try:
+                d_str, p_str = slot.split("-")
+                d, p = int(d_str), int(p_str)
+                if d in days and p in periods:
+                    for u in t_units:
+                        model.Add(x[u["unit_id"], d, p] == 0)
+            except ValueError:
+                pass
+                
+        # B. Preferred slots (優先排課 - Soft Reward)
+        preferred = pref.get("preferred_slots", [])
+        for slot in preferred:
+            try:
+                d_str, p_str = slot.split("-")
+                d, p = int(d_str), int(p_str)
+                if d in days and p in periods:
+                    for u in t_units:
+                        pref_slot_rewards.append(x[u["unit_id"], d, p])
+            except ValueError:
+                pass
+                
+        # C. Avoid First/Last period (避開首尾節 - Soft Penalty)
+        if pref.get("avoid_first_last"):
+            for d in days:
+                for p in (1, 8):
+                    for u in t_units:
+                        avoid_first_last_penalties.append(x[u["unit_id"], d, p])
+                        
+        # D. Avoid Split Shifts (避開天地課 - Soft Penalty)
+        if pref.get("avoid_split_shifts"):
+            for d in days:
+                active_p1 = model.NewBoolVar(f"active_p1_{t_code}_{d}")
+                model.Add(active_p1 == sum(x[u["unit_id"], d, 1] for u in t_units))
+                active_p8 = model.NewBoolVar(f"active_p8_{t_code}_{d}")
+                model.Add(active_p8 == sum(x[u["unit_id"], d, 8] for u in t_units))
+                
+                split_var = model.NewBoolVar(f"split_{t_code}_{d}")
+                model.Add(split_var >= active_p1 + active_p8 - 1)
+                split_shift_violations.append(split_var)
+                
+        # E. Max Daily Periods (每日授課節數上限 - Hard Constraint)
+        max_p = pref.get("max_daily_periods")
+        if max_p is not None:
+            try:
+                max_p_int = int(max_p)
+                for d in days:
+                    model.Add(sum(x[u["unit_id"], d, p] for u in t_units for p in periods) <= max_p_int)
+            except ValueError:
+                pass
+                
+        # F. Style: Compact vs Spread (排課風格 - Soft Penalty)
+        style = pref.get("style", "none")
+        if style == "compact":
+            for d in days:
+                active_slots = {}
+                before = {}
+                after = {}
+                for p in periods:
+                    active_slots[p] = model.NewBoolVar(f"act_{t_code}_{d}_{p}")
+                    model.Add(active_slots[p] == sum(x[u["unit_id"], d, p] for u in t_units))
+                    
+                    before[p] = model.NewBoolVar(f"bef_{t_code}_{d}_{p}")
+                    after[p] = model.NewBoolVar(f"aft_{t_code}_{d}_{p}")
+                    
+                for p in periods:
+                    if p == 1:
+                        model.Add(before[p] == 0)
+                    else:
+                        model.Add(before[p] >= before[p-1])
+                        model.Add(before[p] >= active_slots[p-1])
+                        
+                    if p == 8:
+                        model.Add(after[p] == 0)
+                    else:
+                        model.Add(after[p] >= after[p+1])
+                        model.Add(after[p] >= active_slots[p+1])
+                        
+                for p in periods:
+                    gap_var = model.NewBoolVar(f"gap_{t_code}_{d}_{p}")
+                    model.Add(gap_var >= before[p] + after[p] + (1 - active_slots[p]) - 2)
+                    gap_violations.append(gap_var)
+                    
+        elif style == "spread":
+            for d in days:
+                day_total = sum(x[u["unit_id"], d, p] for u in t_units for p in periods)
+                heavy_var = model.NewBoolVar(f"heavy_{t_code}_{d}")
+                model.Add(heavy_var >= day_total - 3)
+                heavy_days.append(heavy_var)
 
     # Multi-Objective Function
     model.Maximize(
@@ -578,7 +683,12 @@ def run_solver():
         w_no_teach * sum(no_teach_violations) -
         w_no_sub * sum(no_sub_violations) -
         w_morning_pref * sum(afternoon_penalties) -
-        w_pe_noon * sum(pe_noon_penalties)
+        w_pe_noon * sum(pe_noon_penalties) +
+        150 * sum(pref_slot_rewards) -
+        100 * sum(avoid_first_last_penalties) -
+        500 * sum(split_shift_violations) -
+        120 * sum(gap_violations) -
+        300 * sum(heavy_days)
     )
 
     log("Solving CSP Timetable Model using CP-SAT solver...")
@@ -605,6 +715,14 @@ def run_solver():
             model2.Add(day_vars2[uid] == sum(d * x2[uid, d, p] for d in days for p in periods))
             model2.Add(period_vars2[uid] == sum(p * x2[uid, d, p] for d in days for p in periods))
             model2.Add(sum(x2[uid, d, p] for d in days for p in periods) == 1)
+
+            # Keep the period-8 rule during recovery; otherwise regular
+            # courses can reappear in period 8 after Pass-2 rebuilds the model.
+            if not u.get("manual_locked") and restrict_period_8:
+                if is_period_8_tutoring_subject(str(u.get("subject_name", ""))):
+                    model2.Add(period_vars2[uid] == 8)
+                else:
+                    model2.Add(period_vars2[uid] <= 7)
 
         # DBF Simultaneous Groups
         sim_groups2 = {}
@@ -705,6 +823,13 @@ def run_solver():
             model3.Add(day_vars3[uid] == sum(d * x3[uid, d, p] for d in days for p in periods))
             model3.Add(period_vars3[uid] == sum(p * x3[uid, d, p] for d in days for p in periods))
             model3.Add(sum(x3[uid, d, p] for d in days for p in periods) == 1)
+
+            # Keep the period-8 rule in the essential recovery model as well.
+            if not u.get("manual_locked") and restrict_period_8:
+                if is_period_8_tutoring_subject(str(u.get("subject_name", ""))):
+                    model3.Add(period_vars3[uid] == 8)
+                else:
+                    model3.Add(period_vars3[uid] <= 7)
 
         # Class Conflicts
         for cc, ulist in cls_units.items():
@@ -849,13 +974,14 @@ def run_solver():
         df_out.to_excel(local_output, index=False)
         log(f"Successfully wrote solved schedule to: {local_output}")
 
-        if os.path.exists(r"D:\土城高中"):
-            try:
-                tc_output = r"D:\土城高中\School_Schedule_Solved.xlsx"
-                df_out.to_excel(tc_output, index=False)
-                log(f"Successfully synced solved schedule to: {tc_output}")
-            except Exception as e_tc:
-                log(f"Warning syncing to D:\\土城高中: {e_tc}")
+        data_root = os.environ.get("DATA_DIR", os.path.dirname(os.path.abspath(__file__)))
+        try:
+            os.makedirs(data_root, exist_ok=True)
+            tc_output = os.path.join(data_root, "School_Schedule_Solved.xlsx")
+            df_out.to_excel(tc_output, index=False)
+            log(f"Successfully synced solved schedule to: {tc_output}")
+        except Exception as e_tc:
+            log(f"Warning syncing solved schedule to data root: {e_tc}")
 
         # Update config_rules.json with solved_schedules
         if os.path.exists(config_rules_file):
