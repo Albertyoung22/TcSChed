@@ -89,6 +89,7 @@ function initServerInfo() {
             if (data && data.status === 'success' && data.lan_url) {
                 const webBrowserBtn = document.getElementById('webBrowserBtn');
                 const teacherPortalBtn = document.getElementById('teacherPortalBtn');
+                const teacherPreferenceLinkBtn = document.getElementById('teacherPreferenceLinkBtn');
                 if (webBrowserBtn) {
                     webBrowserBtn.href = data.lan_url;
                     webBrowserBtn.title = `開啟真實局域網 IP 網頁版: ${data.lan_url}`;
@@ -96,6 +97,10 @@ function initServerInfo() {
                 if (teacherPortalBtn) {
                     teacherPortalBtn.href = `${data.lan_url}/teacher`;
                     teacherPortalBtn.title = `開啟專屬『教師課表個人查詢門戶』網頁 (${data.lan_url}/teacher)`;
+                }
+                if (teacherPreferenceLinkBtn) {
+                    teacherPreferenceLinkBtn.href = `${data.lan_url}/teacher-preference`;
+                    teacherPreferenceLinkBtn.title = `教師排課志願與偏好申報 (${data.lan_url}/teacher-preference)`;
                 }
             }
         })
@@ -211,6 +216,11 @@ function setupEventListeners() {
     // Tab buttons for quick selection
     tabBtns.forEach(btn => {
         btn.addEventListener('click', (e) => {
+            // If we are currently viewing a schedule, return to the selection view
+            if (window.location.hash && window.location.hash !== '#') {
+                window.location.hash = '';
+            }
+            
             tabBtns.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             
@@ -293,6 +303,7 @@ async function fetchMetadata() {
         }
 
         metadata = data;
+        window.metadata = data;
         await fetchLessonNotes();
         
         // Show database name/path & local LAN IP in badge
@@ -300,7 +311,7 @@ async function fetchMetadata() {
         if (data.dbf_dir) {
             const parts = data.dbf_dir.split(/[\\/]/);
             const dbfFolder = parts.find(p => p.toLowerCase().startsWith('spv') && p.toLowerCase().endsWith('.wdb'));
-            dbPathText.textContent = dbfFolder || "SPV2000 資料庫";
+            dbPathText.textContent = dbfFolder || "學校 DBF 備份資料";
         } else {
             dbPathText.textContent = "未載入 (移交空白範本)";
         }
@@ -334,7 +345,7 @@ function renderQuickSelectGrids() {
             <div style="font-size: 1.1rem; font-weight: 600; color: #f8fafc; margin-bottom: 8px;">系統現已重置為全新空白學校範本</div>
             <div style="font-size: 0.88rem; color: #94a3b8; max-width: 580px; margin: 0 auto; line-height: 1.6;">
                 請點擊右上角 <strong style="color: #fbbf24;">「⚙️ 排課規則與系統設定」</strong> ➔ <strong style="color: #38bdf8;">「學校基本資料與系統設定」</strong><br>
-                點擊 <strong style="color: #0284c7; background: rgba(2, 132, 199, 0.2); padding: 2px 8px; border-radius: 4px;">「📁 瀏覽選擇資料夾...」</strong> 選擇欣河 (SPV2000) DBF 資料庫資料夾即可自動讀取全校班級、教師與授課資料！
+                點擊 <strong style="color: #0284c7; background: rgba(2, 132, 199, 0.2); padding: 2px 8px; border-radius: 4px;">「📁 瀏覽選擇資料夾...」</strong> 選擇學校合法匯出的 DBF 備份資料夾，即可自動讀取班級、教師與授課資料。本系統只讀取資料，不會修改原始備份檔。
             </div>
         </div>`;
         highSchoolGrid.innerHTML = emptyMsg;
@@ -478,7 +489,7 @@ function handleHashChange() {
         // Show Selection view
         quickSelectSection.style.display = 'block';
         scheduleSection.style.display = 'none';
-        document.title = "土城高中課表查詢系統";
+        document.title = "智慧排課課表查詢系統";
         return;
     }
 
@@ -534,14 +545,14 @@ function renderScheduleGrid(type, code, slots) {
         subtitle = cls && cls.tutor ? `導師：${cls.tutor}` : "無導師設定";
         printScheduleTitle.textContent = title;
         printTutorInfo.textContent = subtitle;
-        document.title = `${cls ? cls.name : code} 課表 - 土城高中課表查詢`;
+        document.title = `${cls ? cls.name : code} 課表 - 智慧排課查詢`;
     } else if (type === 'teacher') {
         const t = metadata.teachers.find(x => x.code === code);
         title = `${t ? t.name : code} 老師課表`;
         subtitle = t && t.role ? `職務：${t.role}` : "";
         printScheduleTitle.textContent = title;
         printTutorInfo.textContent = subtitle;
-        document.title = `${t ? t.name : code} 老師課表 - 土城高中課表查詢`;
+        document.title = `${t ? t.name : code} 老師課表 - 智慧排課查詢`;
     } else if (type === 'room') {
         const room = Array.isArray(metadata.classrooms) ? metadata.classrooms.find(r => (typeof r === 'object' ? (r.code === code || r.name === code) : r === code)) : null;
         const roomName = room ? (typeof room === 'object' ? room.name : room) : code;
@@ -549,7 +560,7 @@ function renderScheduleGrid(type, code, slots) {
         subtitle = `專科教室 / 專用場地課表`;
         printScheduleTitle.textContent = title;
         printTutorInfo.textContent = subtitle;
-        document.title = `${roomName} 教室課表 - 土城高中課表查詢`;
+        document.title = `${roomName} 教室課表 - 智慧排課查詢`;
     }
 
     scheduleTitle.textContent = title;
@@ -1481,7 +1492,7 @@ function openSwapSlipModal() {
     let html = `
         <div style="background: #ffffff; color: #1e293b; padding: 24px; border-radius: 8px; font-family: sans-serif;" id="printableSlipArea">
             <div style="text-align: center; border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 16px;">
-                <h2 style="margin: 0; font-size: 1.4rem; color: #0f172a;">臺南市立土城高級中學 114 學年度手動調排課通知聯單</h2>
+                <h2 style="margin: 0; font-size: 1.4rem; color: #0f172a;">智慧排課系統 手動調排課通知聯單</h2>
                 <div style="font-size: 0.85rem; color: #64748b; margin-top: 4px;">開單日期：${new Date().toLocaleDateString()} | 異動筆數：${swapSlipRecords.length} 筆</div>
             </div>
             <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 0.88rem;">
@@ -1632,8 +1643,7 @@ function setupSettingsPanel() {
                 ruleTabTeacher.style.display = 'block';
                 ruleTabTeacher.classList.add('active');
             }
-
-            loadTeachersMaintainList();
+            if (typeof loadTeacherRules === 'function') loadTeacherRules();
         } else if (tabName === 'sub') {
             if (tabRuleSubBtn) {
                 tabRuleSubBtn.classList.add('active');
@@ -1644,6 +1654,7 @@ function setupSettingsPanel() {
                 ruleTabSub.style.display = 'block';
                 ruleTabSub.classList.add('active');
             }
+            if (typeof loadSubjectRules === 'function') loadSubjectRules();
         } else if (tabName === 'weights') {
             if (tabRuleWeightsBtn) {
                 tabRuleWeightsBtn.classList.add('active');
@@ -5071,7 +5082,7 @@ async function loadSemestersList() {
                         tr.appendChild(tdId);
 
                         const tdSchool = document.createElement('td');
-                        tdSchool.textContent = s.school_name || '土城高中';
+                        tdSchool.textContent = s.school_name || '學校名稱';
                         tr.appendChild(tdSchool);
 
                         const tdTime = document.createElement('td');
@@ -6533,7 +6544,7 @@ async function updateDualSwapAssistant(d, p) {
                         return `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; padding:6px 10px; background:#ffffff; border-radius:8px; border:1px solid rgba(0,0,0,0.1); box-shadow:0 1px 3px rgba(0,0,0,0.03);">
                             <div>
                                 <span style="color:#1d1d1f; font-weight:bold;">${dispT}</span>
-                                <span style="font-size:0.75rem; color:#64748b; margin-left:4px;">(${tch.teach_subjects || '跨科'})</span>
+                                ${tch.teach_subjects && tch.teach_subjects !== '無資料' ? `<span style="font-size:0.75rem; color:#64748b; margin-left:4px;">(${tch.teach_subjects})</span>` : ''}
                             </div>
                             <button class="solver-action-btn primary-btn" style="flex:none; width:auto; padding:3px 12px; font-size:0.75rem; background:#0071e3; border-radius:6px; cursor:pointer; white-space:nowrap;" onclick="executeAssignSubstitute('${dispT}', '${tch.teacher_code}', ${d}, ${p}, '${subjName}')">選為代課</button>
                          </div>`;
@@ -7591,8 +7602,9 @@ async function handleCtxAction(action) {
             openNoteModal(noteKey, lesson.subject_name, slot.day, slot.period);
         }
     } else if (action === 'rescue') {
-        // Open smart rescue page
-        window.open('/smart-rescue', '_blank');
+        // Open smart rescue page for step-by-step adjustment demo
+        const demoUrl = '/smart-rescue' + (payload && payload.demo ? '?demo=1' : '');
+        window.open(demoUrl, '_blank', 'noopener,noreferrer');
     }
 }
 
@@ -7736,10 +7748,678 @@ window.addSelectedToHoldingPool = addSelectedToHoldingPool;
 window.removeFromHoldingPool = removeFromHoldingPool;
 window.selectHoldingItem = selectHoldingItem;
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Shin-Her Export & Gemini AI Diagnostics Functionality
+// ─────────────────────────────────────────────────────────────────────────────
+
+function exportShinHerExcel(type) {
+    if (!type) return;
+    if (type === 'formal_timetable') {
+        window.location.href = '/api/formal-timetable/export';
+    } else if (type === 'batch_zip') {
+        window.location.href = '/api/reports/batch-export-zip';
+    } else if (type === 'overtime_rates') {
+        openOvertimeRatesModal();
+    } else if (type === 'moe_23_codes') {
+        openMoe23Modal();
+    } else if (type === 'rbac') {
+        openRbacModal();
+    } else {
+        window.location.href = `/api/export-shinher-excel?type=${type}`;
+    }
+    setTimeout(() => {
+        const select = document.getElementById('shinherExportSelect');
+        if (select) select.value = '';
+    }, 1000);
+}
+window.exportShinHerExcel = exportShinHerExcel;
+
+// 超鐘點費率與算費核算 Modal 邏輯
+async function openOvertimeRatesModal() {
+    const modal = document.getElementById('overtimeRatesModal');
+    if (!modal) return;
+    modal.style.display = 'flex';
+    try {
+        const res = await fetch('/api/overtime/rates').then(r => r.json());
+        if (res.status === 'success') {
+            document.getElementById('payRateJian').value = res.rates.jian || 420;
+            document.getElementById('payRateFu').value = res.rates.fu || 420;
+            document.getElementById('payRateQi').value = res.rates.qi || 420;
+
+            const tbody = document.getElementById('overtimeRatesTableBody');
+            tbody.innerHTML = '';
+            (res.teachers || []).forEach(t => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><strong>${t.name}</strong> (${t.code})</td>
+                    <td>${t.role}</td>
+                    <td>${t.base_hours}</td>
+                    <td>${t.regular_hours}</td>
+                    <td style="color:#10b981; font-weight:700;">+${t.jian_hours}</td>
+                    <td style="color:#3b82f6;">+${t.fu_hours}</td>
+                    <td style="color:#8b5cf6;">+${t.qi_hours}</td>
+                    <td style="font-weight:700;">${t.total_extra_hours} 節</td>
+                    <td style="color:#059669; font-weight:700;">NT$ ${t.monthly_pay.toLocaleString()}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+    } catch (e) {
+        console.error("載入鐘點費率失敗:", e);
+    }
+}
+window.openOvertimeRatesModal = openOvertimeRatesModal;
+
+async function saveOvertimeRates() {
+    const jian = parseFloat(document.getElementById('payRateJian').value) || 420;
+    const fu = parseFloat(document.getElementById('payRateFu').value) || 420;
+    const qi = parseFloat(document.getElementById('payRateQi').value) || 420;
+    try {
+        const res = await fetch('/api/overtime/rates', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ jian, fu, qi })
+        }).then(r => r.json());
+        if (res.status === 'success') {
+            alert(res.message);
+            openOvertimeRatesModal();
+        }
+    } catch (e) {
+        alert("儲存費率失敗: " + e.message);
+    }
+}
+window.saveOvertimeRates = saveOvertimeRates;
+
+// 國教署 23 碼對映維護 Modal 邏輯
+async function openMoe23Modal() {
+    const modal = document.getElementById('moe23Modal');
+    if (!modal) return;
+    modal.style.display = 'flex';
+    try {
+        const res = await fetch('/api/moe-codes').then(r => r.json());
+        if (res.status === 'success') {
+            const tbody = document.getElementById('moe23CodesTableBody');
+            tbody.innerHTML = '';
+            const codes = res.moe_codes || {};
+            const codeKeys = Object.keys(codes);
+            if (codeKeys.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px; color:#94a3b8;">目前尚未匯入國教署 23 碼，請選取檔案上傳進行匯入。</td></tr>';
+            } else {
+                codeKeys.forEach(k => {
+                    const info = codes[k];
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td style="font-family:monospace; font-weight:700; color:#4338ca;">${k}</td>
+                        <td>${info.name || ''}</td>
+                        <td>${info.credits || '2'}</td>
+                        <td>${info.category || '部定必修'}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+        }
+    } catch (e) {
+        console.error("載入 23 碼資料失敗:", e);
+    }
+}
+window.openMoe23Modal = openMoe23Modal;
+
+async function importMoe23File() {
+    const input = document.getElementById('moe23FileInput');
+    if (!input || !input.files || input.files.length === 0) {
+        alert("請先選擇國教署 23 碼課程檔案！");
+        return;
+    }
+    const formData = new FormData();
+    formData.append('file', input.files[0]);
+    try {
+        const res = await fetch('/api/moe-codes/import', {
+            method: 'POST',
+            body: formData
+        }).then(r => r.json());
+        if (res.status === 'success') {
+            alert(res.message);
+            openMoe23Modal();
+        } else {
+            alert("匯入失敗: " + res.message);
+        }
+    } catch (e) {
+        alert("匯入發生錯誤: " + e.message);
+    }
+}
+window.importMoe23File = importMoe23File;
+
+function exportFormalTimetableFile() {
+    window.location.href = '/api/formal-timetable/export';
+}
+window.exportFormalTimetableFile = exportFormalTimetableFile;
+
+// 檢視權限 (RBAC) Modal 邏輯
+async function openRbacModal() {
+    const modal = document.getElementById('rbacModal');
+    if (!modal) return;
+    modal.style.display = 'flex';
+    try {
+        const res = await fetch('/api/rbac/config').then(r => r.json());
+        if (res.status === 'success') {
+            const rbac = res.rbac || {};
+            document.getElementById('rbacSubstituteTeacher').checked = rbac.show_substitute_teacher !== false;
+            document.getElementById('rbacOvertimeNotes').checked = rbac.show_overtime_notes !== false;
+            document.getElementById('rbacCrossClassView').checked = rbac.allow_cross_class_view !== false;
+            document.getElementById('rbacStudentMaxPeriod').value = rbac.student_max_period || 8;
+        }
+    } catch (e) {
+        console.error("載入 RBAC 設定失敗:", e);
+    }
+}
+window.openRbacModal = openRbacModal;
+
+async function saveRbacConfig() {
+    const payload = {
+        show_substitute_teacher: document.getElementById('rbacSubstituteTeacher').checked,
+        show_overtime_notes: document.getElementById('rbacOvertimeNotes').checked,
+        allow_cross_class_view: document.getElementById('rbacCrossClassView').checked,
+        student_max_period: parseInt(document.getElementById('rbacStudentMaxPeriod').value) || 8
+    };
+    try {
+        const res = await fetch('/api/rbac/config', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        }).then(r => r.json());
+        if (res.status === 'success') {
+            alert(res.message);
+            document.getElementById('rbacModal').style.display = 'none';
+        }
+    } catch (e) {
+        alert("儲存 RBAC 設定失敗: " + e.message);
+    }
+}
+window.saveRbacConfig = saveRbacConfig;
+
+// Gemini Settings UI Handlers
+const toggleGeminiSettingsBtn = document.getElementById('toggleGeminiSettingsBtn');
+const geminiSettingsPanel = document.getElementById('geminiSettingsPanel');
+const saveGeminiKeyBtn = document.getElementById('saveGeminiKeyBtn');
+const geminiApiKeyInput = document.getElementById('geminiApiKeyInput');
+const geminiStatusBadge = document.getElementById('geminiStatusBadge');
+
+if (toggleGeminiSettingsBtn && geminiSettingsPanel) {
+    toggleGeminiSettingsBtn.addEventListener('click', async () => {
+        const isHidden = geminiSettingsPanel.style.display === 'none';
+        geminiSettingsPanel.style.display = isHidden ? 'block' : 'none';
+        
+        // Close Groq if open
+        const groqPanel = document.getElementById('groqSettingsPanel');
+        if (groqPanel) groqPanel.style.display = 'none';
+
+        if (isHidden) {
+            geminiStatusBadge.textContent = '載入中...';
+            try {
+                const res = await fetch('/api/config/gemini').then(r => r.json());
+                if (res.status === 'success') {
+                    if (res.has_key) {
+                        geminiStatusBadge.textContent = '已設定';
+                        geminiApiKeyInput.value = res.masked_key;
+                    } else {
+                        geminiStatusBadge.textContent = '未設定';
+                        geminiApiKeyInput.value = '';
+                    }
+                }
+            } catch (e) {
+                geminiStatusBadge.textContent = '載入錯誤';
+            }
+        }
+    });
+}
+
+if (saveGeminiKeyBtn && geminiApiKeyInput) {
+    saveGeminiKeyBtn.addEventListener('click', async () => {
+        const key = geminiApiKeyInput.value.trim();
+        if (key.includes('...')) {
+             showToast("請輸入新的 API Key，不要直接儲存遮罩金鑰！", "error");
+             return;
+        }
+        try {
+            const res = await fetch('/api/config/gemini', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ gemini_api_key: key })
+            }).then(r => r.json());
+            
+            if (res.status === 'success') {
+                showToast(res.message, "success");
+                geminiStatusBadge.textContent = res.has_key ? '已設定' : '未設定';
+                if (res.has_key) {
+                     geminiApiKeyInput.value = '******';
+                }
+            } else {
+                showToast("儲存失敗: " + res.message, "error");
+            }
+        } catch (e) {
+            showToast("伺服器連線異常", "error");
+        }
+    });
+}
+
+const teacherPreferenceBtn = document.getElementById('teacherPreferenceBtn');
+if (teacherPreferenceBtn) {
+    teacherPreferenceBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        if (typeof openTeacherPreferenceModal === 'function') {
+            await openTeacherPreferenceModal();
+        } else if (window.showToast) {
+            showToast("教師意願視窗尚未載入，請稍後再試。", "error");
+        }
+    });
+}
+
+// AI Diagnostics UI Handlers
+const aiDiagnoseChipBtn = document.getElementById('aiDiagnoseChipBtn');
+if (aiDiagnoseChipBtn) {
+    aiDiagnoseChipBtn.addEventListener('click', async () => {
+        const chatMessages = document.getElementById('aiChatMessages');
+        if (!chatMessages) return;
+
+        // Append user prompt
+        const userMsgDiv = document.createElement('div');
+        userMsgDiv.style = "display: flex; gap: 8px; align-items: flex-start; justify-content: flex-end;";
+        userMsgDiv.innerHTML = `
+            <div style="background: rgba(99, 102, 241, 0.15); color: #1e293b; padding: 10px 14px; border-radius: 12px; border-top-right-radius: 2px; border: 1px solid rgba(99, 102, 241, 0.3); line-height: 1.5; max-width: 80%;">
+                🔍 執行全校排課限制與瓶頸 AI 診斷報告
+            </div>
+            <div style="width: 28px; height: 28px; border-radius: 50%; background: #6366f1; display: flex; align-items: center; justify-content: center; color: #ffffff; flex-shrink: 0; font-size: 0.75rem; font-weight: bold;">ME</div>
+        `;
+        chatMessages.appendChild(userMsgDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+
+        // Append AI thinking loader
+        const aiMsgDiv = document.createElement('div');
+        aiMsgDiv.style = "display: flex; gap: 8px; align-items: flex-start;";
+        aiMsgDiv.innerHTML = `
+            <div style="width: 28px; height: 28px; border-radius: 50%; background: #a855f7; display: flex; align-items: center; justify-content: center; color: #1d1d1f; flex-shrink: 0; font-size: 0.75rem;">AI</div>
+            <div id="aiDiagnoseLoadingText" style="background: #f8fafc; color: #1e293b; padding: 10px 14px; border-radius: 12px; border-top-left-radius: 2px; border: 1px solid rgba(168, 85, 247, 0.2); line-height: 1.5; max-width: 80%;">
+                <i class="fa-solid fa-spinner fa-spin" style="margin-right: 6px; color: #a855f7;"></i> 正在載入全校排課數據、分析教師禁排時段與場地容量瓶頸，並呼叫 Gemini 進行診斷分析...
+            </div>
+        `;
+        chatMessages.appendChild(aiMsgDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+
+        try {
+            const res = await fetch('/api/ai-diagnose-bottlenecks', { method: 'POST' }).then(r => r.json());
+            const loadingTextDiv = document.getElementById('aiDiagnoseLoadingText');
+            if (res.status === 'success') {
+                if (loadingTextDiv) {
+                    loadingTextDiv.id = ''; // remove ID
+                    loadingTextDiv.innerHTML = res.diagnose.replace(/\n/g, '<br>');
+                }
+            } else {
+                if (loadingTextDiv) {
+                    loadingTextDiv.innerHTML = `❌ 診斷失敗：${res.message || '未知錯誤'}`;
+                }
+            }
+        } catch (e) {
+            const loadingTextDiv = document.getElementById('aiDiagnoseLoadingText');
+            if (loadingTextDiv) {
+                loadingTextDiv.innerHTML = `❌ 連線伺服器診斷異常：${e.message}`;
+            }
+        }
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    });
+}
 
 
+// --- Added Missing Functions for Rule Tabs ---
 
+function generateEmptyGrid(tbodyId) {
+    const tbody = document.getElementById(tbodyId);
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    for (let period = 1; period <= 8; period++) {
+        const tr = document.createElement('tr');
+        const tdHeader = document.createElement('td');
+        tdHeader.textContent = `第 ${period} 節`;
+        tdHeader.style.fontWeight = 'bold';
+        tdHeader.style.background = '#f8fafc';
+        tr.appendChild(tdHeader);
 
+        for (let day = 1; day <= 5; day++) {
+            const td = document.createElement('td');
+            td.className = 'rule-grid-cell';
+            td.style.cursor = 'pointer';
+            td.style.textAlign = 'center';
+            td.textContent = '可排';
+            td.dataset.day = day;
+            td.dataset.period = period;
+            
+            td.addEventListener('click', function() {
+                if (this.textContent === '可排') {
+                    this.textContent = '不排';
+                    this.style.background = '#fecaca'; // red-200
+                    this.style.color = '#dc2626'; // red-600
+                } else {
+                    this.textContent = '可排';
+                    this.style.background = 'transparent';
+                    this.style.color = 'inherit';
+                }
+            });
+            tr.appendChild(td);
+        }
+        tbody.appendChild(tr);
+    }
+}
 
+window.loadTeacherRules = async function() {
+    const select = document.getElementById('teacherSelectRule');
+    if (select && window.metadata && window.metadata.teachers) {
+        select.innerHTML = '<option value="">-- 請選擇教師 --</option>';
+        window.metadata.teachers.forEach(t => {
+            const opt = document.createElement('option');
+            opt.value = t.code;
+            opt.textContent = `${t.name} (${t.code})`;
+            select.appendChild(opt);
+        });
+    }
+    generateEmptyGrid('teacherRuleGridBody');
+}
 
+window.loadSubjectRules = async function() {
+    const classSelect = document.getElementById('classSelectRule');
+    const subSelect = document.getElementById('subSelectRule');
+    if (classSelect && window.metadata && window.metadata.classes) {
+        classSelect.innerHTML = '<option value="">-- 選擇班級 --</option>';
+        window.metadata.classes.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c.code;
+            opt.textContent = `${c.name} (${c.code})`;
+            classSelect.appendChild(opt);
+        });
+    }
+    if (subSelect && window.metadata && window.metadata.subjects) {
+        subSelect.innerHTML = '<option value="">-- 選擇科目 --</option>';
+        window.metadata.subjects.forEach(s => {
+            const opt = document.createElement('option');
+            opt.value = s.code;
+            opt.textContent = `${s.name} (${s.code})`;
+            subSelect.appendChild(opt);
+        });
+    }
+    generateEmptyGrid('subRuleGridBody');
+}
 
+window.loadClassBindRules = async function() {
+    const select = document.getElementById('classBindTeacherSelect');
+    if (select && window.metadata && window.metadata.teachers) {
+        select.innerHTML = '<option value="">— 選擇教師 —</option>';
+        window.metadata.teachers.forEach(t => {
+            const opt = document.createElement('option');
+            opt.value = t.code;
+            opt.textContent = `${t.name} (${t.code})`;
+            select.appendChild(opt);
+        });
+    }
+    const tbody = document.getElementById('classBindTableBody');
+    if (tbody) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #64748b; padding: 12px;">(目前尚未設定綁班限制)</td></tr>';
+    }
+}
+
+window.openTeacherPreferenceModal = async function() {
+    const select = document.getElementById('prefTeacherSelect');
+    if (!select) return;
+
+    if (window.showToast) {
+        showToast("正在開啟排課意願視窗...");
+    }
+
+    // Populate teachers dropdown if empty
+    if (select.children.length === 0) {
+        let teachers = [];
+        if (typeof metadata !== 'undefined' && metadata && Array.isArray(metadata.teachers)) {
+            teachers = metadata.teachers;
+        } else {
+            try {
+                const metaRes = await fetch('/api/metadata');
+                const metaData = await metaRes.json();
+                if (metaData && Array.isArray(metaData.teachers)) {
+                    teachers = metaData.teachers;
+                }
+            } catch (e) {
+                console.warn('Failed to load metadata for teacher preferences:', e);
+            }
+        }
+        select.innerHTML = '<option value="">-- 選擇申報教師 --</option>';
+        teachers.forEach(t => {
+            const opt = document.createElement('option');
+            opt.value = t.code;
+            opt.textContent = `${t.name} (${t.code})`;
+            select.appendChild(opt);
+        });
+    }
+
+    // Default selection
+    if (typeof currentType !== 'undefined' && currentType === 'teacher' && typeof currentCode !== 'undefined' && currentCode) {
+        select.value = currentCode;
+    } else {
+        select.value = "";
+    }
+
+    // If there is no current teacher context, fall back to the first teacher
+    if (!select.value && select.options.length > 1) {
+        select.selectedIndex = 1;
+    }
+
+    // Generate the 5x8 grid table
+    generatePrefGrid();
+
+    document.getElementById('teacherPreferenceModal').style.display = 'flex';
+
+    if (!select.value) {
+        if (window.showToast) {
+            showToast("請先選擇教師，才能載入或申報排課意願。");
+        } else {
+            alert("請先選擇教師，才能載入或申報排課意願。");
+        }
+        return;
+    }
+
+    // Load preferences for the selected teacher
+    if (window.showToast) {
+        showToast(`已開啟排課意願視窗，預設載入【${select.options[select.selectedIndex].textContent}】。`);
+    }
+    await onPrefTeacherChanged();
+};
+
+window.closeTeacherPreferenceModal = function() {
+    document.getElementById('teacherPreferenceModal').style.display = 'none';
+};
+
+// 產生 5x8 意願點選網格
+function generatePrefGrid() {
+    const tbody = document.getElementById('prefGridBody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    for (let p = 1; p <= 8; p++) {
+        const tr = document.createElement('tr');
+        
+        // 節次欄
+        const tdLabel = document.createElement('td');
+        tdLabel.style.fontWeight = 'bold';
+        tdLabel.style.background = 'rgba(0,0,0,0.02)';
+        tdLabel.style.textAlign = 'center';
+        tdLabel.style.padding = '8px';
+        tdLabel.style.border = '1px solid var(--border-color)';
+        tdLabel.textContent = `第 ${p} 節`;
+        tr.appendChild(tdLabel);
+
+        // 週一至週五
+        for (let d = 1; d <= 5; d++) {
+            const td = document.createElement('td');
+            td.style.textAlign = 'center';
+            td.style.cursor = 'pointer';
+            td.style.padding = '10px';
+            td.style.border = '1px solid var(--border-color)';
+            td.style.fontWeight = 'bold';
+            td.style.transition = 'all 0.2s';
+            td.dataset.day = d;
+            td.dataset.period = p;
+            td.dataset.state = "0"; // 0: None, 1: Blocked, 2: Preferred
+            td.style.background = '#ffffff';
+
+            td.addEventListener('click', () => {
+                let state = parseInt(td.dataset.state);
+                state = (state + 1) % 3;
+                setCellPrefState(td, state);
+            });
+
+            tr.appendChild(td);
+        }
+        tbody.appendChild(tr);
+    }
+}
+
+function setCellPrefState(td, state) {
+    td.dataset.state = state;
+    if (state === 0) {
+        td.style.background = '#ffffff';
+        td.style.color = '#1d1d1f';
+        td.style.borderColor = 'var(--border-color)';
+        td.textContent = '';
+    } else if (state === 1) {
+        td.style.background = '#fee2e2';
+        td.style.color = '#ef4444';
+        td.style.borderColor = '#fca5a5';
+        td.innerHTML = '<span style="font-size:0.8rem;">🔴 絕對禁排</span>';
+    } else if (state === 2) {
+        td.style.background = '#dcfce7';
+        td.style.color = '#22c55e';
+        td.style.borderColor = '#86efac';
+        td.innerHTML = '<span style="font-size:0.8rem;">🟢 優先排課</span>';
+    }
+}
+
+async function onPrefTeacherChanged() {
+    const select = document.getElementById('prefTeacherSelect');
+    const tCode = select ? select.value : '';
+
+    // Reset inputs
+    document.querySelectorAll('input[name="prefStyle"]').forEach(r => r.checked = (r.value === 'none'));
+    document.getElementById('prefAvoidFirstLast').checked = false;
+    document.getElementById('prefAvoidSplitShifts').checked = false;
+    document.getElementById('prefMaxDaily').value = '';
+    
+    // Reset Grid
+    document.querySelectorAll('#prefGridBody td[data-state]').forEach(td => {
+        setCellPrefState(td, 0);
+    });
+
+    if (!tCode) return;
+
+    try {
+        const resp = await fetch(`/api/teacher/preferences?code=${tCode}`);
+        const res = await resp.json();
+        if (res.status === 'success' && res.preferences) {
+            const prefs = res.preferences;
+            
+            // Set Style Radio
+            const style = prefs.style || 'none';
+            const r = document.querySelector(`input[name="prefStyle"][value="${style}"]`);
+            if (r) r.checked = true;
+
+            // Checkboxes
+            document.getElementById('prefAvoidFirstLast').checked = !!prefs.avoid_first_last;
+            document.getElementById('prefAvoidSplitShifts').checked = !!prefs.avoid_split_shifts;
+
+            // Max Daily
+            if (prefs.max_daily_periods !== undefined && prefs.max_daily_periods !== null) {
+                document.getElementById('prefMaxDaily').value = prefs.max_daily_periods;
+            }
+
+            // Set Grid Cells
+            const blocked = prefs.blocked_slots || [];
+            const preferred = prefs.preferred_slots || [];
+
+            blocked.forEach(slot => {
+                const parts = slot.split('-');
+                if (parts.length === 2) {
+                    const td = document.querySelector(`#prefGridBody td[data-day="${parts[0]}"][data-period="${parts[1]}"]`);
+                    if (td) setCellPrefState(td, 1);
+                }
+            });
+
+            preferred.forEach(slot => {
+                const parts = slot.split('-');
+                if (parts.length === 2) {
+                    const td = document.querySelector(`#prefGridBody td[data-day="${parts[0]}"][data-period="${parts[1]}"]`);
+                    if (td) setCellPrefState(td, 2);
+                }
+            });
+        }
+    } catch (e) {
+        console.error("Error loading teacher preferences:", e);
+    }
+}
+window.onPrefTeacherChanged = onPrefTeacherChanged;
+
+async function saveTeacherPreferences() {
+    const select = document.getElementById('prefTeacherSelect');
+    const tCode = select ? select.value : '';
+    if (!tCode) {
+        alert("請先選擇要申報的教師！");
+        return;
+    }
+
+    const styleEl = document.querySelector('input[name="prefStyle"]:checked');
+    const style = styleEl ? styleEl.value : 'none';
+    const avoid_first_last = document.getElementById('prefAvoidFirstLast').checked;
+    const avoid_split_shifts = document.getElementById('prefAvoidSplitShifts').checked;
+    const maxVal = document.getElementById('prefMaxDaily').value;
+    const max_daily_periods = maxVal !== "" ? parseInt(maxVal) : null;
+
+    const blocked_slots = [];
+    const preferred_slots = [];
+
+    document.querySelectorAll('#prefGridBody td[data-state]').forEach(td => {
+        const state = parseInt(td.dataset.state);
+        const day = td.dataset.day;
+        const period = td.dataset.period;
+        const slotKey = `${day}-${period}`;
+        if (state === 1) {
+            blocked_slots.push(slotKey);
+        } else if (state === 2) {
+            preferred_slots.push(slotKey);
+        }
+    });
+
+    try {
+        const resp = await fetch('/api/teacher/preferences', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                teacher_code: tCode,
+                style,
+                avoid_first_last,
+                avoid_split_shifts,
+                max_daily_periods,
+                blocked_slots,
+                preferred_slots
+            })
+        });
+        const res = await resp.json();
+        if (res.status === 'success') {
+            if (window.showToast) {
+                showToast("排課偏好申報已成功儲存並同步至系統！");
+            } else {
+                alert("排課偏好申報已成功儲存並同步至系統！");
+            }
+            closeTeacherPreferenceModal();
+        } else {
+            alert("儲存失敗：" + res.message);
+        }
+    } catch (e) {
+        console.error("Error saving teacher preferences:", e);
+        alert("儲存出錯，請稍後再試。");
+    }
+}
+window.saveTeacherPreferences = saveTeacherPreferences;
