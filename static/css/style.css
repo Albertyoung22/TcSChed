@@ -167,13 +167,13 @@ body {
 }
 
 .solver-panel-btn {
-    background: rgba(255, 255, 255, 0.9);
-    border: 1px solid rgba(0, 0, 0, 0.1);
-    padding: 6px 12px;
+    background: #ffffff;
+    border: 1.5px solid #cbd5e1;
+    padding: 6px 13px;
     border-radius: 10px;
     font-size: 0.85rem;
-    color: var(--text-primary);
-    font-weight: 600;
+    color: #1e293b;
+    font-weight: 700;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
@@ -182,16 +182,16 @@ body {
     white-space: nowrap;
     writing-mode: horizontal-tb;
     flex-shrink: 0;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    font-family: var(--font-inter);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    font-family: var(--font-inter), 'Noto Sans TC', sans-serif;
 }
 
 .solver-panel-btn:hover {
     background: #ffffff;
-    border-color: var(--primary);
-    color: var(--primary);
-    box-shadow: 0 4px 14px rgba(0, 113, 227, 0.15);
+    border-color: #4f46e5;
+    color: #4f46e5;
+    box-shadow: 0 4px 14px rgba(79, 70, 229, 0.18);
     transform: translateY(-1px);
 }
 
@@ -200,19 +200,20 @@ body {
 }
 
 .db-badge {
-    background: rgba(255, 255, 255, 0.9);
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    padding: 6px 12px;
+    background: #ffffff;
+    border: 1.5px solid #cbd5e1;
+    padding: 6px 13px;
     border-radius: 10px;
     font-size: 0.82rem;
-    color: var(--text-secondary);
+    color: #334155;
+    font-weight: 700;
     display: inline-flex;
     align-items: center;
     gap: 6px;
     white-space: nowrap;
     writing-mode: horizontal-tb;
     flex-shrink: 0;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 /* Controls & Search Card */
@@ -331,27 +332,30 @@ body {
     flex: 1;
     background: transparent;
     border: none;
-    color: var(--text-secondary);
+    color: #475569;
     padding: 0.65rem 1.25rem;
-    font-size: 0.92rem;
-    font-weight: 600;
+    font-size: 0.94rem;
+    font-weight: 700;
     cursor: pointer;
     border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    transition: all 0.25s ease;
+    transition: all 0.2s ease;
+    font-family: inherit;
 }
 
 .tab-btn:hover {
-    color: var(--text-primary);
+    color: #0f172a;
+    background: rgba(255, 255, 255, 0.6);
 }
 
 .tab-btn.active {
-    color: var(--primary);
+    color: #4338ca;
     background: #ffffff;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    font-weight: 800;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 /* Quick Select Section */
@@ -414,23 +418,29 @@ body {
 
 .grid-item {
     background: #ffffff;
-    border: 1px solid rgba(0, 0, 0, 0.08);
+    border: 1.5px solid #cbd5e1;
     padding: 0.75rem 0.5rem;
     border-radius: 10px;
     text-align: center;
-    font-weight: 600;
-    color: var(--text-primary);
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: #1e293b;
     cursor: pointer;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     text-decoration: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
 }
 
 .grid-item:hover {
     background: #ffffff;
-    border-color: var(--primary);
-    color: var(--primary);
-    box-shadow: 0 6px 16px rgba(0, 113, 227, 0.15);
+    border-color: #4f46e5;
+    color: #4f46e5;
+    box-shadow: 0 6px 16px rgba(79, 70, 229, 0.18);
     transform: translateY(-2px);
 }
 
@@ -741,22 +751,23 @@ body {
 }
 
 .subject-name {
-    font-weight: 700;
-    font-size: 0.95rem;
-    color: var(--text-primary);
+    font-weight: 800;
+    font-size: 0.98rem;
+    color: #0f172a;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 95%;
-    line-height: 1.25;
+    max-width: 98%;
+    line-height: 1.3;
+    letter-spacing: -0.2px;
 }
 
 /* Teacher / Class Apple Pill Link */
 .meta-link {
-    font-size: 0.8rem;
-    color: var(--primary);
-    background: rgba(0, 113, 227, 0.08);
-    border: 1px solid rgba(0, 113, 227, 0.2);
+    font-size: 0.82rem;
+    color: #0369a1;
+    background: rgba(2, 132, 199, 0.09);
+    border: 1px solid rgba(2, 132, 199, 0.28);
     padding: 2px 8px;
     border-radius: 6px;
     text-decoration: none;
@@ -765,15 +776,15 @@ body {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    font-weight: 600;
-    margin-top: 2px;
+    font-weight: 700;
+    margin-top: 3px;
 }
 
 .meta-link:hover {
     color: #ffffff;
-    background: var(--primary);
-    border-color: var(--primary);
-    box-shadow: 0 2px 8px rgba(0, 113, 227, 0.3);
+    background: #0284c7;
+    border-color: #0284c7;
+    box-shadow: 0 2px 8px rgba(2, 132, 199, 0.35);
     text-decoration: none;
     transform: translateY(-1px);
 }
@@ -1200,7 +1211,16 @@ body {
         border: 1.5px solid #000000 !important;
         padding: 4px 2px !important;
         color: #000000 !important;
+        height: 52pt !important;
         min-height: 52pt !important;
+        max-height: 52pt !important;
+        vertical-align: middle !important;
+        overflow: hidden !important;
+    }
+
+    .schedule-table tbody tr {
+        height: 52pt !important;
+        max-height: 52pt !important;
     }
 
     .schedule-table th {
@@ -1212,6 +1232,37 @@ body {
         background: none !important;
         border: none !important;
         box-shadow: none !important;
+        height: 46pt !important;
+        min-height: 46pt !important;
+        max-height: 46pt !important;
+        padding: 0 !important;
+        gap: 0 !important;
+        overflow: hidden !important;
+        justify-content: center !important;
+    }
+
+    .schedule-cell .lesson-block {
+        max-height: 44pt !important;
+        overflow: hidden !important;
+        gap: 0 !important;
+    }
+
+    .schedule-cell .subject-name,
+    .schedule-cell .meta-link,
+    .schedule-cell .room-lbl {
+        display: block !important;
+        max-width: 100% !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
+        line-height: 1.2 !important;
+    }
+
+    .schedule-cell .slot-note-badge,
+    .schedule-cell button,
+    .schedule-cell .week-badge,
+    .schedule-cell .multi-group-tag {
+        display: none !important;
     }
 
     .subject-name {
