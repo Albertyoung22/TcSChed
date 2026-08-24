@@ -5,8 +5,17 @@ import datetime
 import io
 import zipfile
 import threading
+import traceback
 from flask import Flask, jsonify, render_template, send_from_directory, send_file, request
 from dbfread import DBF
+
+# Optional GitHub cloud-sync settings.  Keep these defined even when the
+# application is running locally without GitHub configuration; otherwise the
+# fallback path in load_config_rules() raises NameError when no local config
+# file exists.
+GITHUB_REPO = os.environ.get("GITHUB_REPO", "").strip()
+GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "").strip()
+GITHUB_BRANCH = os.environ.get("GITHUB_BRANCH", "main").strip() or "main"
 
 def resolve_path(rel_path):
     """Safely resolves relative paths across PyInstaller frozen mode (_MEIPASS & sys.executable), project dir, and CWD."""
@@ -31,8 +40,62 @@ template_folder = resolve_path("templates")
 static_folder = resolve_path("static")
 app = Flask(__name__, static_folder=static_folder, template_folder=template_folder)
 
+def get_valid_data_dir():
+    env_dir = os.environ.get("DATA_DIR", "").strip()
+    if env_dir:
+        try:
+            os.makedirs(env_dir, exist_ok=True)
+            test_file = os.path.join(env_dir, ".test_write")
+            with open(test_file, "w", encoding="utf-8") as f:
+                f.write("ok")
+            os.remove(test_file)
+            return env_dir
+        except Exception:
+            pass
+
+    base_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.dirname(os.path.abspath(__file__))
+    default_data_dir = os.path.join(base_dir, "data")
+    os.makedirs(default_data_dir, exist_ok=True)
+    return default_data_dir
+
+DATA_DIR = get_valid_data_dir()
+CONFIG_RULES_FILE = os.path.join(DATA_DIR, "config_rules.json")
+NOTES_FILE_PATH = os.path.join(DATA_DIR, "lesson_notes.json")
+APP_LOG_FILE = os.path.join(DATA_DIR, "school_schedule.log")
+
+def migrate_legacy_data_files():
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    legacy_files = {
+        os.path.join(base_dir, "config_rules.json"): CONFIG_RULES_FILE,
+        os.path.join(base_dir, "lesson_notes.json"): NOTES_FILE_PATH,
+    }
+    for src, dst in legacy_files.items():
+        try:
+            if os.path.exists(src) and not os.path.exists(dst):
+                import shutil
+                os.makedirs(os.path.dirname(dst), exist_ok=True)
+                shutil.copy2(src, dst)
+        except Exception:
+            pass
+
+migrate_legacy_data_files()
+
 # Path configuration
-SEARCH_DIR = r"D:\土城高中"
+DEFAULT_SEARCH_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dbf_data")
+SEARCH_DIR = r"D:\SchoolData"
+
+def get_default_search_dir():
+    cfg = {}
+    try:
+        cfg = load_config_rules()
+    except Exception:
+        cfg = {}
+    search_dir = (cfg.get("dbf_search_dir") or "").strip()
+    if search_dir:
+        return search_dir
+    if os.path.isdir(DEFAULT_SEARCH_DIR):
+        return DEFAULT_SEARCH_DIR
+    return SEARCH_DIR
 
 # Global cache variables
 _cached_data = None
@@ -53,15 +116,14 @@ def get_local_ip():
 
 def get_latest_dbf_dir():
     """Finds the newest DBF directory containing class.dbf/claspv.dbf."""
-    cfg = load_config_rules()
-    search_dir = cfg.get("dbf_search_dir") or SEARCH_DIR
+    search_dir = get_default_search_dir()
     
     if search_dir and os.path.exists(search_dir):
         try:
             if any(f.lower() == "class.dbf" for f in os.listdir(search_dir)):
                 return search_dir
-        except Exception:
-            pass
+        except Exception as e:
+            log_exception("get_latest_dbf_dir:search_dir", e)
             
         candidates = []
         try:
@@ -71,8 +133,8 @@ def get_latest_dbf_dir():
                     continue
                 if any(f.lower() == "class.dbf" for f in files) and any(f.lower() == "claspv.dbf" for f in files):
                     candidates.append(root)
-        except Exception:
-            pass
+        except Exception as e:
+            log_exception("get_latest_dbf_dir:walk", e)
 
         if candidates:
             candidates.sort(key=lambda x: os.path.getmtime(x), reverse=True)
@@ -83,36 +145,45 @@ def get_latest_dbf_dir():
         try:
             if any(f.lower() == "class.dbf" for f in os.listdir(local_dbf)):
                 return local_dbf
-        except Exception:
-            pass
+        except Exception as e:
+            log_exception("get_latest_dbf_dir:local_dbf", e)
 
     return None
 
 def get_solved_excel_path():
     """Returns path to Solved Excel file without improperly defaulting to Touchong High School when in custom mode."""
-    cfg = load_config_rules()
     dbf_dir = get_latest_dbf_dir()
     base_dir = os.path.dirname(os.path.abspath(__file__))
-
-    if dbf_dir and "土城高中" in dbf_dir:
-        p1 = r"D:\土城高中\School_Schedule_Solved.xlsx"
-        if os.path.exists(p1):
-            return p1
-
-    p2 = os.path.join(base_dir, "School_Schedule_Solved.xlsx")
-    if os.path.exists(p2):
-        return p2
-
-    p3 = resolve_path("School_Schedule_Solved.xlsx")
-    if os.path.exists(p3):
-        return p3
-
+    candidates = []
+    if dbf_dir:
+        candidates.append(os.path.join(dbf_dir, "School_Schedule_Solved.xlsx"))
+    candidates.append(os.path.join(base_dir, "School_Schedule_Solved.xlsx"))
+    candidates.append(resolve_path("School_Schedule_Solved.xlsx"))
+    for path in candidates:
+        if path and os.path.exists(path):
+            return path
     return None
 
 def load_schedule_data():
     """Loads all schedule data from DBF files and caches it."""
     global _cached_data, _db_mtimes
     
+    def natural_sort_key(s):
+        import re
+        return [int(text) if text.isdigit() else text.lower() for text in re.split(r'(\d+)', str(s))]
+    
+    def natural_sort_key(s):
+        import re
+        return [int(text) if text.isdigit() else text.lower() for text in re.split(r'(\d+)', str(s))]
+    
+    def natural_sort_key(s):
+        import re
+        return [int(text) if text.isdigit() else text.lower() for text in re.split(r'(\d+)', str(s))]
+    
+    def natural_sort_key(s):
+        import re
+        return [int(text) if text.isdigit() else text.lower() for text in re.split(r'(\d+)', str(s))]
+        
     dbf_dir = get_latest_dbf_dir()
     if not dbf_dir:
         cfg = load_config_rules()
@@ -172,8 +243,8 @@ def load_schedule_data():
                         "星期": d_val,
                         "節次": p_val
                     })
-            except Exception:
-                pass
+            except Exception as e:
+                log_exception("api_select_folder:tkinter", e)
                 
         if not schedules:
             custom_assign = cfg.get("custom_assignments", {})
@@ -291,7 +362,7 @@ def load_schedule_data():
                 "name": r.get("CLASS_NAME", "").strip(),
                 "tutor": r.get("SHOW_TEA", "").strip() if r.get("SHOW_TEA") else ""
             })
-        classes.sort(key=lambda x: x["code"])
+        classes.sort(key=lambda x: natural_sort_key(x["code"]))
 
         # Map class tutor
         tutor_map = {}
@@ -337,47 +408,46 @@ def load_schedule_data():
                     "code": full_code,
                     "name": t_name,
                     "role": identity,
+                    "subject": str(r.get("TEACH_SUBJ", "")).strip(),
                     "base_hours": int(base_h) if base_h.is_integer() else base_h,
                     "teach_hours": int(teach_h) if teach_h.is_integer() else teach_h,
                     "extra_hours": int(extra_h) if extra_h.is_integer() else extra_h
                 })
-        teachers.sort(key=lambda x: x["name"])
+        teachers.sort(key=lambda x: natural_sort_key(x["code"]))
 
         # 4. Load schedules (either from solved Excel or from claspv.dbf fallback)
-        solved_excel = r"D:\土城高中\School_Schedule_Solved.xlsx"
-        if not os.path.exists(solved_excel):
-            solved_excel = resolve_path("School_Schedule_Solved.xlsx")
+        solved_excel = get_solved_excel_path()
             
         schedules = []
         classrooms = {}
         
-        if os.path.exists(solved_excel):
+        if solved_excel and os.path.exists(solved_excel):
             import pandas as pd
             df = pd.read_excel(solved_excel)
             df = df.fillna("")
             for idx, r in df.iterrows():
-                class_code = str(r.get("班級代碼", "")).strip().split(".")[0]
-                class_name = str(r.get("班級名稱", "")).strip()
-                subject_code = str(r.get("科目代碼", "")).strip().split(".")[0]
-                subject_name = str(r.get("科目名稱", "")).strip()
+                class_code = str(r.get("班級代碼") or r.get("class_code", "")).strip().split(".")[0]
+                class_name = str(r.get("班級名稱") or r.get("class_name", "")).strip()
+                subject_code = str(r.get("科目代碼") or r.get("subject_code", "")).strip().split(".")[0]
+                subject_name = str(r.get("科目名稱") or r.get("subject_name", "")).strip()
                 
-                teacher_code = str(r.get("教師代碼", "")).strip().split(".")[0]
+                teacher_code = str(r.get("教師代碼") or r.get("teacher_code", "")).strip().split(".")[0]
                 if teacher_code.replace(".0", "") == "nan" or teacher_code.lower() == "nan":
                     teacher_code = ""
                 # Normalize teacher code to padded format matching teacher.dbf
                 if teacher_code:
                     teacher_code = teacher_code_map.get(teacher_code, teacher_code)
-                teacher_name = str(r.get("教師姓名", "")).strip()
+                teacher_name = str(r.get("教師姓名") or r.get("teacher_name", "")).strip()
                 if teacher_name.lower() == "nan":
                     teacher_name = ""
                     
-                room_name = str(r.get("教室名稱", "")).strip()
+                room_name = str(r.get("教室名稱") or r.get("room_name", "")).strip()
                 if room_name.lower() == "nan":
                     room_name = ""
                 room_code = room_name
                 
-                day = str(r.get("星期", "")).strip().split(".")[0]
-                period = str(r.get("節次", "")).strip().split(".")[0]
+                day = str(r.get("星期") or r.get("day", "")).strip().split(".")[0]
+                period = str(r.get("節次") or r.get("period", "")).strip().split(".")[0]
                 
                 try:
                     week_mode = int(float(r.get("週別設定", 0)))
@@ -570,13 +640,6 @@ def api_edge_tts():
         import traceback
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
-
-
-
-
-
-NOTES_FILE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "lesson_notes.json")
-
 def load_lesson_notes():
     if os.path.exists(NOTES_FILE_PATH):
         try:
@@ -682,11 +745,11 @@ def api_get_system_info():
 
         return jsonify({
             "status": "success",
-            "school_name": cfg.get("school_name", "臺南市立土城高級中學"),
-            "school_subtitle": cfg.get("school_subtitle", "Tainan Municipal Tucheng High School"),
+            "school_name": cfg.get("school_name", "學校名稱"),
+            "school_subtitle": cfg.get("school_subtitle", "School Timetable System"),
             "year": cfg.get("year", "114"),
             "term": cfg.get("term", "1"),
-            "dbf_search_dir": cfg.get("dbf_search_dir", r"D:\土城高中"),
+            "dbf_search_dir": cfg.get("dbf_search_dir", get_default_search_dir()),
             "actual_dbf_dir": dbf_dir,
             "period_times": period_times
         })
@@ -729,8 +792,8 @@ def api_select_folder():
                 root.destroy()
                 if folder:
                     return os.path.normpath(folder)
-            except Exception:
-                pass
+            except Exception as e:
+                log_exception("api_select_folder:tkinter", e)
 
             try:
                 import subprocess
@@ -746,8 +809,8 @@ def api_select_folder():
                 path = res.stdout.strip()
                 if path:
                     return os.path.normpath(path)
-            except Exception:
-                pass
+            except Exception as e:
+                log_exception("api_select_folder:powershell", e)
             return None
 
         folder_path = choose_folder()
@@ -787,7 +850,6 @@ def api_save_teacher_class_allow():
         else:
             cfg["teacher_class_allow"].pop(teacher_code, None)
         save_config_rules(cfg)
-        sync_to_github_cloud("config_rules.json", json.dumps(cfg, ensure_ascii=False, indent=2), "Update teacher_class_allow")
         return jsonify({"status": "success", "message": f"教師 {teacher_code} 綁班設定已儲存", "data": cfg["teacher_class_allow"]})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
@@ -802,7 +864,6 @@ def api_delete_teacher_class_allow():
         cfg = load_config_rules()
         cfg.get("teacher_class_allow", {}).pop(teacher_code, None)
         save_config_rules(cfg)
-        sync_to_github_cloud("config_rules.json", json.dumps(cfg, ensure_ascii=False, indent=2), "Delete teacher_class_allow")
         return jsonify({"status": "success", "message": f"教師 {teacher_code} 綁班限制已移除"})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
@@ -837,7 +898,6 @@ def api_save_sim_group():
             groups.append(group)
         cfg["custom_simultaneous_groups"] = groups
         save_config_rules(cfg)
-        sync_to_github_cloud("config_rules.json", json.dumps(cfg, ensure_ascii=False, indent=2), "Update sim_groups")
         return jsonify({"status": "success", "message": "同時上課群組已儲存", "data": groups})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
@@ -853,15 +913,10 @@ def api_delete_sim_group():
             removed = groups.pop(index)
             cfg["custom_simultaneous_groups"] = groups
             save_config_rules(cfg)
-            sync_to_github_cloud("config_rules.json", json.dumps(cfg, ensure_ascii=False, indent=2), "Delete sim_group")
             return jsonify({"status": "success", "message": f"群組 {removed.get('label', index)} 已刪除", "data": groups})
         return jsonify({"status": "error", "message": "群組索引無效"}), 400
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
-
-
-
-
 
 def get_all_subjects_list():
     data = load_schedule_data()
@@ -904,7 +959,7 @@ def api_metadata():
     if "error" in data:
         return jsonify({"error": data["error"], "classes": [], "teachers": [], "subjects": subjects, "classrooms": [], "period_times": {}, "dbf_dir": "", "local_ip": get_local_ip()}), 200
     
-    return jsonify({
+    response = jsonify({
         "classes": data["classes"],
         "teachers": data["teachers"],
         "subjects": subjects,
@@ -913,6 +968,10 @@ def api_metadata():
         "dbf_dir": data["dbf_dir"],
         "local_ip": get_local_ip()
     })
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
 
 
 
@@ -1169,18 +1228,18 @@ def api_validate_solver():
             if os.path.exists(nt_p):
                 try:
                     db_no_teach = list(DBF(nt_p, ignore_missing_memofile=True, encoding='cp950'))
-                except Exception:
-                    pass
+                except Exception as e:
+                    log_exception("api_check_schedule_conflicts:no_teach", e)
             if os.path.exists(ns_p):
                 try:
                     db_no_sub = list(DBF(ns_p, ignore_missing_memofile=True, encoding='cp950'))
-                except Exception:
-                    pass
+                except Exception as e:
+                    log_exception("api_check_schedule_conflicts:no_sub", e)
             if os.path.exists(cl_p):
                 try:
                     db_class = list(DBF(cl_p, ignore_missing_memofile=True, encoding='cp950'))
-                except Exception:
-                    pass
+                except Exception as e:
+                    log_exception("api_check_schedule_conflicts:class", e)
         
         virtual_class_codes = set()
         for r in db_class:
@@ -1308,10 +1367,8 @@ def api_debug_db():
 @app.route("/api/debug-solved")
 def api_debug_solved():
     try:
-        excel_path = r"D:\土城高中\School_Schedule_Solved.xlsx"
-        if not os.path.exists(excel_path):
-            excel_path = os.path.join(os.path.dirname(__file__), "School_Schedule_Solved.xlsx")
-        if not os.path.exists(excel_path):
+        excel_path = get_solved_excel_path()
+        if not excel_path or not os.path.exists(excel_path):
             return jsonify({"status": "error", "message": "Solved file not found"})
         import pandas as pd
         df = pd.read_excel(excel_path)
@@ -1408,8 +1465,8 @@ def api_debug_teacher_slots():
                     class_prefilled[c] = set()
                 try:
                     class_prefilled[c].add((int(d), int(p)))
-                except Exception:
-                    pass
+                except Exception as e:
+                    log_exception("api_check_schedule_audit:class_prefilled", e)
                 
         teacher_blocked = {}
         for rule in no_teach:
@@ -1509,8 +1566,8 @@ def api_check_bottlenecks():
                     class_prefilled[c] = set()
                 try:
                     class_prefilled[c].add((int(d), int(p)))
-                except Exception:
-                    pass
+                except Exception as e:
+                    log_exception("api_check_schedule_audit:class_prefilled_int", e)
                 
         teacher_blocked = {}
         for rule in no_teach:
@@ -1604,9 +1661,7 @@ def api_debug_class():
 @app.route("/api/check-file-time")
 def api_check_file_time():
     try:
-        excel_path = r"D:\土城高中\School_Schedule_Solved.xlsx"
-        if not os.path.exists(excel_path) or not os.path.exists(r"D:\土城高中"):
-            excel_path = os.path.join(os.path.dirname(__file__), "School_Schedule_Solved.xlsx")
+        excel_path = get_solved_excel_path() or os.path.join(DATA_DIR, "School_Schedule_Solved.xlsx")
             
         if not os.path.exists(excel_path):
             return jsonify({"status": "error", "message": "Solved file not found"})
@@ -1625,9 +1680,7 @@ def api_check_file_time():
 @app.route("/api/download-solved")
 def api_download_solved():
     try:
-        excel_path = r"D:\土城高中\School_Schedule_Solved.xlsx"
-        if not os.path.exists(excel_path) or not os.path.exists(r"D:\土城高中"):
-            excel_path = os.path.join(os.path.dirname(__file__), "School_Schedule_Solved.xlsx")
+        excel_path = get_solved_excel_path() or os.path.join(DATA_DIR, "School_Schedule_Solved.xlsx")
             
         if not os.path.exists(excel_path):
             return jsonify({"status": "error", "message": "Solved schedule file not found. Please run the solver first."}), 404
@@ -1738,8 +1791,8 @@ def api_check_swap_slots(item_id):
                 idx = int(item_id)
                 if 0 <= idx < len(solved):
                     item = solved[idx]
-            except Exception:
-                pass
+            except Exception as e:
+                log_exception("api_undo_swap:resolve_item", e)
                 
         if not item:
             return jsonify({"status": "error", "message": "找不到該課程項目"}), 404
@@ -1811,16 +1864,16 @@ def api_execute_swap():
                 s_idx = int(source_id)
                 if 0 <= s_idx < len(solved):
                     source_item = solved[s_idx]
-            except Exception:
-                pass
+            except Exception as e:
+                log_exception("api_undo_swap:source_index", e)
                 
         if target_id is not None and not target_item and solved:
             try:
                 t_idx = int(target_id)
                 if 0 <= t_idx < len(solved):
                     target_item = solved[t_idx]
-            except Exception:
-                pass
+            except Exception as e:
+                log_exception("api_undo_swap:target_index", e)
 
         if not source_item and isinstance(req.get("source_lesson"), dict):
             sl = req.get("source_lesson")
@@ -1997,8 +2050,8 @@ def api_undo_swap():
             import pandas as pd
             df = pd.DataFrame(solved)
             df.to_excel(solved_excel, index=False)
-        except Exception:
-            pass
+        except Exception as e:
+            log_exception("api_undo_swap:save_local_copy", e)
             
         undo_msg = f"↩️ 成功復原上一筆調課！已將【{record.get('source_subject', '')}】還原至原時段。"
         return jsonify({
@@ -2021,27 +2074,18 @@ def api_clear_swap_history():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
-def get_valid_data_dir():
-    env_dir = os.environ.get("DATA_DIR", "")
-    if env_dir:
-        try:
-            os.makedirs(env_dir, exist_ok=True)
-            test_file = os.path.join(env_dir, ".test_write")
-            with open(test_file, "w") as f:
-                f.write("ok")
-            os.remove(test_file)
-            return env_dir
-        except Exception:
-            pass
-    base_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.dirname(os.path.abspath(__file__))
-    return base_dir
-
-DATA_DIR = get_valid_data_dir()
-CONFIG_RULES_FILE = resolve_path("config_rules.json")
-
-GITHUB_REPO = os.environ.get("GITHUB_REPO", "")     # e.g. "your_username/School_Schedule"
-GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")   # Free GitHub Personal Access Token
-GITHUB_BRANCH = os.environ.get("GITHUB_BRANCH", "main")
+def log_exception(context, exc):
+    message = f"[{context}] {exc}"
+    try:
+        print(message)
+    except Exception:
+        log_exception("log_exception:stdout", traceback.format_exc())
+    try:
+        with open(APP_LOG_FILE, "a", encoding="utf-8", errors="replace") as f:
+            f.write(message + "\n")
+    except Exception:
+        # Avoid recursion if logging itself fails.
+        pass
 
 def sync_to_github_cloud(filename, content_str, commit_message="Cloud Web UI Auto Save"):
     if not GITHUB_REPO or not GITHUB_TOKEN or len(GITHUB_TOKEN) < 10:
@@ -2061,7 +2105,7 @@ def sync_to_github_cloud(filename, content_str, commit_message="Cloud Web UI Aut
                     res_data = json.loads(resp.read().decode('utf-8'))
                     sha = res_data.get("sha")
             except Exception:
-                pass
+                log_exception("sync_to_github_cloud:get_sha", traceback.format_exc())
 
             encoded_content = base64.b64encode(content_str.encode('utf-8')).decode('utf-8')
             payload = {
@@ -2088,9 +2132,9 @@ def sync_to_github_cloud(filename, content_str, commit_message="Cloud Web UI Aut
                 with urllib.request.urlopen(hook_req) as r_resp:
                     print("Render Deploy Hook Triggered Successfully:", r_resp.read().decode('utf-8'))
             except Exception as e_hook:
-                pass
+                log_exception("sync_to_github_cloud:render_hook", e_hook)
         except Exception as e:
-            pass
+            log_exception("sync_to_github_cloud", e)
 
     import threading
     threading.Thread(target=_bg_sync, daemon=True).start()
@@ -2100,8 +2144,8 @@ def load_config_rules():
         try:
             with open(CONFIG_RULES_FILE, "r", encoding="utf-8") as f:
                 return json.load(f)
-        except Exception:
-            pass
+        except Exception as e:
+            log_exception("load_config_rules:local", e)
     # Try fetching from GitHub if GITHUB_REPO set
     if GITHUB_REPO:
         try:
@@ -2112,8 +2156,8 @@ def load_config_rules():
                 with open(CONFIG_RULES_FILE, "w", encoding="utf-8") as f:
                     json.dump(data, f, ensure_ascii=False, indent=2)
                 return data
-        except Exception:
-            pass
+        except Exception as e:
+            log_exception("load_config_rules:github", e)
     return {
         "custom_no_teach": {},
         "custom_no_sub": {},
@@ -2161,8 +2205,8 @@ def save_current_semester_single_file(sem_id=None):
                     import pandas as pd
                     df = pd.read_excel(solved_excel).fillna("")
                     solved_records = df.to_dict(orient="records")
-                except Exception:
-                    pass
+                except Exception as e:
+                    log_exception("save_current_semester_single_file:read_excel", e)
 
         year = "115"
         term = "1"
@@ -2172,7 +2216,7 @@ def save_current_semester_single_file(sem_id=None):
 
         sem_data = {
             "semester_id": sem_id,
-            "school_name": cfg.get("school_name", "臺南市立土城高級中學"),
+            "school_name": cfg.get("school_name", "學校名稱"),
             "year": year,
             "term": term,
             "updated_at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -2193,8 +2237,12 @@ _config_save_lock = threading.RLock()
 def save_config_rules(data):
     with _config_save_lock:
         json_str = json.dumps(data, ensure_ascii=False, indent=2)
-        with open(CONFIG_RULES_FILE, "w", encoding="utf-8") as f:
-            f.write(json_str)
+        try:
+            with open(CONFIG_RULES_FILE, "w", encoding="utf-8") as f:
+                f.write(json_str)
+        except Exception as e:
+            log_exception("save_config_rules:write", e)
+            raise
         sync_to_github_cloud("config_rules.json", json_str, "Cloud Web UI Auto Save config_rules.json")
         save_current_semester_single_file()
 
@@ -2226,8 +2274,8 @@ def api_get_semesters():
                                 "records_count": records_count,
                                 "is_active": (sem_id == active_id)
                             })
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        log_exception("api_get_semesters:read_semester_file", e)
         if not semesters:
             semesters.append({
                 "semester_id": "115-1",
@@ -2410,12 +2458,9 @@ def api_backup_export():
             if os.path.exists(cfg_path):
                 zf.write(cfg_path, "config_rules.json")
 
-            excel_paths = [
-                r"D:\土城高中\School_Schedule_Solved.xlsx",
-                os.path.join(base_dir, "School_Schedule_Solved.xlsx")
-            ]
+            excel_paths = [get_solved_excel_path(), os.path.join(base_dir, "School_Schedule_Solved.xlsx")]
             for ep in excel_paths:
-                if os.path.exists(ep):
+                if ep and os.path.exists(ep):
                     zf.write(ep, "School_Schedule_Solved.xlsx")
                     break
 
@@ -2486,18 +2531,15 @@ def api_backup_reset():
             cfg_path = os.path.join(base_dir, "config_rules.json")
             if os.path.exists(cfg_path):
                 zf.write(cfg_path, "config_rules.json")
-            excel_paths = [
-                r"D:\土城高中\School_Schedule_Solved.xlsx",
-                os.path.join(base_dir, "School_Schedule_Solved.xlsx")
-            ]
+            excel_paths = [get_solved_excel_path(), os.path.join(base_dir, "School_Schedule_Solved.xlsx")]
             for ep in excel_paths:
-                if os.path.exists(ep):
+                if ep and os.path.exists(ep):
                     zf.write(ep, "School_Schedule_Solved.xlsx")
                     break
 
         # 2. Reset config_rules.json to generic template
         clean_cfg = {
-            "school_name": "○○高級中學",
+            "school_name": "學校名稱",
             "school_subtitle": "Senior High School",
             "year": "114",
             "term": "1",
@@ -2533,14 +2575,12 @@ def api_backup_reset():
         save_config_rules(clean_cfg)
 
         # 3. Remove existing solved Excel files
-        solved_excel_1 = r"D:\土城高中\School_Schedule_Solved.xlsx"
-        solved_excel_2 = os.path.join(base_dir, "School_Schedule_Solved.xlsx")
-        if os.path.exists(solved_excel_1):
-            try: os.remove(solved_excel_1)
-            except Exception: pass
-        if os.path.exists(solved_excel_2):
-            try: os.remove(solved_excel_2)
-            except Exception: pass
+        for solved_excel_path in [get_solved_excel_path(), os.path.join(base_dir, "School_Schedule_Solved.xlsx")]:
+            if solved_excel_path and os.path.exists(solved_excel_path):
+                try:
+                    os.remove(solved_excel_path)
+                except Exception as e:
+                    log_exception("api_backup_reset:remove_solved_excel", e)
 
         # 4. Invalidate global cache
         global _cached_data
@@ -3154,7 +3194,7 @@ def api_save_course_assignment():
             try:
                 entry["hours"] = int(hours)
             except ValueError:
-                pass
+                log_exception("api_save_custom_assignment:hours", f"Invalid hours value: {hours!r}")
 
         cfg["custom_assignments"][key] = entry
         if "deleted_assignments" in cfg and key in cfg["deleted_assignments"]:
@@ -3219,17 +3259,11 @@ def api_reset_schedule():
             })
 
         df = pd.DataFrame(records)
-        base_dir = os.path.dirname(__file__)
-        excel_paths = [
-            r"D:\土城高中\School_Schedule_Solved.xlsx",
-            os.path.join(base_dir, "School_Schedule_Solved.xlsx")
-        ]
-        for ep in excel_paths:
-            try:
-                if os.path.exists(os.path.dirname(ep)):
-                    df.to_excel(ep, index=False)
-            except Exception:
-                pass
+        excel_path = os.path.join(DATA_DIR, "School_Schedule_Solved.xlsx")
+        try:
+            df.to_excel(excel_path, index=False)
+        except Exception as e:
+            log_exception("api_reset_schedule:write_excel", e)
 
         global _cached_data
         _cached_data = None
@@ -3836,8 +3870,8 @@ def api_load_preset():
             if os.path.exists(solved_excel):
                 try:
                     os.remove(solved_excel)
-                except Exception:
-                    pass
+                except Exception as e:
+                    log_exception("api_update_subject_catalog:remove_solved_excel", e)
 
         save_config_rules(cfg)
         
@@ -3894,8 +3928,8 @@ def get_restore_points_manifest():
         try:
             with open(manifest_file, "r", encoding="utf-8") as f:
                 return json.load(f)
-        except Exception:
-            pass
+        except Exception as e:
+            log_exception("get_restore_points_manifest:read", e)
     return []
 
 def save_restore_points_manifest(points):
@@ -3981,8 +4015,8 @@ def api_restore_checkpoint():
         elif os.path.exists(target_excel):
             try:
                 os.remove(target_excel)
-            except Exception:
-                pass
+            except Exception as e:
+                log_exception("api_restore_point:remove_target_excel", e)
                 
         # Invalidate cache
         global _cached_data
@@ -4164,8 +4198,8 @@ def api_preset_apply_school_activity():
             excel_path = os.path.join(os.path.dirname(__file__), "School_Schedule_Solved.xlsx")
             import pandas as pd
             pd.DataFrame(new_solved).to_excel(excel_path, index=False)
-        except Exception:
-            pass
+        except Exception as e:
+            log_exception("api_finalize_simultaneous_group:save_excel", e)
             
         global _cached_data
         _cached_data = None
@@ -4259,8 +4293,8 @@ def api_delete_simultaneous_group():
                 excel_path = os.path.join(os.path.dirname(__file__), "School_Schedule_Solved.xlsx")
                 import pandas as pd
                 pd.DataFrame(new_solved).to_excel(excel_path, index=False)
-            except Exception:
-                pass
+            except Exception as e:
+                log_exception("api_save_simultaneous_group:save_excel", e)
                 
         save_config_rules(cfg)
         
@@ -4343,17 +4377,51 @@ def call_groq_substitute_rank(absent_subject_name, absent_subject_code, absent_c
             content = res_data["choices"][0]["message"]["content"]
             parsed = _json.loads(content)
             rankings = parsed.get("rankings", [])
-            return {r["teacher_code"]: {"fit": r.get("fit","low"), "reason": r.get("reason","")} for r in rankings}
     except Exception as ex:
-        print(f"[AI代課推薦] Groq API 呼叫失敗，使用規則排序: {ex}")
+        # Graceful fallback to rule-based ranking without console spam
+        if "401" in str(ex):
+            # Invalid API key
+            pass
+        else:
+            print(f"[AI代課推薦] Groq API 呼叫未成功，已切換為本地規則排序: {ex}")
         return {}
 
+
+# --- Related Subjects Mapping ---
+DOMAIN_MAP = {
+    "國語文": ["國文", "國語", "閱讀", "寫作", "作文", "文學", "語文", "手語", "閩南", "本土語", "原民"],
+    "外語": ["英文", "英語", "英聽", "雙語", "外語", "日語", "日文", "世界"],
+    "數學": ["數學", "數理"],
+    "自然": ["理化", "生物", "地科", "自然", "物理", "化學", "科學實驗", "生態", "遺傳", "細胞", "微生物"],
+    "社會": ["歷史", "地理", "公民", "社會", "政治", "法律", "人文"],
+    "藝術": ["音樂", "美術", "視覺", "表演", "藝術"],
+    "健體": ["體育", "健康", "健體", "專項", "選手", "運動", "輕艇", "射"],
+    "綜合科技": ["家政", "童軍", "輔導", "資訊", "電腦", "生活科技", "科技", "綜合", "機器人", "生命教育"]
+}
+
+def get_subject_domains(subject_name):
+    """Returns a set of domain names that a subject string might belong to."""
+    if not subject_name:
+        return set()
+    
+    matched_domains = set()
+    subj_str = subject_name.lower()
+    for domain, keywords in DOMAIN_MAP.items():
+        for kw in keywords:
+            if kw in subj_str:
+                matched_domains.add(domain)
+                break # Matched this domain, no need to check other keywords for this domain
+    return matched_domains
 
 @app.route("/api/substitute/recommend", methods=["POST"])
 def api_substitute_recommend():
     try:
         req = request.get_json() or {}
-        absent_tcode = req.get("teacher_code", "").strip()
+        absent_tcode = str(req.get("teacher_code") or "").strip()
+        if absent_tcode.lower() in ("nan", "none", "null"):
+            absent_tcode = ""
+        if absent_tcode.isdigit() and len(absent_tcode) < 4:
+            absent_tcode = absent_tcode.zfill(4)
         day = str(req.get("day", "1")).strip()
         period = str(req.get("period", "1")).strip()
         
@@ -4405,9 +4473,23 @@ def api_substitute_recommend():
         no_teach_map = cfg.get("custom_no_teach", {})
 
         candidates = []
-        target_class = absent_course.get("class_name", "") if absent_course else ""
-        target_subject = absent_course.get("subject_name", "") if absent_course else ""
+        target_class = absent_course.get("class_name", "") if absent_course else req.get("class_name", "")
+        target_subject = absent_course.get("subject_name", "") if absent_course else req.get("subject_name", "")
         target_subject_code = absent_course.get("subject_code", "") if absent_course else ""
+        
+        target_class = str(target_class or "").strip()
+        if target_class.lower() in ("nan", "none", "null"):
+            target_class = ""
+            
+        target_subject = str(target_subject or "").strip()
+        if target_subject.lower() in ("nan", "none", "null"):
+            target_subject = ""
+            
+        target_subject_code = str(target_subject_code or "").strip()
+        if target_subject_code.lower() in ("nan", "none", "null"):
+            target_subject_code = ""
+        
+        print(f"[DEBUG] recommend: absent_tcode={absent_tcode}, day={day}, period={period}, found_course={absent_course is not None}, target_subj={target_subject}")
 
         # Build per-teacher subject list (unique subject names they teach)
         teacher_subjects_map = {}
@@ -4433,22 +4515,58 @@ def api_substitute_recommend():
             t_classes = teacher_classes_map.get(t_code, set())
             is_same_class = (target_class in t_classes) if target_class else False
 
-            # Rule: Exact same subject_code (baseline for AI fallback)
+            # Collect subject names this teacher actually teaches
+            t_subject_set = teacher_subjects_map.get(t_code, set())
+            declared_subject = t.get("subject", "")
+            if declared_subject:
+                t_subject_set.add(declared_subject)
+
+            # Exclude club-only teachers (adjunct/external)
+            if t_subject_set:
+                is_club_only = all("社團" in s or "聯課" in s for s in t_subject_set)
+                if is_club_only:
+                    continue
+
+            # Rule: Exact same subject_code or subject_name (baseline for AI fallback)
             same_subject_bonus = False
             if target_subject_code:
                 for s in schedules:
                     if s["teacher_code"] == t_code and s.get("subject_code", "") == target_subject_code:
                         same_subject_bonus = True
                         break
+            if not same_subject_bonus and target_subject:
+                if target_subject in t_subject_set:
+                    same_subject_bonus = True
+                
+                # Check domain mapping
+                if not same_subject_bonus:
+                    target_domains = get_subject_domains(target_subject)
+                    if target_domains:
+                        for ts in t_subject_set:
+                            ts_domains = get_subject_domains(ts)
+                            if target_domains.intersection(ts_domains):
+                                same_subject_bonus = True
+                                break
+                    
+            if not same_subject_bonus and not target_subject:
+                absent_t_subjects = teacher_subjects_map.get(absent_tcode, set())
+                if absent_t_subjects and absent_t_subjects.intersection(t_subject_set):
+                    same_subject_bonus = True
+                elif absent_t_subjects:
+                    # Check domain mapping for absent teacher's subjects
+                    absent_domains = set()
+                    for ats in absent_t_subjects:
+                        absent_domains.update(get_subject_domains(ats))
+                    if absent_domains:
+                        for ts in t_subject_set:
+                            ts_domains = get_subject_domains(ts)
+                            if absent_domains.intersection(ts_domains):
+                                same_subject_bonus = True
+                                break
 
             c_list = sorted(list(t_classes))
             c_str = ", ".join(c_list) if c_list else "無"
 
-            # Collect subject names this teacher actually teaches (for AI prompt)
-            t_subject_set = teacher_subjects_map.get(t_code, set())
-            declared_subject = t.get("subject", "")
-            if declared_subject:
-                t_subject_set.add(declared_subject)
             teach_subjects_str = "、".join(sorted(t_subject_set)) if t_subject_set else "無資料"
 
             candidates.append({
@@ -4473,16 +4591,19 @@ def api_substitute_recommend():
             ai_info = ai_ranks.get(c["teacher_code"], {})
             c["ai_fit"]    = ai_info.get("fit", None)
             c["ai_reason"] = ai_info.get("reason", "")
-            # Merge AI fit into is_same_domain for backward compat
+            # Merge AI fit into is_same_domain for backward compat, and vice-versa
             if c["ai_fit"] == "high":
                 c["is_same_domain"] = True
+            elif c["is_same_domain"]:
+                c["ai_fit"] = "high"
 
-        # Sort: same class > AI fit (high→medium→low) > name
+        # Sort: same class > AI fit (high→medium→low) > is_same_domain > name
         use_ai = bool(ai_ranks)
         if use_ai:
             candidates.sort(key=lambda x: (
                 not x["is_same_class"],
                 fit_order.get(x["ai_fit"], 3),
+                not x["is_same_domain"],
                 x["teacher_name"]
             ))
         else:
@@ -4730,7 +4851,7 @@ def get_moe_course_codes_data():
                 subjects_dict[code]["hours"] = max(1, h // 5)
 
     year = cfg.get("year", "114")
-    school_name = cfg.get("school_name", "土城高中")
+    school_name = cfg.get("school_name", "學校名稱")
 
     result_list = []
     mapped_count = 0
@@ -4864,15 +4985,23 @@ def api_get_teachers_list():
             code = str(t.get("code", "")).strip()
             name = str(t.get("name", "")).strip()
             role = str(t.get("role", "專任教師")).strip()
+            subject = str(t.get("subject", "")).strip()
             if code and code not in deleted_teacher_codes:
-                merged_map[code] = {"code": code, "name": name, "role": role}
+                item = {"code": code, "name": name, "role": role}
+                if subject:
+                    item["subject"] = subject
+                merged_map[code] = item
 
         for t in custom_teachers:
             code = str(t.get("code", "")).strip()
             name = str(t.get("name", "")).strip()
             role = str(t.get("role", "專任教師")).strip()
+            subject = str(t.get("subject", "")).strip()
             if code and code not in deleted_teacher_codes:
-                merged_map[code] = {"code": code, "name": name, "role": role}
+                item = {"code": code, "name": name, "role": role}
+                if subject:
+                    item["subject"] = subject
+                merged_map[code] = item
 
         final_list = list(merged_map.values())
         final_list.sort(key=lambda x: (x.get("code", ""), x.get("name", "")))
@@ -4888,6 +5017,7 @@ def api_add_teacher():
         code = str(req.get("code", "")).strip()
         name = str(req.get("name", "")).strip()
         role = str(req.get("role", "專任教師")).strip() or "專任教師"
+        subject = str(req.get("subject", "")).strip()
 
         if not code or not name:
             return jsonify({"status": "error", "message": "教師代碼與姓名不能為空！"}), 400
@@ -4904,8 +5034,9 @@ def api_add_teacher():
         if existing:
             existing["name"] = name
             existing["role"] = role
+            existing["subject"] = subject
         else:
-            custom_teachers.append({"code": code, "name": name, "role": role})
+            custom_teachers.append({"code": code, "name": name, "role": role, "subject": subject})
 
         cfg["custom_teachers"] = custom_teachers
         save_config_rules(cfg)
@@ -5280,7 +5411,7 @@ def normalize_schedule_record(r):
                     t_name = tch.get("name", t_name)
                     break
         except Exception:
-            pass
+            log_exception("normalize_solved_record:teacher_lookup", traceback.format_exc())
 
     return {
         "id": r.get("id") or f"{c_code}_{day}_{period}",
@@ -5471,7 +5602,37 @@ def process_semantic_ai_scheduling(msg, cfg, data):
         )
         return reply, "match_venues", {}
 
-    # 5. Teacher Surname / Count Query (e.g. "有幾個姓王的老師", "姓王的老師有哪些")
+    # 5a. Direct adjustment / demonstration mode
+    if any(k in msg_clean for k in ["怎麼調", "如何調", "直接解決", "幫我修正", "幫我處理", "調整", "演示", "示範"]):
+        reply = (
+            "🛠️ 【AI 調整演示模式】\n"
+            "我可以直接幫你進入調整流程，並在螢幕上展示可行改法：\n"
+            "1. 先打開雙視窗對照或智慧修復頁面\n"
+            "2. 標出可調整的課程、教師與可用時段\n"
+            "3. 直接提供可執行的對調 / 微調 / 代課 / 連鎖調整方案\n"
+            "4. 你確認後可立即套用到課表"
+        )
+        return reply, "rescue", {"demo": True}
+
+    # 5. Teacher specialty / subject query
+    if any(k in msg_clean for k in ["專長", "任教科目", "教什麼", "擅長", "可以教", "教哪科", "科目"]):
+        teachers = data.get("teachers", [])
+        matched = []
+        for t in teachers:
+            tname = str(t.get("name", "")).strip()
+            tcode = str(t.get("code", "")).strip()
+            tsubj = str(t.get("subject", "")).strip()
+            trole = str(t.get("role", "")).strip()
+            if any(x and x in msg_clean for x in [tname, tcode, tsubj, trole]):
+                matched.append(t)
+        if matched:
+            lines = []
+            for t in matched[:15]:
+                lines.append(f"• {t.get('name')}({t.get('code')}): {t.get('subject') or t.get('role', '未標示')}")
+            reply = "📚 【AI 教師專長查詢】\n" + "\n".join(lines)
+            return reply, None, {}
+
+    # 6. Teacher Surname / Count Query (e.g. "有幾個姓王的老師", "姓王的老師有哪些")
     if ("姓" in msg_clean and ("老師" in msg_clean or "教師" in msg_clean)) or ("有幾個" in msg_clean and "老師" in msg_clean) or ("幾位老師" in msg_clean):
         teachers = data.get("teachers", [])
         surname = ""
@@ -5499,7 +5660,7 @@ def process_semantic_ai_scheduling(msg, cfg, data):
             reply = f"📊 【AI 學校資料庫即時查詢】\n目前全校資料庫中共有 {len(teachers)} 位教師，包含：{t_list_str}..."
         return reply, None, {}
 
-    # 6. Specific Class / Teacher / Room Timetable Navigation Query
+    # 7. Specific Class / Teacher / Room Timetable Navigation Query
     classes = data.get("classes", [])
     teachers = data.get("teachers", [])
     
@@ -5536,14 +5697,14 @@ def process_semantic_ai_scheduling(msg, cfg, data):
             reply = f"🚀 【AI 語意切換】已為您開啟【{rname}】專用教室課表！"
             return reply, "show_room_schedule", {"code": rname}
 
-    # 7. Class / Tutor Query (e.g. "701班導師是誰", "有幾個班級")
+    # 8. Class / Tutor Query (e.g. "701班導師是誰", "有幾個班級")
     if "導師" in msg_clean or ("有幾個" in msg_clean and "班" in msg_clean) or ("班級" in msg_clean and "名單" in msg_clean):
         classes = data.get("classes", [])
         c_list_str = "\n".join([f"• {c.get('name')}: 導師【{c.get('tutor', '未指派')}】" for c in classes])
         reply = f"🏫 【AI 全校班級與導師即時資料】\n目前全校共有 {len(classes)} 個班級：\n{c_list_str}"
         return reply, None, {}
 
-    # 8. Semester Switch or Creation
+    # 9. Semester Switch or Creation
     if "學期" in msg_clean:
         sem_match = re.search(r"1\d\d-[12]", msg_clean)
         if sem_match:
@@ -5555,7 +5716,7 @@ def process_semantic_ai_scheduling(msg, cfg, data):
             reply = f"📅 【AI 語意理解】目前啟用的學期為【{curr_sem}】。您可以告訴我：「開辦 114-2 學期」或「切換至 115-1 學期」，我會為您一鍵切換與繼承！"
             return reply, None, {}
 
-    # 9. Smart General Reasoning Fallback
+    # 10. Smart General Reasoning Fallback
     reply = (
         "🤖 【AI 智慧自然語言助理就緒】我能聽懂您的自由口語描述與查詢，例如：\n"
         "• 💬「201的課表」\n"
@@ -5583,7 +5744,10 @@ def call_groq_llm_api(user_msg, cfg, data, groq_api_key, model="llama-3.3-70b-ve
     subjects = data.get("subjects", [])
     solved = get_current_solved_schedules()
     
-    t_summary = ", ".join([f"{t.get('name')}({t.get('code')})" for t in teachers])
+    t_summary = ", ".join([
+        f"{t.get('name')}({t.get('code')})[{t.get('subject') or t.get('role') or '未標示'}]"
+        for t in teachers[:40]
+    ])
     c_summary = ", ".join([f"{c.get('name')}(導師:{c.get('tutor','未指派')})" for c in classes])
     s_summary = ", ".join([s.get('name') for s in subjects[:12]])
 
@@ -5608,6 +5772,8 @@ def call_groq_llm_api(user_msg, cfg, data, groq_api_key, model="llama-3.3-70b-ve
         f"• 現有學科：{s_summary}\n"
         f"• 已排好的現行課表摘要：{solved_summary}\n\n"
         "當使用者詢問『201的課表』或某班級/教師課表時，請參考上述『已排好的現行課表摘要』詳細列出該班/該老師各節次的科目與時間。\n"
+        "當使用者詢問教師專長、任教科目、代課人選、或某科目應找哪位老師時，請優先使用教師資料中的 subject 與 role，並結合現行排課紀錄推理。\n"
+        "若使用者的話中含有明確排課動作意圖，請盡量輸出 action 與 payload，不要只做純聊天回答。\n"
         "回應格式必須為 JSON，包含 3 個欄位：\n"
         "1. reply: (字串) 用親切繁體中文向使用者詳細說明的課表內容或統計分析結果\n"
         "2. action: (字串) 應執行的動作代碼 (run_full_auto, create_sim_preset, match_venues, update_no_teach, switch_semester, 或 null)\n"
@@ -5691,7 +5857,7 @@ def api_server_info():
         scheme = request.scheme or "http"
         lan_url = f"{scheme}://{local_ip}:{port}" if port not in ("80", "443") else f"{scheme}://{local_ip}"
         cloud_url = "https://tucheng-school-schedule.onrender.com"
-        github_url = "https://github.com/Albertyoung22/TcSChed"
+        github_url = "https://github.com/YOUR_GITHUB_OWNER/YOUR_GITHUB_REPO"
         return jsonify({
             "status": "success",
             "local_ip": local_ip,
@@ -5793,11 +5959,6 @@ def api_health_check():
                 c_key = (slot_key, c_name)
                 if c_key in slot_classes:
                     other_info = slot_classes[c_key]
-                    other_subj = other_info.split("(")[0]
-                    if other_subj != subj:
-                        msg = f"❌ 班級【{c_name}】衝堂：在 星期{day} 第{period}節 同時排了多門課程 ({other_info} 與 {subj})"
-                        if msg not in class_conflicts:
-                            class_conflicts.append(msg)
                 else:
                     slot_classes[c_key] = f"{subj}({t_name or ''})"
 
@@ -5818,7 +5979,7 @@ def api_health_check():
                 if not is_tutoring and not is_pseudo_teacher:
                     msg = f"⚠️ 正課排入第8節違規：班級【{c_name}】星期{day} 第8節 被安排了正課【{subj}】({t_name})，按規定正課僅能排在第1~7節"
                     if msg not in no_teach_violations:
-                        no_teach_violations.append(msg)
+                        class_conflicts.append(msg)
 
         total_issues = len(teacher_conflicts) + len(class_conflicts) + len(no_teach_violations) + len(fatigue_warnings)
 
@@ -5835,6 +5996,348 @@ def api_health_check():
 
 @app.route("/api/ai-chat", methods=["POST"])
 def api_ai_chat():
+    """Natural Language AI Conversational Assistant Endpoint with Hybrid Gemini/Groq LLM & Deterministic Engine."""
+    try:
+        req = request.get_json(silent=True) or {}
+        msg = str(req.get("message", "")).strip()
+        if not msg:
+            return jsonify({"status": "error", "message": "請輸入對話內容！"}), 400
+
+        cfg = load_config_rules()
+        data = load_schedule_data()
+
+        # 1. First parse deterministic system actions & queries
+        s_reply, s_action, s_payload = process_semantic_ai_scheduling(msg, cfg, data)
+
+        gemini_key = cfg.get("gemini_api_key") or os.environ.get("GEMINI_API_KEY", "")
+        groq_key = cfg.get("groq_api_key") or os.environ.get("GROQ_API_KEY", "")
+        groq_model = cfg.get("groq_model", "llama-3.3-70b-versatile")
+        
+        reply = None
+        action = s_action
+        action_payload = s_payload or {}
+        
+        # 2. Query LLM (Priority: Gemini -> Groq -> fallback)
+        if s_action is None:
+            if gemini_key:
+                try:
+                    t_summary = ", ".join([
+                        f"{t.get('name')}[{t.get('subject') or t.get('role') or '未標示'}]"
+                        for t in data.get('teachers', [])[:15]
+                    ])
+                    c_summary = ", ".join([c.get('name') for c in data.get('classes', [])])
+                    prompt = (
+                        f"你是一個臺灣中學排課專家 AI 對談助手。\n"
+                        f"目前學校有教師: {t_summary} 等...\n"
+                        f"班級有: {c_summary}\n"
+                        f"使用者指令: {msg}\n\n"
+                        "請以親切、專業的繁體中文回答，若有動作代碼與參數，請以 JSON 格式回應，否則直接以口語詳細解答。"
+                    )
+                    g_reply = call_gemini_llm_api(prompt, gemini_key, model="gemini-2.5-flash")
+                    if g_reply:
+                        try:
+                            import re, json
+                            json_match = re.search(r"\{.*\}", g_reply, re.DOTALL)
+                            if json_match:
+                                parsed = json.loads(json_match.group(0))
+                                reply = f"✨ 【Gemini AI 助手】\n{parsed.get('reply')}"
+                                if parsed.get("action"): action = parsed.get("action")
+                                if parsed.get("payload"): action_payload = parsed.get("payload")
+                            else:
+                                reply = f"✨ 【Gemini AI 助手】\n{g_reply}"
+                        except Exception:
+                            reply = f"✨ 【Gemini AI 助手】\n{g_reply}"
+                except Exception as e:
+                    print(f"[Gemini Chat API Error] {e}")
+
+            if not reply and groq_key:
+                try:
+                    g_reply, g_action, g_payload = call_groq_llm_api(msg, cfg, data, groq_key, model=groq_model)
+                    if g_reply:
+                        reply = f"⚡ 【Groq High-Speed AI ({groq_model})】\n{g_reply}"
+                        if g_action: action = g_action
+                        if g_payload: action_payload = g_payload
+                except Exception as ge:
+                    print(f"[Groq API Exception] Fallback to Semantic Engine: {ge}")
+
+        if not reply:
+            reply = s_reply
+
+        return jsonify({
+            "status": "success",
+            "reply": reply,
+            "action": action,
+            "payload": action_payload
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": f"AI 對談處理異常: {str(e)}"}), 500
+
+def call_gemini_llm_api(prompt, api_key, model="gemini-2.5-flash", response_json=False):
+    import urllib.request
+    import json
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
+    headers = {
+        "Content-Type": "application/json"
+    }
+    body = {
+        "contents": [{
+            "parts": [{"text": prompt}]
+        }]
+    }
+    if response_json:
+        body["generationConfig"] = {
+            "responseMimeType": "application/json"
+        }
+    try:
+        req = urllib.request.Request(url, data=json.dumps(body).encode("utf-8"), headers=headers, method="POST")
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            res_data = json.loads(resp.read().decode("utf-8"))
+            candidates = res_data.get("candidates", [])
+            if candidates:
+                content = candidates[0].get("content", {})
+                parts = content.get("parts", [])
+                if parts:
+                    return parts[0].get("text", "")
+            return ""
+    except Exception as e:
+        print(f"[Gemini API Error] {e}")
+        raise e
+
+@app.route("/api/config/gemini", methods=["GET", "POST"])
+def api_config_gemini():
+    try:
+        cfg = load_config_rules()
+        if request.method == "POST":
+            req = request.get_json(silent=True) or {}
+            api_key = str(req.get("gemini_api_key", "")).strip()
+            cfg["gemini_api_key"] = api_key
+            save_config_rules(cfg)
+            status_text = "已設定 Gemini API Key" if api_key else "未設定 (將使用 Groq Key 或內建 AI 語意)"
+            return jsonify({
+                "status": "success",
+                "message": f"Gemini AI 設定已成功儲存！({status_text})",
+                "has_key": bool(api_key)
+            })
+        else:
+            api_key = cfg.get("gemini_api_key") or os.environ.get("GEMINI_API_KEY", "")
+            masked_key = ""
+            if api_key:
+                masked_key = api_key[:6] + "..." + api_key[-4:] if len(api_key) > 10 else "***"
+            return jsonify({
+                "status": "success",
+                "has_key": bool(api_key),
+                "masked_key": masked_key
+            })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/ai-diagnose-bottlenecks", methods=["POST"])
+def api_ai_diagnose_bottlenecks():
+    """
+    AI Timetable Constraints Diagnostician.
+    Analyzes schedule bottlenecks and conflicts to give human-friendly constraint relaxing advice.
+    """
+    try:
+        cfg = load_config_rules()
+        data = load_schedule_data()
+        
+        debug_res = api_data_debug_report().get_json()
+        audit = debug_res.get("audit_summary", {}) if debug_res.get("status") == "success" else {}
+        
+        logic_errors = audit.get("logic_errors", [])
+        unassigned_subjects = audit.get("unassigned_subjects", [])
+        
+        bottleneck_res = api_check_bottlenecks().get_json()
+        teacher_bottlenecks = bottleneck_res.get("teacher_bottlenecks", []) if isinstance(bottleneck_res, dict) else []
+        
+        errs_desc = "\n".join([f"- {e}" for e in logic_errors[:15]]) if logic_errors else "無硬性衝突與邏輯錯誤。"
+        unassigned_desc = ", ".join(unassigned_subjects[:15]) if unassigned_subjects else "無未指派教師之科目。"
+        
+        bottlenecks_desc = ""
+        for b in teacher_bottlenecks[:10]:
+            bottlenecks_desc += f"- 教師【{b.get('teacher')}】: 需排 {b.get('needed')} 節課，但可用空堂僅 {b.get('available_candidates')} 節，剩餘裕度(slack)僅 {b.get('slack')} 節。\n"
+        if not bottlenecks_desc:
+            bottlenecks_desc = "無明顯排課裕度不足之瓶頸教師。"
+            
+        prompt = (
+            "你是一個臺灣中學排課專家 AI 診斷助手。請分析以下排課系統提供的診斷報告數據，"
+            "以專業、親切的繁體中文，為學校排課管理者提出具體的限制調整或排課建議：\n\n"
+            f"=== 1. 硬性衝堂與邏輯錯誤 ===\n{errs_desc}\n\n"
+            f"=== 2. 未指派授課教師科目 ===\n{unassigned_desc}\n\n"
+            f"=== 3. 裕度極度吃緊之教師瓶頸 ===\n{bottlenecks_desc}\n\n"
+            "請給出 3~4 點明確可行的解決方案建議（例如建議放寬某些教師的不排課設定、檢視某科目的專用教室容量限制、或是檢查某些班級的配課是否超額）。"
+        )
+        
+        gemini_key = cfg.get("gemini_api_key") or os.environ.get("GEMINI_API_KEY", "")
+        groq_key = cfg.get("groq_api_key") or os.environ.get("GROQ_API_KEY", "")
+        
+        reply = ""
+        if gemini_key:
+            try:
+                reply = call_gemini_llm_api(prompt, gemini_key, model="gemini-2.5-flash")
+                if reply:
+                    reply = "✨ 【Google Gemini 2.5 Flash 排課診斷建議】\n" + reply
+            except Exception as e:
+                print(f"Fallback to Groq due to Gemini error: {e}")
+                
+        if not reply and groq_key:
+            try:
+                groq_model = cfg.get("groq_model", "llama-3.3-70b-versatile")
+                headers = {
+                    "Authorization": f"Bearer {groq_key}",
+                    "Content-Type": "application/json",
+                    "User-Agent": "Mozilla/5.0"
+                }
+                body = {
+                    "model": groq_model,
+                    "messages": [
+                        {"role": "system", "content": "你是一個臺灣中學排課診斷專家。"},
+                        {"role": "user", "content": prompt}
+                    ],
+                    "temperature": 0.3
+                }
+                import urllib.request, json
+                req = urllib.request.Request("https://api.groq.com/openai/v1/chat/completions", data=json.dumps(body).encode("utf-8"), headers=headers, method="POST")
+                with urllib.request.urlopen(req, timeout=12) as resp:
+                    res_data = json.loads(resp.read().decode("utf-8"))
+                    reply = "⚡ 【Groq Llama 3.3 排課診斷建議】\n" + res_data["choices"][0]["message"]["content"]
+            except Exception as e:
+                print(f"Groq API error: {e}")
+                
+        if not reply:
+            reply = (
+                "解【本機排課限制診斷與建議】\n"
+                "1. 請檢查診斷報告中的「硬性衝堂」教師與班級項目，這是排課系統的硬性約束衝突。\n"
+                "2. 若有裕度極度吃緊的教師（如可用空堂接近所需節數），代表該教師的「不排課時段」限制過於嚴格，建議在基本資料中適度放寬其不排課設定。\n"
+                "3. 請確認是否有科目尚未在「配課管理」中指派任課教師，避免遺漏。"
+            )
+            
+        return jsonify({
+            "status": "success",
+            "diagnose": reply
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": f"AI 診斷失敗: {str(e)}"}), 500
+
+@app.route("/api/export-shinher-excel", methods=["GET"])
+def api_export_shinher_excel():
+    """
+    Export ShinHer compatible excel templates for:
+    - teacher: 教師代碼
+    - class: 班級代碼
+    - subject: 科目代碼
+    - curriculum: 配課資料
+    """
+    try:
+        import pandas as pd
+        import io
+        
+        export_type = request.args.get("type", "teacher")
+        cfg = load_config_rules()
+        data = load_schedule_data()
+        
+        output = io.BytesIO()
+        
+        if export_type == "teacher":
+            teachers = data.get("teachers", [])
+            rows = []
+            for t in teachers:
+                rows.append({
+                    "教師代碼": t.get("code", ""),
+                    "教師姓名": t.get("name", ""),
+                    "教師職務名稱": t.get("role", "專任教師"),
+                    "教師組別": "",
+                    "基本節數": t.get("base_hours", 16),
+                    "人事編號": "",
+                    "電子信箱": "",
+                    "備註": ""
+                })
+            df = pd.DataFrame(rows)
+            sheet_name = "教師代碼匯入"
+            filename = "教師代碼匯入表.xlsx"
+            
+        elif export_type == "class":
+            classes = data.get("classes", [])
+            teachers = data.get("teachers", [])
+            t_name_to_code = {t.get("name"): t.get("code") for t in teachers}
+            
+            rows = []
+            for c in classes:
+                tutor_name = c.get("tutor", "")
+                tutor_code = t_name_to_code.get(tutor_name, "")
+                rows.append({
+                    "班級代碼": c.get("code", ""),
+                    "班級名稱": c.get("name", ""),
+                    "導師代碼": tutor_code,
+                    "導師姓名": tutor_name,
+                    "課諮師代碼": "",
+                    "教室代碼": ""
+                })
+            df = pd.DataFrame(rows)
+            sheet_name = "班級代碼匯入"
+            filename = "班級代碼匯入表.xlsx"
+            
+        elif export_type == "subject":
+            subjects = get_all_subjects_list()
+            rows = []
+            for s in subjects:
+                rows.append({
+                    "科目代碼": s.get("code", ""),
+                    "科目名稱": s.get("name", ""),
+                    "科目簡稱": s.get("name", "")[:6],
+                    "科目英文名稱": ""
+                })
+            df = pd.DataFrame(rows)
+            sheet_name = "科目代碼匯入"
+            filename = "科目代碼匯入表.xlsx"
+            
+        elif export_type == "curriculum":
+            year = cfg.get("year", "114")
+            term = cfg.get("term", "1")
+            res_json = api_get_course_assignments().get_json()
+            assignments = res_json.get("assignments", [])
+            
+            rows = []
+            for c_info in assignments:
+                cc = c_info.get("class_code")
+                cn = c_info.get("class_name")
+                for sub in c_info.get("subjects", []):
+                    rows.append({
+                        "學年": year,
+                        "學期": term,
+                        "班級代碼": cc,
+                        "班級名稱": cn,
+                        "科目代碼": sub.get("subject_code"),
+                        "科目名稱": sub.get("subject_name"),
+                        "教師代碼": sub.get("teacher_code"),
+                        "教師姓名": sub.get("teacher_name"),
+                        "每週節數": sub.get("hours", 1)
+                    })
+            df = pd.DataFrame(rows)
+            sheet_name = "配課資料匯入"
+            filename = "配課資料匯入表.xlsx"
+        else:
+            return jsonify({"status": "error", "message": "不支援的匯出類型"}), 400
+            
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False, sheet_name=sheet_name)
+        output.seek(0)
+        
+        import urllib.parse
+        encoded_filename = urllib.parse.quote(filename)
+        response = send_file(
+            output,
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            as_attachment=True,
+            download_name=filename
+        )
+        response.headers["Content-Disposition"] = f"attachment; filename*=utf-8''{encoded_filename}"
+        return response
+    except Exception as e:
+        return jsonify({"status": "error", "message": f"匯出失敗: {str(e)}"}), 500
+
+# @app.route("/api/ai-chat", methods=["POST"])
+def api_ai_chat_duplicate():
     """Natural Language AI Conversational Assistant Endpoint with Hybrid Groq LLM & Deterministic Engine."""
     try:
         req = request.get_json(silent=True) or {}
@@ -6201,8 +6704,8 @@ def api_smart_rescue_place():
             base_dir = os.path.dirname(os.path.abspath(__file__))
             local_output = os.path.join(base_dir, "School_Schedule_Solved.xlsx")
             pd.DataFrame(solved).to_excel(local_output, index=False)
-        except Exception:
-            pass
+        except Exception as e:
+            log_exception("api_place_schedule:save_solved_excel", e)
 
         return jsonify({
             "status": "success",
@@ -6457,6 +6960,52 @@ def api_export_workload_excel():
         return jsonify({"status": "error", "message": f"匯出失敗: {str(e)}"}), 500
 
 
+@app.route("/api/teacher/preferences", methods=["GET"])
+def api_get_teacher_preferences():
+    try:
+        teacher_code = request.args.get("code", "").strip()
+        if teacher_code.isdigit() and len(teacher_code) < 4:
+            teacher_code = teacher_code.zfill(4)
+        cfg = load_config_rules()
+        prefs = cfg.get("teacher_preferences", {}).get(teacher_code, {})
+        return jsonify({"status": "success", "preferences": prefs})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/teacher/preferences", methods=["POST"])
+def api_save_teacher_preferences():
+    try:
+        req = request.get_json() or {}
+        teacher_code = req.get("teacher_code", "").strip()
+        if teacher_code.isdigit() and len(teacher_code) < 4:
+            teacher_code = teacher_code.zfill(4)
+        if not teacher_code:
+            return jsonify({"status": "error", "message": "教師代碼必填"}), 400
+        
+        cfg = load_config_rules()
+        if "teacher_preferences" not in cfg:
+            cfg["teacher_preferences"] = {}
+            
+        cfg["teacher_preferences"][teacher_code] = {
+            "style": req.get("style", "none"),
+            "avoid_split_shifts": bool(req.get("avoid_split_shifts", False)),
+            "max_daily_periods": req.get("max_daily_periods"),
+            "avoid_first_last": bool(req.get("avoid_first_last", False)),
+            "blocked_slots": req.get("blocked_slots", []),
+            "preferred_slots": req.get("preferred_slots", [])
+        }
+        
+        save_config_rules(cfg)
+        return jsonify({"status": "success", "message": "排課偏好申報已儲存！"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/teacher-preference")
+def teacher_preference_page():
+    return render_template("teacher_preference.html")
+
+
 if __name__ == "__main__":
 
     if len(sys.argv) > 1 and ("desktop" in sys.argv[1].lower() or "--desktop" in sys.argv[1].lower()):
@@ -6467,7 +7016,7 @@ if __name__ == "__main__":
         port = int(os.environ.get("PORT", 5000))
         local_ip = get_local_ip()
         print(f"\n==================================================")
-        print(f" [系統] 臺南市立土城高級中學課表系統已啟動 (Waitress WSGI Server)")
+        print(f" [系統] 智慧排課系統已啟動 (Waitress WSGI Server)")
         print(f" [網址] 本機瀏覽網址: http://127.0.0.1:{port}")
         print(f" [局域網] 局域網/手機連線網址: http://{local_ip}:{port}")
         print(f"==================================================\n")
