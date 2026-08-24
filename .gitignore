@@ -5,3 +5,6 @@ __pycache__/
 env/
 venv/
 *.xlsx
+data/
+dist_release/
+build_release/
