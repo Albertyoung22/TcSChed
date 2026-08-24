@@ -35,7 +35,7 @@
             <div class="logo">
                 <i class="fa-solid fa-calendar-days logo-icon"></i>
                 <div class="logo-text">
-                    <h1 id="appHeaderTitle">臺南市立土城高級中學</h1>
+                    <h1 id="appHeaderTitle">學校名稱</h1>
 
                     <span class="sub-text" id="appHeaderSubtext">👨‍🏫 全校課表個人查詢門戶 (唯讀瀏覽對照)</span>
                 </div>
@@ -57,17 +57,11 @@
                 <button id="substituteModalBtn" class="solver-panel-btn" style="background: rgba(16, 185, 129, 0.15); border-color: rgba(16, 185, 129, 0.3); color: #34d399; padding: 5px 12px; font-size: 0.85rem; height: 36px;" title="辦理教師調代課登記與智慧推薦">
                     <i class="fa-solid fa-user-clock"></i> 調代課管理
                 </button>
-                <button id="examModalBtn" class="solver-panel-btn" onclick="document.getElementById('examInvigilationModal').style.display='flex'" style="background: rgba(245, 158, 11, 0.15); border-color: rgba(245, 158, 11, 0.3); color: #fbbf24; padding: 5px 12px; font-size: 0.85rem; height: 36px;" title="開啟全校段考監考課表矩陣與 AI 自動監考排程">
-                    <i class="fa-solid fa-clipboard-user"></i> 段考監考排程
-                </button>
-                <button id="healthCheckBtn" class="solver-panel-btn" onclick="openDataDebugModal()" style="background: rgba(236, 72, 153, 0.15); border-color: rgba(236, 72, 153, 0.3); color: #f472b6; padding: 5px 12px; font-size: 0.85rem; height: 36px;" title="開啟州董式全校排課資料邏輯與衝突除錯稽核">
-                    <i class="fa-solid fa-bug"></i> 資料邏輯除錯
-                </button>
                 <a href="/teacher" target="_blank" id="teacherPortalBtn" class="solver-panel-btn" style="background: rgba(168, 85, 247, 0.15); border-color: rgba(168, 85, 247, 0.3); color: #c084fc; padding: 5px 12px; font-size: 0.85rem; height: 36px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;" title="開啟專屬『教師課表個人查詢門戶』網頁">
                     <i class="fa-solid fa-chalkboard-user"></i> 教師課表專頁
                 </a>
-                <a href="/" target="_blank" id="webBrowserBtn" class="solver-panel-btn" style="background: rgba(14, 165, 233, 0.15); border-color: rgba(14, 165, 233, 0.3); color: #38bdf8; padding: 5px 12px; font-size: 0.85rem; height: 36px; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;" title="在獨立瀏覽器分頁開啟系統 Web 版">
-                    <i class="fa-solid fa-globe"></i> 瀏覽器網頁版
+                <a id="teacherPreferenceBtn" href="/teacher-preference" target="_blank" class="solver-panel-btn" style="background: rgba(236, 72, 153, 0.15); border-color: rgba(236, 72, 153, 0.3); color: #f472b6; padding: 5px 12px; font-size: 0.85rem; height: 36px; text-decoration: none; display: inline-flex; align-items: center;" title="教師排課志願與偏好申報">
+                    <i class="fa-solid fa-user-gear"></i> 教師排課志願與偏好申報
                 </a>
 
                 <div class="solver-panel-btn" id="headerSemesterBox" style="background: rgba(168, 85, 247, 0.15); border: 1px solid rgba(168, 85, 247, 0.3); color: #c084fc; display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; height: 36px;" title="切換目前學期課表檔案">
@@ -210,7 +204,7 @@
 
             <!-- Print Header (Hidden on screen, visible only when printing) -->
             <div class="print-header only-print">
-                <div class="print-school-title">臺南市立土城高級中學 114 學年度第一學期 正式課表</div>
+                <div class="print-school-title">學校名稱 學期正式課表</div>
                 <div class="print-meta-bar">
                     <div class="meta-left">
                         <span id="printScheduleTitle" class="print-target-name">課表</span>
@@ -270,7 +264,7 @@
         
         <!-- Footer -->
         <footer class="app-footer no-print">
-            <p>© 2026 台南市立土城高中. All Rights Reserved. Designed by Antigravity AI.</p>
+            <p>© 2026 智慧排課系統. All Rights Reserved.</p>
         </footer>
     </div>
 
@@ -539,14 +533,14 @@
                                 <label style="display: block; font-weight: 500; margin-bottom: 6px; color: #38bdf8;">
                                     <i class="fa-solid fa-graduation-cap"></i> 學校中文全稱：
                                 </label>
-                                <input type="text" id="schoolNameInput" placeholder="例如: 臺南市立土城高級中學" style="width: 100%; padding: 8px 12px; border-radius: 6px; background: #ffffff; color: #1d1d1f; border: 1px solid var(--border-color);">
+                                <input type="text" id="schoolNameInput" placeholder="例如: 學校名稱" style="width: 100%; padding: 8px 12px; border-radius: 6px; background: #ffffff; color: #1d1d1f; border: 1px solid var(--border-color);">
                             </div>
 
                             <div style="flex: 1; min-width: 280px;">
                                 <label style="display: block; font-weight: 500; margin-bottom: 6px; color: var(--text-secondary);">
                                     <i class="fa-solid fa-globe"></i> 學校英文名稱 / 說明：
                                 </label>
-                                <input type="text" id="schoolSubtitleInput" placeholder="例如: Tainan Municipal Tucheng High School" style="width: 100%; padding: 8px 12px; border-radius: 6px; background: #ffffff; color: #1d1d1f; border: 1px solid var(--border-color);">
+                                <input type="text" id="schoolSubtitleInput" placeholder="例如: School Timetable System" style="width: 100%; padding: 8px 12px; border-radius: 6px; background: #ffffff; color: #1d1d1f; border: 1px solid var(--border-color);">
                             </div>
                         </div>
 
@@ -570,16 +564,16 @@
 
                             <div style="flex: 1; min-width: 280px;">
                                 <label style="display: block; font-weight: 500; margin-bottom: 6px; color: #fbbf24;">
-                                    <i class="fa-solid fa-folder-open"></i> 欣河 / SPV2000 排課 DBF 資料庫搜尋路徑：
+                                    <i class="fa-solid fa-folder-open"></i> 學校合法匯出之 DBF 備份資料路徑：
                                 </label>
                                 <div style="display: flex; gap: 8px;">
-                                    <input type="text" id="dbfSearchDirInput" placeholder="點選右側按鈕選擇欣河 DBF 資料夾，或手動輸入" style="flex: 1; padding: 8px 12px; border-radius: 6px; background: #ffffff; color: #1d1d1f; border: 1px solid var(--border-color);">
+                                    <input type="text" id="dbfSearchDirInput" placeholder="選擇學校合法匯出的 DBF 備份資料夾，或手動輸入" style="flex: 1; padding: 8px 12px; border-radius: 6px; background: #ffffff; color: #1d1d1f; border: 1px solid var(--border-color);">
                                     <button type="button" id="browseDbfDirBtn" class="solver-action-btn primary-btn" style="padding: 8px 14px; font-size: 0.85rem; background: #0284c7; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; cursor: pointer;">
                                         <i class="fa-solid fa-folder-tree"></i> 瀏覽選擇資料夾...
                                     </button>
                                 </div>
                                 <div style="font-size: 0.8rem; color: #475569; margin-top: 6px; line-height: 1.4;">
-                                    💡 <strong>指示說明</strong>：點擊「瀏覽選擇資料夾」可選擇欣河排課系統備份資料夾（含 <code style="color: #fbbf24;">class.dbf</code>、<code style="color: #fbbf24;">teacher.dbf</code>、<code style="color: #fbbf24;">claspv.dbf</code> 等），或選取解壓縮後的 <code style="color: #38bdf8;">.wdb</code> 資料夾。
+                                    💡 <strong>資料使用提醒</strong>：請選擇學校依法取得並有權使用的 DBF 備份資料夾（含 <code style="color: #fbbf24;">class.dbf</code>、<code style="color: #fbbf24;">teacher.dbf</code>、<code style="color: #fbbf24;">claspv.dbf</code> 等）。本系統只讀取資料，不會修改原始備份檔。
                                 </div>
                             </div>
                         </div>
@@ -2197,7 +2191,118 @@
         </div>
     </div>
 
+    <!-- Teacher Preferences Declarations Modal -->
+    <div id="teacherPreferenceModal" class="modal-overlay" style="display: none; z-index: 100000;">
+        <div class="modal-content glass" style="max-width: 760px; width: 94vw; padding: 24px; border-radius: 16px; border: 1px solid rgba(236, 72, 153, 0.3); box-shadow: 0 20px 50px rgba(0,0,0,0.6);">
+            <div class="modal-header" style="padding: 0 0 16px 0; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; color: #0f172a; font-size: 1.15rem; display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-user-gear" style="color: #ec4899;"></i> <span>教師排課志願與偏好申報</span>
+                </h3>
+                <div class="modal-header-actions">
+                    <button class="maximize-modal-btn" onclick="toggleModalMaximize('teacherPreferenceModal')" title="全螢幕最大化展開/還原視窗">
+                        <i class="fa-solid fa-expand"></i>
+                    </button>
+                    <button class="close-modal-btn" onclick="closeTeacherPreferenceModal()">&times;</button>
+                </div>
+            </div>
+            <div class="modal-body" style="padding: 16px 0; display: flex; flex-direction: column; gap: 16px; max-height: 70vh; overflow-y: auto;">
+                <div style="display: flex; gap: 14px; align-items: center; background: rgba(0,0,0,0.02); padding: 12px; border-radius: 10px;">
+                    <label style="font-size: 0.9rem; color: #334155; font-weight: bold; flex: none;">申報教師：</label>
+                    <select id="prefTeacherSelect" onchange="onPrefTeacherChanged()" style="padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border-color); font-size: 0.9rem; min-width: 180px; background: #ffffff; color: #1d1d1f; outline: none;"></select>
+                    <span style="font-size: 0.8rem; color: #64748b;">(請先選擇您的名字以載入目前的偏好)</span>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                    <!-- Left: Parameters -->
+                    <div style="display: flex; flex-direction: column; gap: 12px; background: rgba(236, 72, 153, 0.02); padding: 14px; border-radius: 12px; border: 1px solid rgba(236, 72, 153, 0.1);">
+                        <h4 style="margin: 0 0 6px 0; color: #db2777; font-size: 0.9rem;"><i class="fa-solid fa-sliders"></i> 排課風格與限制</h4>
+                        
+                        <div>
+                            <label style="font-size: 0.85rem; color: #475569; font-weight: 600; margin-bottom: 6px; display: block;">排課風格偏好：</label>
+                            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                                <label style="display: inline-flex; align-items: center; gap: 4px; font-size: 0.85rem; cursor: pointer; color: #1d1d1f;">
+                                    <input type="radio" name="prefStyle" value="none" checked style="accent-color: #db2777;"> 無特定偏好
+                                </label>
+                                <label style="display: inline-flex; align-items: center; gap: 4px; font-size: 0.85rem; cursor: pointer; color: #1d1d1f;" title="課與課之間盡量沒有空堂，方便集中排課">
+                                    <input type="radio" name="prefStyle" value="compact" style="accent-color: #db2777;"> 集中排課 (空堂最少)
+                                </label>
+                                <label style="display: inline-flex; align-items: center; gap: 4px; font-size: 0.85rem; cursor: pointer; color: #1d1d1f;" title="每天課數均勻，避免某天連續上課過多">
+                                    <input type="radio" name="prefStyle" value="spread" style="accent-color: #db2777;"> 均勻分散 (避免滿堂)
+                                </label>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 6px; border-top: 1px dashed rgba(0,0,0,0.06); padding-top: 10px;">
+                            <label style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem; cursor: pointer; color: #1d1d1f;">
+                                <input type="checkbox" id="prefAvoidFirstLast" style="width: 15px; height: 15px; accent-color: #db2777;"> 避開首尾節 (不排第一節與第八節)
+                            </label>
+                            <label style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem; cursor: pointer; color: #1d1d1f;">
+                                <input type="checkbox" id="prefAvoidSplitShifts" style="width: 15px; height: 15px; accent-color: #db2777;"> 避開天地課 (同一天不排第一節與第八節)
+                            </label>
+                        </div>
+
+                        <div style="margin-top: 6px; border-top: 1px dashed rgba(0,0,0,0.06); padding-top: 10px; display: flex; align-items: center; gap: 10px;">
+                            <label style="font-size: 0.85rem; color: #475569; font-weight: 600;" for="prefMaxDaily">每日授課節數上限：</label>
+                            <input type="number" id="prefMaxDaily" min="1" max="8" style="width: 70px; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border-color); background: #ffffff; color: #1d1d1f; text-align: center; font-size: 0.85rem;" placeholder="不限">
+                            <span style="font-size: 0.8rem; color: #64748b;">節</span>
+                        </div>
+                    </div>
+
+                    <!-- Right: Instructions and state legend -->
+                    <div style="background: rgba(0, 113, 227, 0.02); padding: 14px; border-radius: 12px; border: 1px solid rgba(0, 113, 227, 0.1); display: flex; flex-direction: column; gap: 8px;">
+                        <h4 style="margin: 0 0 4px 0; color: #0071e3; font-size: 0.9rem;"><i class="fa-solid fa-circle-question"></i> 時段志願點選說明</h4>
+                        <p style="margin: 0; font-size: 0.8rem; color: #475569; line-height: 1.4;">
+                            請直接點擊右方/下方的課表方格來循環切換該時段意願：
+                        </p>
+                        <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 4px; font-size: 0.8rem;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <div style="width: 24px; height: 18px; background: #ffffff; border: 1px solid rgba(0,0,0,0.15); border-radius: 4px;"></div>
+                                <span style="font-weight: bold; color: #334155;">無偏好 (可正常排課)</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <div style="width: 24px; height: 18px; background: #fee2e2; border: 1px solid #ef4444; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #ef4444; font-size: 0.65rem;">🔴</div>
+                                <span style="font-weight: bold; color: #ef4444;">絕對禁排 (有要事絕對無法排課)</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <div style="width: 24px; height: 18px; background: #dcfce7; border: 1px solid #22c55e; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #22c55e; font-size: 0.65rem;">🟢</div>
+                                <span style="font-weight: bold; color: #22c55e;">優先排課 (偏好將課排在此時段)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Grid Calendar Selector -->
+                <div style="margin-top: 10px;">
+                    <label style="font-size: 0.88rem; color: #334155; font-weight: bold; display: block; margin-bottom: 8px;">
+                        <i class="fa-solid fa-calendar-check"></i> 每週排課時段志願申報表：
+                    </label>
+                    <table class="schedule-table" style="width: 100%; border-collapse: collapse; font-size: 0.85rem; user-select: none;">
+                        <thead>
+                            <tr style="background: rgba(0,0,0,0.03);">
+                                <th style="width: 12%; padding: 8px; text-align: center; border: 1px solid var(--border-color);">節次</th>
+                                <th style="width: 17.6%; padding: 8px; text-align: center; border: 1px solid var(--border-color);">星期一</th>
+                                <th style="width: 17.6%; padding: 8px; text-align: center; border: 1px solid var(--border-color);">星期二</th>
+                                <th style="width: 17.6%; padding: 8px; text-align: center; border: 1px solid var(--border-color);">星期三</th>
+                                <th style="width: 17.6%; padding: 8px; text-align: center; border: 1px solid var(--border-color);">星期四</th>
+                                <th style="width: 17.6%; padding: 8px; text-align: center; border: 1px solid var(--border-color);">星期五</th>
+                            </tr>
+                        </thead>
+                        <tbody id="prefGridBody">
+                            <!-- JS will generate 8 rows -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer" style="padding-top: 16px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 8px;">
+                <button type="button" onclick="closeTeacherPreferenceModal()" style="background: transparent; border: 1px solid var(--border-color); color: #475569; padding: 8px 18px; border-radius: 8px; cursor: pointer; font-size: 0.88rem;">取消</button>
+                <button type="button" onclick="saveTeacherPreferences()" style="background: linear-gradient(135deg, #ec4899, #db2777); border: none; color: #ffffff; padding: 8px 24px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.88rem; box-shadow: 0 4px 12px rgba(236,72,153,0.3);">
+                    <i class="fa-solid fa-cloud-arrow-up"></i> 儲存提交申報
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- JS Scripts with Cache-Buster -->
-    <script src="/static/js/app.js?v=20260820_v340"></script>
+    <script src="/static/js/app.js?v=20260823_v3"></script>
 </body>
 </html>
