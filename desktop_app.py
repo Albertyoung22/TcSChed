@@ -79,6 +79,8 @@ except Exception:
 user_data_dir = os.path.join(tempfile.gettempdir(), f"tucheng_wv2_{os.getpid()}")
 os.environ["WEBVIEW2_USER_DATA_FOLDER"] = user_data_dir
 
+
+
 from app import app, load_schedule_data
 
 def get_free_port():
@@ -111,7 +113,7 @@ def run_server(host, port):
     try:
         from waitress import serve
         print(f"\n==================================================")
-        print(f" [系統] 舟歌AI排課系統已啟動 (Waitress WSGI)")
+        print(f" [系統] 智慧排課系統已啟動 (Waitress WSGI)")
         print(f" [網址] 本機瀏覽網址: http://127.0.0.1:{port}")
         print(f" [局域網] 手機/跨裝置連線網址: http://{local_ip}:{port}")
         print(f"==================================================\n")
@@ -147,10 +149,25 @@ def launch_standalone_window(url, title):
     if browser_exe:
         try:
             print(f"[資訊] 使用獨立視窗模式開啟: {browser_exe}")
-            proc = subprocess.Popen([browser_exe, f"--app={url}", f"--window-size=1400,900"])
-            # Keep main process and WSGI server thread running
-            while True:
+            chrome_user_data = os.path.join(tempfile.gettempdir(), f"tucheng_chrome_{os.getpid()}")
+            proc = subprocess.Popen([
+                browser_exe, 
+                f"--app={url}", 
+                f"--window-size=1400,900",
+                f"--user-data-dir={chrome_user_data}"
+            ])
+            # Keep the app alive while the browser window is open.
+            start_time = time.time()
+            while proc.poll() is None:
                 time.sleep(1)
+            
+            # If the process exited in less than 3 seconds, it was likely delegated
+            # to an existing Chrome/Edge process. Keep the server alive so the user can browse it.
+            if time.time() - start_time < 3:
+                print("[資訊] 瀏覽器視窗已併入現有的瀏覽器程序中。")
+                print("[資訊] 伺服器將持續在背景運作，請勿關閉此視窗。按 Ctrl+C 可結束程式。")
+                while True:
+                    time.sleep(1)
             return True
         except Exception as e:
             print(f"[警告] 獨立視窗模式啟動例外: {e}")
@@ -218,7 +235,7 @@ def main():
     lan_url = f"http://{local_ip}:{port}" if local_ip and local_ip != "127.0.0.1" else url
     print(f"[資訊] 系統成功啟動！本機瀏覽網址: {url}")
     print(f"[資訊] 【真實局域網 IP 連線網址】: {lan_url}")
-    print(f"[資訊] 教師個人門戶網頁: {lan_url}/teacher")
+    print(f"[資訊] 教師課表專頁: {lan_url}/teacher")
     print(f"[資訊] 系統亮點與 AI 導覽 Showcase: {lan_url}/showcase")
     cfg = {}
     try:
@@ -227,8 +244,8 @@ def main():
                 cfg = json.load(f)
     except Exception:
         pass
-    school_name = cfg.get("school_name", "高級中學")
-    title = f"舟歌AI排課 - {school_name}"
+    school_name = cfg.get("school_name", "學校名稱")
+    title = f"智慧排課系統 - {school_name}"
 
     launch_standalone_window(url, title)
 
