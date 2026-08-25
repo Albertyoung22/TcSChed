@@ -560,14 +560,14 @@ function renderScheduleGrid(type, code, slots) {
     let subtitle = "";
 
     if (type === 'class') {
-        const cls = metadata.classes.find(c => c.code === code);
+        const cls = metadata.classes ? metadata.classes.find(c => c.code === code || c.name === code || String(c.code) === String(code)) : null;
         title = `${cls ? cls.name : code} 班級課表`;
-        subtitle = cls && cls.tutor ? `導師：${cls.tutor}` : "無導師設定";
+        subtitle = cls && cls.tutor ? `導師：${cls.tutor}` : "";
         printScheduleTitle.textContent = title;
         printTutorInfo.textContent = subtitle;
         document.title = `${cls ? cls.name : code} 課表 - 智慧排課查詢`;
     } else if (type === 'teacher') {
-        const t = metadata.teachers.find(x => x.code === code);
+        const t = metadata.teachers ? metadata.teachers.find(x => x.code === code || x.name === code || String(x.code) === String(code)) : null;
         title = `${t ? t.name : code} 老師課表`;
         subtitle = t && t.role ? `職務：${t.role}` : "";
         printScheduleTitle.textContent = title;
