@@ -1429,11 +1429,25 @@ def api_schedule_teacher(teacher_code):
 def api_schedule_room(room_code):
     try:
         rq = str(room_code).strip()
+        data = load_schedule_data()
+        classrooms = data.get("classrooms", []) if isinstance(data, dict) else []
+        
+        # 建立代碼與名稱反查
+        matched_names = set()
+        matched_names.add(rq)
+        for r in classrooms:
+            rcode = str(r.get("code", "")).strip() if isinstance(r, dict) else str(r)
+            rname = str(r.get("name", "")).strip() if isinstance(r, dict) else str(r)
+            if rq == rcode or rq == rname or (rcode and rq == rcode.lstrip("0")) or (rq and rq.isdigit() and rcode and int(float(rq)) == int(float(rcode)) if rcode.replace(".", "").isdigit() else False):
+                if rname:
+                    matched_names.add(rname)
+
         solved = get_current_solved_schedules()
         filtered = []
         for s in solved:
             rname = str(s.get("room_name", "")).strip()
-            if rq == rname or (rq and rq in rname) or (rname and rname in rq):
+            rcode = str(s.get("room_code", "")).strip()
+            if rname in matched_names or rcode == rq or (rname and (rq == rname or rq in rname or rname in rq)):
                 filtered.append(s)
         return jsonify(filtered)
     except Exception as e:
