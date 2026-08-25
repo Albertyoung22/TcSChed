@@ -1,0 +1,73 @@
+{
+  "semester_id": "115-1",
+  "school_name": "學校名稱",
+  "year": "115",
+  "term": "1",
+  "updated_at": "2026-08-25 21:01:47",
+  "config_rules": {
+    "school_name": "學校名稱",
+    "school_subtitle": "Senior High School",
+    "year": "114",
+    "term": "1",
+    "dbf_search_dir": "",
+    "period_times": {
+      "1": {
+        "name": "第1節",
+        "time": "08:10-08:55"
+      },
+      "2": {
+        "name": "第2節",
+        "time": "09:05-09:50"
+      },
+      "3": {
+        "name": "第3節",
+        "time": "10:10-10:55"
+      },
+      "4": {
+        "name": "第4節",
+        "time": "11:05-11:50"
+      },
+      "5": {
+        "name": "第5節",
+        "time": "13:10-13:55"
+      },
+      "6": {
+        "name": "第6節",
+        "time": "14:05-14:50"
+      },
+      "7": {
+        "name": "第7節",
+        "time": "15:05-15:50"
+      },
+      "8": {
+        "name": "第8節",
+        "time": "16:00-16:45"
+      }
+    },
+    "custom_assignments": {},
+    "deleted_assignments": [],
+    "custom_no_teach": {},
+    "custom_no_sub": {},
+    "custom_simultaneous_groups": [],
+    "venue_capacities": {},
+    "subject_venue_mappings": [],
+    "consecutive_subjects": [
+      "104",
+      "105",
+      "110"
+    ],
+    "class_consecutive_rules": [],
+    "solved_schedules": [],
+    "weights": {
+      "spreading_weight": 15,
+      "consecutive_weight": 600,
+      "no_teach_penalty": 300,
+      "no_sub_penalty": 300,
+      "morning_pref_weight": 50,
+      "pe_noon_penalty_weight": 100
+    },
+    "clean_mode": false,
+    "active_semester_id": "115-1"
+  },
+  "solved_schedules": []
+}
