@@ -405,7 +405,7 @@ function renderQuickSelectGrids() {
             const item = document.createElement('a');
             const rcode = typeof room === 'string' ? room : (room.code || room.name);
             const rname = typeof room === 'string' ? room : (room.name || room.code);
-            item.href = `#room/${encodeURIComponent(rcode)}`;
+            item.href = `#room/${encodeURIComponent(rname || rcode)}`;
             item.className = 'grid-item';
             item.innerHTML = `${rname}`;
             roomsGrid.appendChild(item);
