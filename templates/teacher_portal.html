@@ -76,13 +76,12 @@
             </div>
         </header>
 
-
         <!-- Search and Navigation Section -->
         <section class="controls-section no-print">
             <div class="search-card glass">
                 <div class="search-box-wrapper">
                     <i class="fa-solid fa-magnifying-glass search-icon"></i>
-                    <input type="text" id="searchInput" placeholder="輸入班級、教師姓名或教室進行搜尋..." autocomplete="off">
+                    <input type="text" id="searchInput" placeholder="輸入教師姓名、班級或教室進行搜尋..." autocomplete="off">
                     <button id="clearSearchBtn" class="clear-btn" style="display: none;">
                         <i class="fa-solid fa-xmark"></i>
                     </button>
@@ -91,11 +90,11 @@
                 </div>
                 
                 <div class="tab-container">
-                    <button class="tab-btn active" data-tab="class" id="tabClassBtn">
-                        <i class="fa-solid fa-graduation-cap"></i> 班級課表
-                    </button>
-                    <button class="tab-btn" data-tab="teacher" id="tabTeacherBtn">
+                    <button class="tab-btn active" data-tab="teacher" id="tabTeacherBtn">
                         <i class="fa-solid fa-chalkboard-user"></i> 教師課表
+                    </button>
+                    <button class="tab-btn" data-tab="class" id="tabClassBtn">
+                        <i class="fa-solid fa-graduation-cap"></i> 班級課表
                     </button>
                     <button class="tab-btn" data-tab="room" id="tabRoomBtn">
                         <i class="fa-solid fa-school"></i> 教室課表
@@ -107,21 +106,21 @@
         <!-- Quick Select Grid -->
         <section class="quick-select-section no-print" id="quickSelectSection">
             <div class="section-title">
-                <h2><i class="fa-solid fa-bolt"></i> 快速選擇</h2>
+                <h2><i class="fa-solid fa-chalkboard-user"></i> 👨‍🏫 全校教師課表快速選擇</h2>
             </div>
             
             <div class="quick-grid-wrapper glass">
+                <!-- Teacher List Container (預設為 Active) -->
+                <div id="teacherQuickContainer" class="quick-container active">
+                    <div class="quick-grid teacher-grid" id="teachersGrid"></div>
+                </div>
+
                 <!-- Class Tabs Subsections (Junior High vs High School) -->
-                <div id="classQuickContainer" class="quick-container active">
+                <div id="classQuickContainer" class="quick-container">
                     <div class="group-title">高中部</div>
                     <div class="quick-grid" id="highSchoolGrid"></div>
                     <div class="group-title">國中部</div>
                     <div class="quick-grid" id="juniorHighGrid"></div>
-                </div>
-                
-                <!-- Teacher List Container -->
-                <div id="teacherQuickContainer" class="quick-container">
-                    <div class="quick-grid teacher-grid" id="teachersGrid"></div>
                 </div>
 
                 <!-- Classroom List Container -->
@@ -2303,6 +2302,6 @@
     </div>
 
     <!-- JS Scripts with Cache-Buster -->
-    <script src="/static/js/app.js?v=20260823_v3"></script>
+    <script src="/static/js/app.js?v=20260825_v10"></script>
 </body>
 </html>
