@@ -5705,9 +5705,7 @@ def handle_500_error(e):
 
 
 
-@app.route("/teacher")
-def route_teacher_portal():
-    return render_template("teacher_portal.html")
+
 
 def generate_default_6class_schedule():
     """Generates a default collision-free 6-class schedule for 101, 201, 301, 701, 801, 901."""
