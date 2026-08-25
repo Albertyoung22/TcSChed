@@ -1300,6 +1300,11 @@ body {
     overflow-y: auto !important;
 }
 
+.modal-overlay.active,
+.modal-overlay[style*="display: flex"] {
+    display: flex !important;
+}
+
 .modal-content {
     width: 94vw !important;
     max-width: 1560px !important;
