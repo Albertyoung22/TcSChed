@@ -58,6 +58,12 @@
                     <i class="fa-solid fa-clipboard-user" style="color: #d97706;"></i> 段考監考
                 </button>
 
+                <!-- Direct Xinhe Excel File Picker Input -->
+                <input type="file" id="directXinheFileInput" accept=".xlsx,.xls,.xlsm" style="display: none;" onchange="uploadXinheDirectly(this)">
+                <button id="importXinheModalBtn" type="button" class="solver-panel-btn" onclick="document.getElementById('directXinheFileInput').click()" style="background: linear-gradient(135deg, #0284c7, #0369a1); border: none; color: #ffffff; padding: 6px 14px; font-size: 0.86rem; height: 36px; font-weight: 800; box-shadow: 0 2px 8px rgba(2,132,199,0.35); display: inline-flex; align-items: center; gap: 6px; cursor: pointer;" title="點擊直接選擇欣河排課系統匯出的配課 Excel 檔案 (例如 預設排課資料匯出_20260825.xlsx)">
+                    <i class="fa-solid fa-file-excel" style="color: #7dd3fc;"></i> 📥 匯入欣河課表
+                </button>
+
                 <div class="solver-panel-btn" style="background: #ffffff; border: 1.5px solid #059669; color: #047857; display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; height: 36px;" title="匯出課表與行政資料表">
                     <i class="fa-solid fa-file-excel" style="color: #059669;"></i>
                     <select id="shinherExportSelect" onchange="exportShinHerExcel(this.value)" style="background: transparent; color: #047857; border: none; font-weight: 700; cursor: pointer; outline: none; font-size: 0.84rem; font-family: inherit;">
@@ -382,6 +388,9 @@
             <div class="modal-body">
                 <div class="rules-tab-bar">
                     <!-- AI & Assistant -->
+                    <button id="tabRuleXinheBtn" class="rule-tab-btn" data-ruletab="xinhe" style="background: rgba(2,132,199,0.08); border-left: 3px solid #0284c7; color: #0369a1; font-weight: 800;" title="📥 欣河排課 Excel 匯入：直接匯入欣河雲端排課 Excel 檔案">
+                        <i class="fa-solid fa-file-excel" style="color: #0284c7;"></i> 📥 匯入欣河課表
+                    </button>
                     <button id="tabRuleAiCenterBtn" class="rule-tab-btn active" data-ruletab="aicenter">
                         <i class="fa-solid fa-wand-magic-sparkles" style="color: #fbbf24;"></i> 🚀 AI 智慧建置中心
                     </button>
@@ -442,6 +451,55 @@
                 </div>
 
 
+
+                <!-- Tab 0: 匯入欣河雲端排課 Excel -->
+                <div id="ruleTabXinhe" class="rule-tab-content" style="display: none;">
+                    <div style="background: rgba(2, 132, 199, 0.05); border: 2px solid rgba(2, 132, 199, 0.3); padding: 18px 22px; border-radius: 14px; margin-bottom: 18px;">
+                        <h3 style="margin: 0 0 6px 0; color: #0284c7; font-size: 1.15rem; display: flex; align-items: center; gap: 8px;">
+                            <i class="fa-solid fa-file-excel"></i> 欣河雲端排課 Excel 匯入與管理
+                        </h3>
+                        <p style="margin: 0; font-size: 0.85rem; color: #475569; line-height: 1.5;">
+                            若您使用的是欣河雲端排課系統，直接在此上傳匯出的 Excel 配課檔（例如 <code>預設排課資料匯出_20260825.xlsx</code>），系統將自動解析全校班級、教師與 810 節排課資料並即時生效！
+                        </p>
+                    </div>
+
+                    <!-- Status Card -->
+                    <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div id="xinheTabStatusIcon" style="width: 44px; height: 44px; border-radius: 10px; background: #e0f2fe; color: #0284c7; display: flex; align-items: center; justify-content: center; font-size: 1.3rem;">
+                                <i class="fa-solid fa-database"></i>
+                            </div>
+                            <div>
+                                <div style="font-weight: 800; font-size: 1rem; color: #0f172a;" id="xinheTabStatusTitle">偵測中...</div>
+                                <div style="font-size: 0.82rem; color: #64748b;" id="xinheTabStatusSub">載入狀態詳情中</div>
+                            </div>
+                        </div>
+                        <div id="xinheTabStatusActionBox"></div>
+                    </div>
+
+                    <!-- Drop Zone -->
+                    <div onclick="document.getElementById('xinheTabFileInput').click()" style="border: 2.5px dashed #38bdf8; background: rgba(56, 189, 248, 0.03); border-radius: 14px; padding: 36px 20px; text-align: center; cursor: pointer; transition: all .2s; margin-bottom: 18px;">
+                        <input type="file" id="xinheTabFileInput" accept=".xlsx,.xls,.xlsm" style="display: none;" onchange="onXinheTabFileChosen(this)">
+                        <div style="font-size: 2.8rem; color: #0284c7; margin-bottom: 10px;">
+                            <i class="fa-solid fa-cloud-arrow-up"></i>
+                        </div>
+                        <div style="font-size: 1.05rem; font-weight: 800; color: #0f172a; margin-bottom: 6px;">
+                            點擊此處選取 Excel 檔案，或拖曳檔案至此
+                        </div>
+                        <div style="font-size: 0.85rem; color: #64748b;">
+                            支援 <code>.xlsx</code> / <code>.xls</code> 格式（欣河雲端配課匯出檔）
+                        </div>
+                        <div id="xinheTabSelectedFileBox" style="display: none; margin-top: 14px; padding: 10px 16px; background: #ffffff; border-radius: 8px; border: 1.5px solid #bae6fd; font-size: 0.9rem; color: #0369a1; font-weight: 700; display: inline-flex; align-items: center; gap: 8px;">
+                            <i class="fa-solid fa-file-excel"></i> <span id="xinheTabSelectedFileName">檔名</span> <span id="xinheTabSelectedFileSize" style="color: #64748b; font-weight: normal;">(0 KB)</span>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                        <button type="button" id="xinheTabSubmitBtn" onclick="submitXinheTabUpload()" disabled style="background: linear-gradient(135deg, #0284c7, #0369a1); border: none; color: #ffffff; padding: 10px 28px; border-radius: 8px; cursor: not-allowed; opacity: 0.6; font-weight: bold; font-size: 0.92rem; box-shadow: 0 4px 12px rgba(2,132,199,0.3); display: inline-flex; align-items: center; gap: 8px;">
+                            <i class="fa-solid fa-bolt"></i> <span>確認匯入並更新全校課表</span>
+                        </button>
+                    </div>
+                </div>
 
                 <!-- Tab 1: 全校 AI 智慧預設與一鍵設定 Center -->
                 <div id="ruleTabAiCenter" class="rule-tab-content" style="display: block;">
@@ -2342,6 +2400,205 @@
                 </div>
             </div>
             <div class="modal-body" style="max-height: 55vh; overflow-y: auto; padding: 20px 24px;">
+        </div>
+
+        <!-- Suggestion Quick Chips -->
+        <div style="padding: 6px 12px; background: #ffffff; border-top: 1px solid rgba(255, 255, 255, 0.05); display: flex; gap: 6px; overflow-x: auto; white-space: nowrap;">
+            <button id="aiDiagnoseChipBtn" class="ai-chip-btn" style="background: rgba(244, 63, 94, 0.15); color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.3); border-radius: 12px; padding: 3px 10px; font-size: 0.75rem; cursor: pointer; font-weight: bold;">🔍 AI 一鍵診斷排課瓶頸</button>
+            <button class="ai-chip-btn" style="background: linear-gradient(135deg, rgba(168, 85, 247, 0.3), rgba(99, 102, 241, 0.3)); color: #1d1d1f; font-weight: bold; border: 1px solid rgba(168, 85, 247, 0.5); border-radius: 12px; padding: 3px 10px; font-size: 0.75rem; cursor: pointer;">🚀 全部一次 AI 自動設定</button>
+            <button class="ai-chip-btn" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 12px; padding: 3px 10px; font-size: 0.75rem; cursor: pointer;">幫全校排共同班會與社團</button>
+            <button class="ai-chip-btn" style="background: rgba(52, 211, 153, 0.15); color: #34d399; border: 1px solid rgba(52, 211, 153, 0.3); border-radius: 12px; padding: 3px 10px; font-size: 0.75rem; cursor: pointer;">一鍵對接專用教室</button>
+        </div>
+
+        <!-- Chat Input Bar -->
+        <div style="padding: 10px; border-top: 1px solid rgba(255, 255, 255, 0.1); display: flex; gap: 8px; background: #ffffff;">
+            <input type="text" id="aiChatInput" placeholder="請輸入對話需求 (如: 幫全校排共同班會)..." style="flex: 1; padding: 8px 12px; border-radius: 8px; background: #f8fafc; color: #1d1d1f; border: 1px solid var(--border-color); font-size: 0.85rem; outline: none;">
+            <button id="sendAiChatBtn" style="background: #6366f1; color: #1d1d1f; border: none; border-radius: 8px; padding: 8px 14px; cursor: pointer; font-size: 0.85rem; font-weight: bold;">
+                <i class="fa-solid fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Lesson Note Modal Dialog -->
+    <div id="noteModal" class="modal-overlay" style="display: none; z-index: 100000;">
+        <div class="modal-content glass" style="max-width: 520px; width: 92vw; padding: 24px; border-radius: 16px;">
+            <div class="modal-header" style="padding: 0 0 16px 0; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; color: #0f172a; font-size: 1.15rem; display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-pen-to-square" style="color: #38bdf8;"></i> <span id="noteModalTitle">課表/調課事項註記</span>
+                </h3>
+                <div class="modal-header-actions">
+                    <button class="maximize-modal-btn" onclick="toggleModalMaximize('noteModal')" title="全螢幕最大化展開/還原視窗">
+                        <i class="fa-solid fa-expand"></i>
+                    </button>
+                    <button class="close-modal-btn" onclick="closeNoteModal()">&times;</button>
+                </div>
+            </div>
+            <div class="modal-body" style="padding: 16px 0; display: flex; flex-direction: column; gap: 14px;">
+                <input type="hidden" id="noteTargetKey">
+                <input type="hidden" id="selectedNoteType" value="調課">
+                
+                <div>
+                    <label style="font-size: 0.85rem; color: #475569; font-weight: 600; margin-bottom: 6px; display: block;">註記類型 (點選標籤)：</label>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;" id="noteTypeSelector">
+                        <button type="button" class="btn-note-tag active" data-type="兼課" onclick="selectNoteType('兼課')" style="padding: 5px 12px; border-radius: 6px; border: 1px solid #f59e0b; background: rgba(245, 158, 11, 0.25); color: #f59e0b; cursor: pointer; font-size: 0.82rem; font-weight: bold;">💼 兼課</button>
+                        <button type="button" class="btn-note-tag" data-type="調課" onclick="selectNoteType('調課')" style="padding: 5px 12px; border-radius: 6px; border: 1px solid #fbbf24; background: transparent; color: #475569; cursor: pointer; font-size: 0.82rem;">🔁 調課</button>
+                        <button type="button" class="btn-note-tag" data-type="代課" onclick="selectNoteType('代課')" style="padding: 5px 12px; border-radius: 6px; border: 1px solid #38bdf8; background: transparent; color: #475569; cursor: pointer; font-size: 0.82rem;">👤 代課</button>
+                        <button type="button" class="btn-note-tag" data-type="段考" onclick="selectNoteType('段考')" style="padding: 5px 12px; border-radius: 6px; border: 1px solid #ef4444; background: transparent; color: #475569; cursor: pointer; font-size: 0.82rem;">📝 段考</button>
+                        <button type="button" class="btn-note-tag" data-type="地點" onclick="selectNoteType('地點')" style="padding: 5px 12px; border-radius: 6px; border: 1px solid #34d399; background: transparent; color: #475569; cursor: pointer; font-size: 0.82rem;">📍 地點</button>
+                        <button type="button" class="btn-note-tag" data-type="備註" onclick="selectNoteType('備註')" style="padding: 5px 12px; border-radius: 6px; border: 1px solid #a78bfa; background: transparent; color: #475569; cursor: pointer; font-size: 0.82rem;">📌 備註</button>
+                    </div>
+                </div>
+
+                <div>
+                    <label style="font-size: 0.85rem; color: #475569; font-weight: 600; margin-bottom: 6px; display: block;">註記說明內容：</label>
+                    <textarea id="noteTextInput" rows="3" placeholder="請輸入註記說明內容 (如: 由游貞維老師代課、或第1次段考考場)..." style="width: 100%; padding: 10px; border-radius: 8px; background: #ffffff; color: #1d1d1f; border: 1px solid var(--border-color); font-size: 0.9rem; outline: none; box-sizing: border-box;"></textarea>
+                </div>
+
+                <div>
+                    <label style="font-size: 0.8rem; color: #475569; margin-bottom: 4px; display: block;">註記人/單位：</label>
+                    <input type="text" id="noteAuthorInput" value="教務處" style="width: 100%; padding: 6px 10px; border-radius: 6px; background: #ffffff; color: #1d1d1f; border: 1px solid var(--border-color); font-size: 0.85rem; box-sizing: border-box;">
+                </div>
+            </div>
+
+            <div class="modal-footer" style="padding-top: 16px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                <button type="button" onclick="deleteLessonNote()" id="deleteNoteBtn" style="background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.4); color: #f87171; padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; display: none;">
+                    <i class="fa-solid fa-trash-can"></i> 刪除註記
+                </button>
+                <div style="margin-left: auto; display: flex; gap: 8px;">
+                    <button type="button" onclick="closeNoteModal()" style="background: transparent; border: 1px solid var(--border-color); color: #475569; padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: 0.85rem;">取消</button>
+                    <button type="button" onclick="saveLessonNote()" style="background: #6366f1; border: none; color: #1d1d1f; padding: 6px 18px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.85rem;">
+                        <i class="fa-solid fa-floppy-disk"></i> 儲存註記
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- AI Chain Swap Modal -->
+    <div id="chainSwapModal" class="modal-overlay" style="display: none; z-index: 100000;">
+        <div class="modal-content glass" style="max-width: 680px; width: 94vw; padding: 24px; border-radius: 16px;">
+            <div class="modal-header" style="padding: 0 0 16px 0; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; color: #fbbf24; font-size: 1.15rem; display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> <span>AI 3向連鎖環狀對調建議</span>
+                </h3>
+                <div class="modal-header-actions">
+                    <button class="maximize-modal-btn" onclick="toggleModalMaximize('chainSwapModal')" title="全螢幕最大化展開/還原視窗">
+                        <i class="fa-solid fa-expand"></i>
+                    </button>
+                    <button class="close-modal-btn" onclick="document.getElementById('chainSwapModal').style.display='none'">&times;</button>
+                </div>
+            </div>
+            <div class="modal-body" style="padding: 16px 0; max-height: 60vh; overflow-y: auto;" id="chainSwapContainer">
+                <div style="text-align: center; color: var(--text-muted); padding: 24px;">計算連鎖建議中...</div>
+            </div>
+            <div class="modal-footer" style="padding-top: 16px; border-top: 1px solid var(--border-color); text-align: right;">
+                <button type="button" onclick="document.getElementById('chainSwapModal').style.display='none'" style="background: transparent; border: 1px solid var(--border-color); color: #475569; padding: 6px 16px; border-radius: 8px; cursor: pointer;">關閉</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Swap Notification Slip Modal -->
+    <div id="swapSlipModal" class="modal-overlay" style="display: none; z-index: 100005;">
+        <div class="modal-content glass" style="max-width: 780px; width: 95vw; padding: 24px; border-radius: 16px; background: #ffffff;">
+            <div class="modal-header no-print" style="padding: 0 0 16px 0; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; color: #4ade80; font-size: 1.15rem; display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-file-invoice"></i> <span>手動調排課通知聯單</span>
+                </h3>
+                <div class="modal-header-actions">
+                    <button type="button" onclick="window.print()" style="background: #22c55e; border: none; color: #1d1d1f; padding: 6px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                        <i class="fa-solid fa-print"></i> 列印聯單
+                    </button>
+                    <button class="maximize-modal-btn" onclick="toggleModalMaximize('swapSlipModal')" title="全螢幕最大化展開/還原視窗">
+                        <i class="fa-solid fa-expand"></i>
+                    </button>
+                    <button class="close-modal-btn" onclick="document.getElementById('swapSlipModal').style.display='none'">&times;</button>
+                </div>
+            </div>
+            <div class="modal-body" style="padding: 16px 0;" id="swapSlipContent">
+                <!-- Dynamic printable content -->
+            </div>
+        </div>
+    </div>
+    <!-- Cross Class/Teacher Swap Picker Modal -->
+    <div id="crossSwapModal" class="modal-overlay" style="display: none; z-index: 100002;">
+        <div class="modal-content glass" style="max-width: 900px; width: 95vw; padding: 24px; border-radius: 16px; background: #ffffff;">
+            <div class="modal-header" style="padding: 0 0 16px 0; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; color: #60a5fa; font-size: 1.15rem; display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-earth-americas"></i> <span>跨班級 / 跨教師 課程對調選擇器</span>
+                </h3>
+                <div class="modal-header-actions">
+                    <button class="maximize-modal-btn" onclick="toggleModalMaximize('crossSwapModal')" title="全螢幕最大化展開/還原視窗">
+                        <i class="fa-solid fa-expand"></i>
+                    </button>
+                    <button class="close-modal-btn" onclick="document.getElementById('crossSwapModal').style.display='none'">&times;</button>
+                </div>
+            </div>
+            <div class="modal-body" style="padding: 16px 0; display: flex; flex-direction: column; gap: 14px;">
+                <div style="background: #f8fafc; padding: 12px 16px; border-radius: 10px; border: 1px solid rgba(96, 165, 250, 0.3); display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+                    <div style="font-size: 0.9rem; color: #334155;">
+                        已選擇來源課程：<strong id="crossSwapSourceText" style="color: #38bdf8;">未選擇</strong>
+                    </div>
+                    <div style="display: flex; gap: 8px; align-items: center; margin-left: auto;">
+                        <label style="font-size: 0.85rem; color: #475569;">對調目標：</label>
+                        <select id="crossSwapTypeSelect" style="padding: 6px 12px; border-radius: 6px; background: #f8fafc; color: #1d1d1f; border: 1px solid var(--border-color);">
+                            <option value="class">選擇全校其他班級...</option>
+                            <option value="teacher">選擇全校其他教師...</option>
+                        </select>
+                        <select id="crossSwapTargetSelect" style="padding: 6px 12px; border-radius: 6px; background: #f8fafc; color: #1d1d1f; border: 1px solid var(--border-color); min-width: 140px;">
+                        </select>
+                    </div>
+                </div>
+
+                <div id="crossSwapGridContainer" style="max-height: 55vh; overflow-y: auto;">
+                    <div style="text-align: center; color: #475569; padding: 32px;">請於上方選擇欲對調的目標班級或教師</div>
+                </div>
+            </div>
+            <div class="modal-footer" style="padding-top: 16px; border-top: 1px solid var(--border-color); text-align: right;">
+                <button type="button" onclick="document.getElementById('crossSwapModal').style.display='none'" style="background: transparent; border: 1px solid var(--border-color); color: #475569; padding: 6px 16px; border-radius: 8px; cursor: pointer;">關閉</button>
+            </div>
+        </div>
+    </div>
+    <!-- Health Check Inspector Modal -->
+    <div id="healthCheckModal" class="modal-overlay" style="display: none; z-index: 100008;">
+        <div class="modal-content glass" style="max-width: 720px; width: 94vw; padding: 24px; border-radius: 16px; background: #ffffff;">
+            <div class="modal-header" style="padding: 0 0 16px 0; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; color: #f472b6; font-size: 1.15rem; display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-notes-medical"></i> <span>全校排課規則與衝突一鍵健康診斷</span>
+                </h3>
+                <div class="modal-header-actions">
+                    <button class="maximize-modal-btn" onclick="toggleModalMaximize('healthCheckModal')" title="全螢幕最大化展開/還原視窗">
+                        <i class="fa-solid fa-expand"></i>
+                    </button>
+                    <button class="close-modal-btn" onclick="document.getElementById('healthCheckModal').style.display='none'">&times;</button>
+                </div>
+            </div>
+            <div class="modal-body" style="padding: 16px 0; max-height: 60vh; overflow-y: auto;" id="healthCheckContainer">
+                <!-- Health Check Results -->
+            </div>
+            <div class="modal-footer" style="padding-top: 16px; border-top: 1px solid var(--border-color); text-align: right;">
+                <button type="button" onclick="document.getElementById('healthCheckModal').style.display='none'" style="background: transparent; border: 1px solid var(--border-color); color: #475569; padding: 6px 16px; border-radius: 8px; cursor: pointer;">關閉</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Swap History & Undo Log Modal -->
+    <div id="swapHistoryModal" class="modal-overlay no-print" style="display: none; z-index: 100009;">
+        <div class="modal-content glass" style="max-width: 680px; width: 94vw; border-radius: 16px;">
+            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding: 18px 24px;">
+                <div class="modal-title" style="display: flex; align-items: center; gap: 12px;">
+                    <i class="fa-solid fa-clock-rotate-left modal-icon" style="color: #0071e3; font-size: 1.4rem;"></i>
+                    <div>
+                        <h2 style="margin: 0; font-size: 1.25rem;">調課歷程紀錄與復原管理</h2>
+                        <p class="sub-text" style="margin: 2px 0 0 0; font-size: 0.82rem; color: var(--text-secondary);">記錄所有手動調課、微調與連鎖對調動作，支援隨時一鍵反向復原</p>
+                    </div>
+                </div>
+                <div class="modal-header-actions">
+                    <button class="maximize-modal-btn" onclick="toggleModalMaximize('swapHistoryModal')" title="全螢幕最大化展開/還原視窗">
+                        <i class="fa-solid fa-expand"></i>
+                    </button>
+                    <button type="button" class="close-modal-btn" onclick="document.getElementById('swapHistoryModal').style.display='none'">&times;</button>
+                </div>
+            </div>
+            <div class="modal-body" style="max-height: 55vh; overflow-y: auto; padding: 20px 24px;">
                 <div id="swapHistoryList">
                     <!-- Dynamic history items -->
                 </div>
@@ -2353,6 +2610,42 @@
                 <button type="button" class="action-btn primary" onclick="document.getElementById('swapHistoryModal').style.display='none'" style="padding: 6px 20px; border-radius: 8px;">
                     關閉
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 檢視權限 (RBAC) 設定 Modal -->
+    <div id="rbacModal" class="modal-overlay no-print" style="display: none;">
+        <div class="modal-content glass" style="max-width: 650px;">
+            <div class="modal-header">
+                <div class="modal-title">
+                    <i class="fa-solid fa-lock modal-icon" style="color: #a855f7;"></i> 前台與教師門戶檢視權限 (RBAC) 控制
+                </div>
+                <button class="close-modal-btn" onclick="document.getElementById('rbacModal').style.display='none'">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 20px;">
+                <div style="display: flex; flex-direction: column; gap: 14px; background: #f8fafc; padding: 18px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                    <label style="display: flex; align-items: center; gap: 10px; font-size: 0.9rem; cursor: pointer;">
+                        <input type="checkbox" id="rbacSubstituteTeacher" checked style="width: 18px; height: 18px;"> 顯示代課教師名稱與調代課備註
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 10px; font-size: 0.9rem; cursor: pointer;">
+                        <input type="checkbox" id="rbacOvertimeNotes" checked style="width: 18px; height: 18px;"> 顯示教師課表兼課與超鐘點標記
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 10px; font-size: 0.9rem; cursor: pointer;">
+                        <input type="checkbox" id="rbacCrossClassView" checked style="width: 18px; height: 18px;"> 允許教師個人門戶跨班檢視其他班級課表
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 10px; font-size: 0.9rem;">
+                        學生端最多顯示節數:
+                        <select id="rbacStudentMaxPeriod" style="padding: 4px 8px; border-radius: 4px; border: 1px solid #cbd5e1;">
+                            <option value="7">第 7 節 (不含第8節輔導課)</option>
+                            <option value="8" selected>第 8 節 (含第8節輔導課)</option>
+                            <option value="9">第 9 節 (夜輔/精進班)</option>
+                        </select>
+                    </label>
+                </div>
+                <div style="margin-top: 18px; text-align: right;">
+                    <button onclick="saveRbacConfig()" class="action-btn primary" style="padding: 8px 20px; font-size: 0.9rem;"><i class="fa-solid fa-floppy-disk"></i> 儲存權限設定</button>
+                </div>
             </div>
         </div>
     </div>
@@ -2500,19 +2793,6 @@
                 <button class="close-modal-btn" onclick="document.getElementById('moe23Modal').style.display='none'">&times;</button>
             </div>
             <div class="modal-body" style="overflow-y: auto; padding: 20px;">
-                <div style="background: rgba(99, 102, 241, 0.08); border-left: 4px solid #6366f1; padding: 12px 16px; border-radius: 6px; margin-bottom: 16px; font-size: 0.88rem; color: #4338ca;">
-                    <i class="fa-solid fa-circle-info"></i> 可匯入國教署課程代碼檔 (Text/CSV)，系統排課與轉出正式課表時將自動帶入 23 碼代碼對應。
-                </div>
-                <div style="display: flex; gap: 12px; margin-bottom: 16px; align-items: center; background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
-                    <input type="file" id="moe23FileInput" accept=".txt,.csv,.xlsx" style="font-size: 0.85rem;">
-                    <button onclick="importMoe23File()" class="action-btn primary" style="padding: 6px 14px; font-size: 0.85rem;"><i class="fa-solid fa-upload"></i> 匯入代碼檔</button>
-                    <button onclick="exportFormalTimetableFile()" class="action-btn" style="padding: 6px 14px; font-size: 0.85rem; background: rgba(16, 185, 129, 0.15); color: #059669; border-color: rgba(16, 185, 129, 0.3);"><i class="fa-solid fa-file-export"></i> 轉出正式課表檔</button>
-                </div>
-                <div id="moe23CodesListContainer" style="max-height: 380px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px;">
-                    <table class="schedule-table" style="font-size: 0.85rem; width: 100%;">
-                        <thead>
-                            <tr style="position: sticky; top: 0; background: #f1f5f9; z-index: 2;">
-                                <th>國教署 23 碼課程代碼</th><th>科目名稱</th><th>學分</th><th>課程類別</th>
                             </tr>
                         </thead>
                         <tbody id="moe23CodesTableBody">
@@ -2531,20 +2811,6 @@
                 <div class="modal-title">
                     <i class="fa-solid fa-lock modal-icon" style="color: #a855f7;"></i> 前台與教師門戶檢視權限 (RBAC) 控制
                 </div>
-                <button class="close-modal-btn" onclick="document.getElementById('rbacModal').style.display='none'">&times;</button>
-            </div>
-            <div class="modal-body" style="padding: 20px;">
-                <div style="display: flex; flex-direction: column; gap: 14px; background: #f8fafc; padding: 18px; border-radius: 8px; border: 1px solid #e2e8f0;">
-                    <label style="display: flex; align-items: center; gap: 10px; font-size: 0.9rem; cursor: pointer;">
-                        <input type="checkbox" id="rbacSubstituteTeacher" checked style="width: 18px; height: 18px;"> 顯示代課教師名稱與調代課備註
-                    </label>
-                    <label style="display: flex; align-items: center; gap: 10px; font-size: 0.9rem; cursor: pointer;">
-                        <input type="checkbox" id="rbacOvertimeNotes" checked style="width: 18px; height: 18px;"> 顯示教師課表兼課與超鐘點標記
-                    </label>
-                    <label style="display: flex; align-items: center; gap: 10px; font-size: 0.9rem; cursor: pointer;">
-                        <input type="checkbox" id="rbacCrossClassView" checked style="width: 18px; height: 18px;"> 允許教師個人門戶跨班檢視其他班級課表
-                    </label>
-                    <label style="display: flex; align-items: center; gap: 10px; font-size: 0.9rem;">
                         學生端最多顯示節數:
                         <select id="rbacStudentMaxPeriod" style="padding: 4px 8px; border-radius: 4px; border: 1px solid #cbd5e1;">
                             <option value="7">第 7 節 (不含第8節輔導課)</option>
@@ -2695,7 +2961,140 @@
         </div>
     </div>
 
+    
+    <!-- Import Xinhe Timetable Excel Modal (欣河排課 Excel 匯入入口) -->
+    <div id="importXinheModal" class="modal-overlay" style="display: none; z-index: 100000;">
+        <div class="modal-content glass" style="max-width: 680px; width: 92vw; padding: 24px; border-radius: 16px; border: 1px solid rgba(2, 132, 199, 0.3); box-shadow: 0 20px 50px rgba(0,0,0,0.5); background: #ffffff;">
+            <div class="modal-header" style="padding: 0 0 16px 0; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; color: #0f172a; font-size: 1.15rem; display: flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-file-excel" style="color: #0284c7;"></i> <span>匯入欣河雲端排課 Excel 資料</span>
+                </h3>
+                <div class="modal-header-actions">
+                    <button class="close-modal-btn" onclick="closeImportXinheModal()">&times;</button>
+                </div>
+            </div>
+            <div class="modal-body" style="padding: 18px 0; display: flex; flex-direction: column; gap: 16px; max-height: 72vh; overflow-y: auto;">
+                <!-- Current Data Source Status Card -->
+                <div id="xinheStatusCard" style="background: rgba(2, 132, 199, 0.05); border: 1.5px solid rgba(2, 132, 199, 0.25); border-radius: 12px; padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <div id="xinheStatusIcon" style="width: 40px; height: 40px; border-radius: 10px; background: #e0f2fe; color: #0284c7; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; flex: none;">
+                            <i class="fa-solid fa-database"></i>
+                        </div>
+                        <div>
+                            <div style="font-weight: 800; font-size: 0.95rem; color: #0f172a;" id="xinheStatusTitle">偵測資料來源中...</div>
+                            <div style="font-size: 0.8rem; color: #64748b; margin-top: 2px;" id="xinheStatusSub">載入狀態詳情中</div>
+                        </div>
+                    </div>
+                    <div id="xinheStatusActionBox"></div>
+                </div>
+
+                <!-- Drag and Drop Upload Area -->
+                <div id="xinheDropZone" onclick="document.getElementById('xinheFileInput').click()" style="border: 2px dashed #38bdf8; background: rgba(56, 189, 248, 0.03); border-radius: 14px; padding: 32px 20px; text-align: center; cursor: pointer; transition: all .2s; position: relative;">
+                    <input type="file" id="xinheFileInput" accept=".xlsx,.xls,.xlsm" style="display: none;" onchange="onXinheFileChosen(this)">
+                    <div style="font-size: 2.4rem; color: #0284c7; margin-bottom: 8px;">
+                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                    </div>
+                    <div style="font-size: 1rem; font-weight: 800; color: #0f172a; margin-bottom: 4px;" id="xinheDropTitle">
+                        點擊此處選取檔案，或將 Excel 檔案拖曳至此
+                    </div>
+                    <div style="font-size: 0.82rem; color: #64748b;" id="xinheDropDesc">
+                        支援欣河雲端排課系統匯出的配課 Excel 檔（例如：<code>預設排課資料匯出_20260825.xlsx</code>）
+                    </div>
+                    <!-- Selected File Info Preview -->
+                    <div id="xinheSelectedFileBox" style="display: none; margin-top: 14px; padding: 10px 14px; background: #ffffff; border-radius: 8px; border: 1px solid #bae6fd; font-size: 0.85rem; color: #0369a1; font-weight: 700; display: inline-flex; align-items: center; gap: 8px;">
+                        <i class="fa-solid fa-file-excel"></i> <span id="xinheSelectedFileName">檔名</span> <span id="xinheSelectedFileSize" style="color: #64748b; font-weight: normal;">(0 KB)</span>
+                    </div>
+                </div>
+
+                <!-- Format Instruction Note -->
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 16px; font-size: 0.82rem; color: #475569; line-height: 1.5;">
+                    <div style="font-weight: 700; color: #334155; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+                        <i class="fa-solid fa-circle-info" style="color: #0284c7;"></i> 欣河匯入說明與注意事項：
+                    </div>
+                    <ul style="margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 3px;">
+                        <li>直接從欣河排課系統點選「配課資料匯出」或「課表匯出」下載 <code>.xlsx</code> 檔即可直接匯入。</li>
+                        <li>系統將自動對照全校國中部（國101~國303）、高中部（高一忠~高三仁）與教師代碼。</li>
+                        <li>匯入完成後將即時生效並更新全校班級與教師課表，完全不需重開程式。</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="modal-footer" style="padding-top: 16px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 10px; align-items: center;">
+                <button type="button" onclick="closeImportXinheModal()" style="background: transparent; border: 1px solid var(--border-color); color: #475569; padding: 8px 18px; border-radius: 8px; cursor: pointer; font-size: 0.88rem;">取消</button>
+                <button type="button" id="xinheSubmitBtn" onclick="submitXinheUpload()" disabled style="background: linear-gradient(135deg, #0284c7, #0369a1); border: none; color: #ffffff; padding: 8px 24px; border-radius: 8px; cursor: not-allowed; opacity: 0.6; font-weight: bold; font-size: 0.88rem; box-shadow: 0 4px 12px rgba(2,132,199,0.3); display: inline-flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-bolt"></i> <span>確認匯入並更新課表</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function uploadXinheDirectly(input) {
+            if (!input.files || !input.files[0]) return;
+            var file = input.files[0];
+            var fn = file.name.toLowerCase();
+            if (!fn.endsWith('.xlsx') && !fn.endsWith('.xls') && !fn.endsWith('.xlsm')) {
+                alert("僅支援 .xlsx 或 .xls 格式之 Excel 檔案！");
+                input.value = '';
+                return;
+            }
+
+            var btn = document.getElementById('importXinheModalBtn');
+            var originalText = btn ? btn.innerHTML : '';
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 匯入生效中...';
+            }
+
+            try {
+                var formData = new FormData();
+                formData.append('file', file);
+
+                var resp = await fetch('/api/import/xinhe', {
+                    method: 'POST',
+                    body: formData
+                });
+                var res = await resp.json();
+
+                if (res.success) {
+                    alert('🎉 欣河排課 Excel (' + file.name + ') 匯入成功！\n共成功讀取並生效 ' + (res.count || 810) + ' 節全校課表。');
+                    window.location.reload();
+                } else {
+                    alert('匯入失敗：' + (res.error || '未知錯誤'));
+                }
+            } catch (e) {
+                console.error('Direct upload error:', e);
+                alert('上傳與解析檔案時發生錯誤: ' + e);
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                }
+                input.value = '';
+            }
+        }
+        window.uploadXinheDirectly = uploadXinheDirectly;
+
+        function openXinheModalDirect() {
+            var m = document.getElementById('importXinheModal');
+            if (m) {
+                m.style.setProperty('display', 'flex', 'important');
+                m.classList.add('active');
+                if (typeof checkXinheStatus === 'function') checkXinheStatus();
+                if (typeof setupXinheDragAndDrop === 'function') setupXinheDragAndDrop();
+            }
+        }
+        function closeXinheModalDirect() {
+            var m = document.getElementById('importXinheModal');
+            if (m) {
+                m.style.setProperty('display', 'none', 'important');
+                m.classList.remove('active');
+            }
+        }
+        window.openImportXinheModal = openXinheModalDirect;
+        window.closeImportXinheModal = closeXinheModalDirect;
+    </script>
+
     <!-- JS Scripts with Cache-Buster -->
-    <script src="/static/js/app.js?v=20260823_v3"></script>
+    <script src="/static/js/app.js?v=20260825_v9"></script>
 </body>
 </html>
