@@ -211,6 +211,23 @@ function setupEventListeners() {
         });
     }
 
+    // Import Xinhe Modal Listeners
+    const importXinheModalBtn = document.getElementById('importXinheModalBtn');
+    if (importXinheModalBtn) {
+        importXinheModalBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            openImportXinheModal();
+        });
+    }
+    const importXinheModal = document.getElementById('importXinheModal');
+    if (importXinheModal) {
+        importXinheModal.addEventListener('click', (e) => {
+            if (e.target === importXinheModal) {
+                closeImportXinheModal();
+            }
+        });
+    }
+
 
 
     // Tab buttons for quick selection
@@ -308,15 +325,17 @@ async function fetchMetadata() {
         
         // Show database name/path & local LAN IP in badge
         const dbBadge = document.getElementById('dbBadge');
-        if (data.dbf_dir) {
+        if (data.data_source === 'xinhe' || (!data.dbf_dir && data.schedules && data.schedules.length > 0)) {
+            dbPathText.innerHTML = `<span style="color:#0284c7; font-weight:800;"><i class="fa-solid fa-file-excel"></i> 欣河雲端排課 (${data.schedules.length}節)</span>`;
+            if (dbBadge) dbBadge.title = `資料來源: 欣河雲端系統匯出 Excel (${data.schedules.length} 節課表)`;
+        } else if (data.dbf_dir) {
             const parts = data.dbf_dir.split(/[\\/]/);
             const dbfFolder = parts.find(p => p.toLowerCase().startsWith('spv') && p.toLowerCase().endsWith('.wdb'));
             dbPathText.textContent = dbfFolder || "學校 DBF 備份資料";
+            if (dbBadge) dbBadge.title = `資料庫: ${data.dbf_dir}\n局域網連線網址: http://${data.local_ip}:5000`;
         } else {
-            dbPathText.textContent = "未載入 (移交空白範本)";
-        }
-        if (data.local_ip && dbBadge) {
-            dbBadge.title = `資料庫: ${data.dbf_dir || '未設定'}\n局域網連線網址: http://${data.local_ip}:5000`;
+            dbPathText.textContent = "未載入 (空白學校範本)";
+            if (dbBadge) dbBadge.title = "尚未載入課表資料";
         }
 
         renderQuickSelectGrids();
@@ -342,10 +361,10 @@ function renderQuickSelectGrids() {
         const emptyMsg = `
         <div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 32px 16px; background: rgba(15, 23, 42, 0.4); border-radius: 12px; border: 1px dashed var(--border-color);">
             <i class="fa-solid fa-folder-open" style="font-size: 2.5rem; color: #38bdf8; margin-bottom: 12px; display: block;"></i>
-            <div style="font-size: 1.1rem; font-weight: 600; color: #f8fafc; margin-bottom: 8px;">系統現已重置為全新空白學校範本</div>
+            <div style="font-size: 1.1rem; font-weight: 600; color: #f8fafc; margin-bottom: 8px;">系統現處於全新空白學校範本</div>
             <div style="font-size: 0.88rem; color: #94a3b8; max-width: 580px; margin: 0 auto; line-height: 1.6;">
-                請點擊右上角 <strong style="color: #fbbf24;">「⚙️ 排課規則與系統設定」</strong> ➔ <strong style="color: #38bdf8;">「學校基本資料與系統設定」</strong><br>
-                點擊 <strong style="color: #0284c7; background: rgba(2, 132, 199, 0.2); padding: 2px 8px; border-radius: 4px;">「📁 瀏覽選擇資料夾...」</strong> 選擇學校合法匯出的 DBF 備份資料夾，即可自動讀取班級、教師與授課資料。本系統只讀取資料，不會修改原始備份檔。
+                請點擊右上角 <strong style="color: #0284c7;">「📥 匯入欣河課表」</strong> 直接拖入欣河 Excel 檔案，<br>
+                或至 <strong style="color: #fbbf24;">「⚙️ 規則設定」</strong> 選擇新學校的 DBF 資料夾，即可自動讀取課表。
             </div>
         </div>`;
         highSchoolGrid.innerHTML = emptyMsg;
@@ -354,16 +373,17 @@ function renderQuickSelectGrids() {
         return;
     }
 
-    // 1. Classes
+    // 1. Classes (乾淨美化排版)
     metadata.classes.forEach(cls => {
         const item = document.createElement('a');
         item.href = `#class/${cls.code}`;
         item.className = 'grid-item';
-        item.innerHTML = `${cls.name}<span class="sub-label">${cls.tutor || '無導師'}</span>`;
+        const tutorLabel = cls.tutor ? `<span class="sub-label"><i class="fa-solid fa-user-tie" style="font-size:0.75rem; margin-right:2px; color:#4f46e5;"></i>${cls.tutor}</span>` : '';
+        item.innerHTML = `${cls.name}${tutorLabel}`;
         
         // Junior high vs High school grouping
-        const firstChar = cls.code.charAt(0);
-        if (firstChar === '1' || firstChar === '2' || firstChar === '3') {
+        const codeStr = String(cls.code);
+        if (codeStr.startsWith('1') || codeStr.startsWith('2') || codeStr.startsWith('3') || cls.name.startsWith('7') || cls.name.startsWith('8') || cls.name.startsWith('9')) {
             juniorHighGrid.appendChild(item);
         } else {
             highSchoolGrid.appendChild(item);
@@ -1594,7 +1614,20 @@ function setupSettingsPanel() {
             c.classList.remove('active');
         });
 
-        if (tabName === 'aicenter') {
+        if (tabName === 'xinhe') {
+            const tabRuleXinheBtn = document.getElementById('tabRuleXinheBtn');
+            const ruleTabXinhe = document.getElementById('ruleTabXinhe');
+            if (tabRuleXinheBtn) {
+                tabRuleXinheBtn.classList.add('active');
+                tabRuleXinheBtn.style.background = 'rgba(2, 132, 199, 0.2)';
+                tabRuleXinheBtn.style.color = '#0284c7';
+            }
+            if (ruleTabXinhe) {
+                ruleTabXinhe.style.display = 'block';
+                ruleTabXinhe.classList.add('active');
+            }
+            checkXinheTabStatus();
+        } else if (tabName === 'aicenter') {
             const tabRuleAiCenterBtn = document.getElementById('tabRuleAiCenterBtn');
             const ruleTabAiCenter = document.getElementById('ruleTabAiCenter');
             if (tabRuleAiCenterBtn) {
@@ -8423,3 +8456,352 @@ async function saveTeacherPreferences() {
     }
 }
 window.saveTeacherPreferences = saveTeacherPreferences;
+
+/* ==========================================================================
+   欣河雲端排課 Excel 匯入模組 (Xinhe Timetable Excel Import Module)
+   ========================================================================== */
+
+let _selectedXinheFile = null;
+
+async function openImportXinheModal() {
+    const modal = document.getElementById('importXinheModal');
+    if (!modal) {
+        console.error("importXinheModal element not found!");
+        return;
+    }
+    modal.style.setProperty('display', 'flex', 'important');
+    modal.classList.add('active');
+    resetXinheUploadForm();
+    await checkXinheStatus();
+    setupXinheDragAndDrop();
+}
+window.openImportXinheModal = openImportXinheModal;
+
+function closeImportXinheModal() {
+    const modal = document.getElementById('importXinheModal');
+    if (modal) {
+        modal.style.setProperty('display', 'none', 'important');
+        modal.classList.remove('active');
+    }
+}
+window.closeImportXinheModal = closeImportXinheModal;
+
+function resetXinheUploadForm() {
+    _selectedXinheFile = null;
+    const fileInput = document.getElementById('xinheFileInput');
+    if (fileInput) fileInput.value = '';
+    
+    const submitBtn = document.getElementById('xinheSubmitBtn');
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.style.opacity = '0.6';
+        submitBtn.style.cursor = 'not-allowed';
+        submitBtn.innerHTML = '<i class="fa-solid fa-bolt"></i> <span>確認匯入並更新課表</span>';
+    }
+
+    const previewBox = document.getElementById('xinheSelectedFileBox');
+    if (previewBox) previewBox.style.display = 'none';
+
+    const dropZone = document.getElementById('xinheDropZone');
+    if (dropZone) {
+        dropZone.style.borderColor = '#38bdf8';
+        dropZone.style.background = 'rgba(56, 189, 248, 0.03)';
+    }
+}
+
+async function checkXinheStatus() {
+    const titleEl = document.getElementById('xinheStatusTitle');
+    const subEl = document.getElementById('xinheStatusSub');
+    const iconEl = document.getElementById('xinheStatusIcon');
+    const actionBox = document.getElementById('xinheStatusActionBox');
+    if (!titleEl) return;
+
+    try {
+        const resp = await fetch('/api/xinhe/status?t=' + Date.now());
+        const data = await resp.json();
+
+        if (data.active) {
+            titleEl.innerHTML = `🟢 目前正使用：<span style="color:#0284c7;">欣河雲端 Excel 課表</span> (${data.schedules_count || 810} 節)`;
+            subEl.innerHTML = `檔案：<code>${data.filename}</code> (${data.size_kb} KB) · 更新時間：${data.modified}`;
+            if (iconEl) {
+                iconEl.style.background = '#e0f2fe';
+                iconEl.style.color = '#0284c7';
+                iconEl.innerHTML = '<i class="fa-solid fa-file-excel"></i>';
+            }
+            if (actionBox) {
+                actionBox.innerHTML = `
+                    <button onclick="removeXinheFile()" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; padding: 6px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 700; cursor: pointer;" title="切換回原版 DBF 資料庫">
+                        <i class="fa-solid fa-rotate-left"></i> 回復使用 DBF
+                    </button>
+                `;
+            }
+        } else {
+            titleEl.innerHTML = `⚪ 目前使用：<span style="color:#475569;">原始 DBF 資料庫</span>`;
+            subEl.innerHTML = data.message || '尚未匯入欣河 Excel 檔案，目前由 claspv.dbf 提供排課資料。';
+            if (iconEl) {
+                iconEl.style.background = '#f1f5f9';
+                iconEl.style.color = '#64748b';
+                iconEl.innerHTML = '<i class="fa-solid fa-database"></i>';
+            }
+            if (actionBox) actionBox.innerHTML = '';
+        }
+    } catch (e) {
+        console.error("Failed to check xinhe status:", e);
+    }
+}
+window.checkXinheStatus = checkXinheStatus;
+
+function onXinheFileChosen(input) {
+    if (input.files && input.files[0]) {
+        handleSelectedXinheFile(input.files[0]);
+    }
+}
+window.onXinheFileChosen = onXinheFileChosen;
+
+function handleSelectedXinheFile(file) {
+    const fn = file.name.toLowerCase();
+    if (!fn.endsWith('.xlsx') && !fn.endsWith('.xls') && !fn.endsWith('.xlsm')) {
+        if (window.showToast) showToast("僅支援 .xlsx 或 .xls 格式之 Excel 檔案！");
+        else alert("僅支援 .xlsx 或 .xls 格式之 Excel 檔案！");
+        return;
+    }
+
+    _selectedXinheFile = file;
+
+    const nameEl = document.getElementById('xinheSelectedFileName');
+    const sizeEl = document.getElementById('xinheSelectedFileSize');
+    const boxEl = document.getElementById('xinheSelectedFileBox');
+    const submitBtn = document.getElementById('xinheSubmitBtn');
+
+    if (nameEl) nameEl.textContent = file.name;
+    if (sizeEl) sizeEl.textContent = `(${Math.round(file.size / 1024)} KB)`;
+    if (boxEl) boxEl.style.display = 'inline-flex';
+
+    if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.style.opacity = '1';
+        submitBtn.style.cursor = 'pointer';
+    }
+}
+
+function setupXinheDragAndDrop() {
+    const zone = document.getElementById('xinheDropZone');
+    if (!zone || zone._dndSet) return;
+    zone._dndSet = true;
+
+    ['dragenter', 'dragover'].forEach(evt => {
+        zone.addEventListener(evt, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            zone.style.borderColor = '#0284c7';
+            zone.style.background = 'rgba(2, 132, 199, 0.08)';
+        });
+    });
+
+    ['dragleave', 'drop'].forEach(evt => {
+        zone.addEventListener(evt, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            zone.style.borderColor = '#38bdf8';
+            zone.style.background = 'rgba(56, 189, 248, 0.03)';
+        });
+    });
+
+    zone.addEventListener('drop', (e) => {
+        const dt = e.dataTransfer;
+        if (dt && dt.files && dt.files.length > 0) {
+            handleSelectedXinheFile(dt.files[0]);
+        }
+    });
+}
+
+async function submitXinheUpload() {
+    if (!_selectedXinheFile) {
+        if (window.showToast) showToast("請先選取欣河 Excel 檔案！");
+        else alert("請先選取欣河 Excel 檔案！");
+        return;
+    }
+
+    const submitBtn = document.getElementById('xinheSubmitBtn');
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>正在解析並生效課表中...</span>';
+    }
+
+    try {
+        const formData = new FormData();
+        formData.append('file', _selectedXinheFile);
+
+        const resp = await fetch('/api/import/xinhe', {
+            method: 'POST',
+            body: formData
+        });
+
+        const res = await resp.json();
+
+        if (res.success) {
+            const msg = res.message || `🎉 欣河排課 Excel 匯入成功！共生效 ${res.count} 節課表。`;
+            if (window.showToast) showToast(msg);
+            else alert(msg);
+
+            closeImportXinheModal();
+
+            // 重新載入系統元數據與目前檢視中的課表
+            if (typeof loadMetadata === 'function') {
+                await loadMetadata();
+            }
+            if (typeof renderCurrentSchedule === 'function') {
+                await renderCurrentSchedule();
+            }
+            if (typeof refreshScheduleView === 'function') {
+                refreshScheduleView();
+            }
+        } else {
+            alert("匯入失敗：" + (res.error || "未知錯誤"));
+        }
+    } catch (e) {
+        console.error("Upload error:", e);
+        alert("上傳與解析過程發生錯誤，請檢查檔案格式。");
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fa-solid fa-bolt"></i> <span>確認匯入並更新課表</span>';
+        }
+    }
+}
+window.submitXinheUpload = submitXinheUpload;
+
+async function removeXinheFile() {
+    if (!confirm("確定要移除欣河匯入課表，回復使用 DBF 原始資料庫嗎？")) return;
+    try {
+        const resp = await fetch('/api/xinhe/remove', { method: 'POST' });
+        const res = await resp.json();
+        if (res.success) {
+            if (window.showToast) showToast(res.message);
+            else alert(res.message);
+            await checkXinheStatus();
+            if (typeof loadMetadata === 'function') await loadMetadata();
+            if (typeof renderCurrentSchedule === 'function') await renderCurrentSchedule();
+        } else {
+            alert(res.message);
+        }
+    } catch (e) {
+        alert("移除失敗：" + e);
+    }
+}
+window.removeXinheFile = removeXinheFile;
+
+// Rule Tab Xinhe Import Handlers
+let _selectedXinheTabFile = null;
+
+async function checkXinheTabStatus() {
+    const titleEl = document.getElementById('xinheTabStatusTitle');
+    const subEl = document.getElementById('xinheTabStatusSub');
+    const iconEl = document.getElementById('xinheTabStatusIcon');
+    const actionBox = document.getElementById('xinheTabStatusActionBox');
+    if (!titleEl) return;
+
+    try {
+        const resp = await fetch('/api/xinhe/status?t=' + Date.now());
+        const data = await resp.json();
+
+        if (data.active) {
+            titleEl.innerHTML = `🟢 目前正使用：<span style="color:#0284c7;">欣河雲端 Excel 課表</span> (${data.schedules_count || 810} 節)`;
+            subEl.innerHTML = `檔案：<code>${data.filename}</code> (${data.size_kb} KB) · 更新時間：${data.modified}`;
+            if (iconEl) {
+                iconEl.style.background = '#e0f2fe';
+                iconEl.style.color = '#0284c7';
+                iconEl.innerHTML = '<i class="fa-solid fa-file-excel"></i>';
+            }
+            if (actionBox) {
+                actionBox.innerHTML = `
+                    <button type="button" onclick="removeXinheFile()" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; padding: 6px 14px; border-radius: 8px; font-size: 0.85rem; font-weight: 700; cursor: pointer;">
+                        <i class="fa-solid fa-rotate-left"></i> 回復使用 DBF
+                    </button>
+                `;
+            }
+        } else {
+            titleEl.innerHTML = `⚪ 目前使用：<span style="color:#475569;">空白範本 / 原始 DBF</span>`;
+            subEl.innerHTML = data.message || '尚未匯入欣河 Excel 檔案，您可直接在下方選取檔案匯入。';
+            if (iconEl) {
+                iconEl.style.background = '#f1f5f9';
+                iconEl.style.color = '#64748b';
+                iconEl.innerHTML = '<i class="fa-solid fa-database"></i>';
+            }
+            if (actionBox) actionBox.innerHTML = '';
+        }
+    } catch (e) {
+        console.error("checkXinheTabStatus failed:", e);
+    }
+}
+window.checkXinheTabStatus = checkXinheTabStatus;
+
+function onXinheTabFileChosen(input) {
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        const fn = file.name.toLowerCase();
+        if (!fn.endsWith('.xlsx') && !fn.endsWith('.xls') && !fn.endsWith('.xlsm')) {
+            alert("僅支援 .xlsx 或 .xls 格式之 Excel 檔案！");
+            return;
+        }
+        _selectedXinheTabFile = file;
+
+        const nameEl = document.getElementById('xinheTabSelectedFileName');
+        const sizeEl = document.getElementById('xinheTabSelectedFileSize');
+        const boxEl = document.getElementById('xinheTabSelectedFileBox');
+        const submitBtn = document.getElementById('xinheTabSubmitBtn');
+
+        if (nameEl) nameEl.textContent = file.name;
+        if (sizeEl) sizeEl.textContent = `(${Math.round(file.size / 1024)} KB)`;
+        if (boxEl) boxEl.style.display = 'inline-flex';
+
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.style.opacity = '1';
+            submitBtn.style.cursor = 'pointer';
+        }
+    }
+}
+window.onXinheTabFileChosen = onXinheTabFileChosen;
+
+async function submitXinheTabUpload() {
+    if (!_selectedXinheTabFile) {
+        alert("請先選取欣河 Excel 檔案！");
+        return;
+    }
+
+    const submitBtn = document.getElementById('xinheTabSubmitBtn');
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>正在解析並生效課表中...</span>';
+    }
+
+    try {
+        const formData = new FormData();
+        formData.append('file', _selectedXinheTabFile);
+
+        const resp = await fetch('/api/import/xinhe', {
+            method: 'POST',
+            body: formData
+        });
+
+        const res = await resp.json();
+
+        if (res.success) {
+            alert(res.message || `🎉 欣河排課 Excel 匯入成功！共生效 ${res.count} 節課表。`);
+            window.location.reload();
+        } else {
+            alert("匯入失敗：" + (res.error || "未知錯誤"));
+        }
+    } catch (e) {
+        console.error("Upload error:", e);
+        alert("上傳與解析過程發生錯誤，請檢查檔案格式。");
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fa-solid fa-bolt"></i> <span>確認匯入並更新全校課表</span>';
+        }
+    }
+}
+window.submitXinheTabUpload = submitXinheTabUpload;
+
