@@ -5000,42 +5000,15 @@ def api_substitute_recommend():
                 if is_club_only:
                     continue
 
-            # Rule: Exact same subject_code or subject_name (baseline for AI fallback)
-            same_subject_bonus = False
-            if target_subject_code:
+            # Exact same subject match (direct match, no forced domain guessing)
+            is_exact_same_subj = False
+            if target_subject and target_subject in t_subject_set:
+                is_exact_same_subj = True
+            elif target_subject_code:
                 for s in schedules:
                     if s["teacher_code"] == t_code and s.get("subject_code", "") == target_subject_code:
-                        same_subject_bonus = True
+                        is_exact_same_subj = True
                         break
-            if not same_subject_bonus and target_subject:
-                if target_subject in t_subject_set:
-                    same_subject_bonus = True
-                
-                # Check domain mapping
-                if not same_subject_bonus:
-                    target_domains = get_subject_domains(target_subject)
-                    if target_domains:
-                        for ts in t_subject_set:
-                            ts_domains = get_subject_domains(ts)
-                            if target_domains.intersection(ts_domains):
-                                same_subject_bonus = True
-                                break
-                    
-            if not same_subject_bonus and not target_subject:
-                absent_t_subjects = teacher_subjects_map.get(absent_tcode, set())
-                if absent_t_subjects and absent_t_subjects.intersection(t_subject_set):
-                    same_subject_bonus = True
-                elif absent_t_subjects:
-                    # Check domain mapping for absent teacher's subjects
-                    absent_domains = set()
-                    for ats in absent_t_subjects:
-                        absent_domains.update(get_subject_domains(ats))
-                    if absent_domains:
-                        for ts in t_subject_set:
-                            ts_domains = get_subject_domains(ts)
-                            if absent_domains.intersection(ts_domains):
-                                same_subject_bonus = True
-                                break
 
             c_list = sorted(list(t_classes))
             c_str = ", ".join(c_list) if c_list else "無"
@@ -5048,49 +5021,27 @@ def api_substitute_recommend():
                 "role": t.get("role", "") or "專任教師",
                 "assigned_classes_str": c_str,
                 "is_same_class": is_same_class,
-                "is_same_domain": same_subject_bonus,
+                "is_exact_same_subj": is_exact_same_subj,
                 "is_class_tutor": is_tutor_of_class,
                 "same_class_subjects": same_class_subj_str,
-                "teach_subjects": teach_subjects_str,
-                "ai_fit": None,
-                "ai_reason": ""
+                "teach_subjects": teach_subjects_str
             })
 
-        # AI semantic ranking (if Groq API key available)
-        ai_ranks = call_groq_substitute_rank(
-            target_subject, target_subject_code, target_class, candidates, cfg
-        )
-        use_ai = bool(ai_ranks)
-
-        fit_order = {"high": 0, "medium": 1, "low": 2, None: 3}
-        for c in candidates:
-            ai_info = ai_ranks.get(c["teacher_code"], {})
-            c["ai_fit"]    = ai_info.get("fit", None)
-            c["ai_reason"] = ai_info.get("reason", "")
-            # Merge AI fit into is_same_domain for backward compat, and vice-versa
-            if c["ai_fit"] == "high":
-                c["is_same_domain"] = True
-            elif c["is_same_domain"]:
-                c["ai_fit"] = "high"
-
         # Sorting strategy:
-        # Prio 0: Same Domain + Same Class (Top Jackpot!)
-        # Prio 1: Same Domain (同學科空堂)
-        # Prio 2: Class Tutor (本班導師空堂)
-        # Prio 3: Same Class Teacher (任教本班其他科目空堂)
-        # Prio 4: Schoolwide other free teachers
+        # Prio 0: 本班導師 (Class Tutor)
+        # Prio 1: 任教本班教師 (Same Class Subject Teacher)
+        # Prio 2: 完全同科目教師 (Exact Same Subject Teacher)
+        # Prio 3: 全校其他空堂教師 (Other Free Teachers)
         def get_sub_sort_key(c):
-            if c["is_same_domain"] and c["is_same_class"]:
+            if c.get("is_class_tutor"):
                 prio = 0
-            elif c["is_same_domain"]:
+            elif c.get("is_same_class"):
                 prio = 1
-            elif c.get("is_class_tutor"):
+            elif c.get("is_exact_same_subj"):
                 prio = 2
-            elif c["is_same_class"]:
-                prio = 3
             else:
-                prio = 4
-            return (prio, fit_order.get(c.get("ai_fit"), 3), c["teacher_name"])
+                prio = 3
+            return (prio, c["teacher_name"])
 
         candidates.sort(key=get_sub_sort_key)
 
@@ -5099,7 +5050,7 @@ def api_substitute_recommend():
             "absent_teacher_info": absent_teacher_info,
             "absent_course": absent_course,
             "candidates": candidates,
-            "ai_ranked": use_ai
+            "ai_ranked": False
         })
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
