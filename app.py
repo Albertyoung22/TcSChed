@@ -4862,15 +4862,35 @@ def api_substitute_recommend():
         schedules = data.get("schedules", [])
         teachers = data.get("teachers", [])
 
-        # Build teacher assigned classes map
+        # Build teacher assigned classes map & teacher subjects per class
         teacher_classes_map = {}
+        teacher_class_subjects_map = {} # (t_code, class_key) -> set of subjects
+        class_tutors_map = {} # class_key -> tutor name or code
+
+        for c in data.get("classes", []):
+            if isinstance(c, dict):
+                c_name = str(c.get("name") or "").strip()
+                c_code = str(c.get("code") or "").strip()
+                c_tutor = str(c.get("tutor") or "").strip()
+                if c_name and c_tutor:
+                    class_tutors_map[c_name] = c_tutor
+                if c_code and c_tutor:
+                    class_tutors_map[c_code] = c_tutor
+
         for s in schedules:
             tc = s.get("teacher_code")
             cn = s.get("class_name")
-            if tc and cn:
-                if tc not in teacher_classes_map:
-                    teacher_classes_map[tc] = set()
-                teacher_classes_map[tc].add(cn)
+            cc = s.get("class_code")
+            sn = s.get("subject_name", "")
+            if tc:
+                if cn:
+                    teacher_classes_map.setdefault(tc, set()).add(cn)
+                    if sn:
+                        teacher_class_subjects_map.setdefault((tc, cn), set()).add(sn)
+                if cc:
+                    teacher_classes_map.setdefault(tc, set()).add(cc)
+                    if sn:
+                        teacher_class_subjects_map.setdefault((tc, cc), set()).add(sn)
 
         # Absent teacher details
         absent_teacher_info = None
@@ -4919,7 +4939,7 @@ def api_substitute_recommend():
         if target_subject_code.lower() in ("nan", "none", "null"):
             target_subject_code = ""
         
-        print(f"[DEBUG] recommend: absent_tcode={absent_tcode}, day={day}, period={period}, found_course={absent_course is not None}, target_subj={target_subject}")
+        print(f"[DEBUG] recommend: absent_tcode={absent_tcode}, day={day}, period={period}, found_course={absent_course is not None}, target_subj={target_subject}, target_class={target_class}")
 
         # Build per-teacher subject list (unique subject names they teach)
         teacher_subjects_map = {}
@@ -4943,7 +4963,30 @@ def api_substitute_recommend():
 
             # Rule: Same class teacher
             t_classes = teacher_classes_map.get(t_code, set())
-            is_same_class = (target_class in t_classes) if target_class else False
+            is_same_class = False
+            same_class_subjs = set()
+            if target_class:
+                if target_class in t_classes:
+                    is_same_class = True
+                    same_class_subjs.update(teacher_class_subjects_map.get((t_code, target_class), set()))
+                for c_item in t_classes:
+                    if c_item == target_class or c_item.endswith(target_class) or target_class.endswith(c_item):
+                        is_same_class = True
+                        same_class_subjs.update(teacher_class_subjects_map.get((t_code, c_item), set()))
+
+            # Check if teacher is tutor of target_class
+            is_tutor_of_class = False
+            target_tutor = class_tutors_map.get(target_class, "")
+            if not target_tutor and target_class:
+                for ck, tv in class_tutors_map.items():
+                    if ck == target_class or ck.endswith(target_class) or target_class.endswith(ck):
+                        target_tutor = tv
+                        break
+            if target_tutor and (target_tutor == t.get("name") or target_tutor == t_code):
+                is_tutor_of_class = True
+                is_same_class = True
+
+            same_class_subj_str = "、".join(sorted(same_class_subjs)) if same_class_subjs else ""
 
             # Collect subject names this teacher actually teaches
             t_subject_set = teacher_subjects_map.get(t_code, set())
@@ -5006,6 +5049,8 @@ def api_substitute_recommend():
                 "assigned_classes_str": c_str,
                 "is_same_class": is_same_class,
                 "is_same_domain": same_subject_bonus,
+                "is_class_tutor": is_tutor_of_class,
+                "same_class_subjects": same_class_subj_str,
                 "teach_subjects": teach_subjects_str,
                 "ai_fit": None,
                 "ai_reason": ""
@@ -5027,17 +5072,26 @@ def api_substitute_recommend():
             elif c["is_same_domain"]:
                 c["ai_fit"] = "high"
 
-        # Sort: same class > AI fit (high→medium→low) > is_same_domain > name
-        use_ai = bool(ai_ranks)
-        if use_ai:
-            candidates.sort(key=lambda x: (
-                not x["is_same_class"],
-                fit_order.get(x["ai_fit"], 3),
-                not x["is_same_domain"],
-                x["teacher_name"]
-            ))
-        else:
-            candidates.sort(key=lambda x: (not x["is_same_class"], not x["is_same_domain"], x["teacher_name"]))
+        # Sorting strategy:
+        # Prio 0: Same Domain + Same Class (Top Jackpot!)
+        # Prio 1: Same Domain (同學科空堂)
+        # Prio 2: Class Tutor (本班導師空堂)
+        # Prio 3: Same Class Teacher (任教本班其他科目空堂)
+        # Prio 4: Schoolwide other free teachers
+        def get_sub_sort_key(c):
+            if c["is_same_domain"] and c["is_same_class"]:
+                prio = 0
+            elif c["is_same_domain"]:
+                prio = 1
+            elif c.get("is_class_tutor"):
+                prio = 2
+            elif c["is_same_class"]:
+                prio = 3
+            else:
+                prio = 4
+            return (prio, fit_order.get(c.get("ai_fit"), 3), c["teacher_name"])
+
+        candidates.sort(key=get_sub_sort_key)
 
         return jsonify({
             "status": "success",
