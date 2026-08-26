@@ -114,8 +114,9 @@ def run_server(host, port):
         from waitress import serve
         print(f"\n==================================================")
         print(f" [系統] 智慧排課系統已啟動 (Waitress WSGI)")
-        print(f" [網址] 本機瀏覽網址: http://127.0.0.1:{port}")
-        print(f" [局域網] 手機/跨裝置連線網址: http://{local_ip}:{port}")
+        print(f" [本機電腦] http://127.0.0.1:{port}")
+        print(f" [區域網路] http://{local_ip}:{port} (手機/平板在同Wi-Fi連線)")
+        print(f" [Render雲端] https://tcsched.onrender.com (全球免開機直連)")
         print(f"==================================================\n")
         serve(app, host=host, port=port, threads=8)
     except Exception as ex:
@@ -233,10 +234,11 @@ def main():
 
     url = f"http://127.0.0.1:{port}"
     lan_url = f"http://{local_ip}:{port}" if local_ip and local_ip != "127.0.0.1" else url
-    print(f"[資訊] 系統成功啟動！本機瀏覽網址: {url}")
-    print(f"[資訊] 【真實局域網 IP 連線網址】: {lan_url}")
-    print(f"[資訊] 教師課表專頁: {lan_url}/teacher")
-    print(f"[資訊] 系統亮點與 AI 導覽 Showcase: {lan_url}/showcase")
+    print(f"[資訊] 本機電腦瀏覽網址: {url}")
+    print(f"[資訊] 本機教師課表專頁: {url}/teacher")
+    print(f"[資訊] 區域網路手機連線: {lan_url}/teacher (請使用 http:// 勿用 https://)")
+    print(f"[資訊] ☁️ Render 雲端全球網址: https://tcsched.onrender.com/teacher")
+    print(f"[資訊] 系統亮點與 AI 導覽 Showcase: {url}/showcase")
     cfg = {}
     try:
         if os.path.exists("config_rules.json"):
