@@ -6302,12 +6302,18 @@ async function loadDualViewData() {
 
 async function switchDualRightTeacher(tCode, d, p) {
     if (!tCode) return;
-    dualViewCurrentTeacher = tCode;
     const teacherSelect = document.getElementById('dualViewTeacherSelect');
+    let tObj = findTeacherInMetadata(tCode);
+    let targetCode = tObj ? (tObj.code || tObj.name) : tCode;
+    let targetName = tObj ? (tObj.name || tObj.code) : tCode;
+    dualViewCurrentTeacher = targetCode;
+
     if (teacherSelect) {
         let matchedOpt = false;
         for (let i = 0; i < teacherSelect.options.length; i++) {
-            if (teacherSelect.options[i].value === tCode || teacherSelect.options[i].text.includes(tCode)) {
+            const optVal = teacherSelect.options[i].value;
+            const optTxt = teacherSelect.options[i].text;
+            if (optVal === targetCode || optVal === targetName || optVal === tCode || optTxt.includes(targetName) || optTxt.includes(targetCode)) {
                 teacherSelect.selectedIndex = i;
                 dualViewCurrentTeacher = teacherSelect.options[i].value;
                 matchedOpt = true;
@@ -6315,7 +6321,10 @@ async function switchDualRightTeacher(tCode, d, p) {
             }
         }
         if (!matchedOpt) {
-            teacherSelect.value = tCode;
+            teacherSelect.value = targetCode || tCode;
+            if (teacherSelect.value) {
+                dualViewCurrentTeacher = teacherSelect.value;
+            }
         }
     }
     
@@ -6323,7 +6332,10 @@ async function switchDualRightTeacher(tCode, d, p) {
         const tRes = await fetch(`/api/schedule/teacher/${encodeURIComponent(dualViewCurrentTeacher)}`).then(r => r.ok ? r.json() : []);
         dualTeacherSlotsData = Array.isArray(tRes) ? tRes : (tRes.slots || tRes.data || []);
         renderDualTeacherGrid();
-        if (d && p) highlightDualSlotSync(d, p);
+        
+        const targetD = (d !== undefined && d !== null) ? d : (dualSelectedDay || 1);
+        const targetP = (p !== undefined && p !== null) ? p : (dualSelectedPeriod || 1);
+        highlightDualSlotSync(targetD, targetP);
     } catch (e) {
         console.error("switchDualRightTeacher failed:", e);
     }
@@ -6358,8 +6370,14 @@ async function switchDualLeftClass(cCode, d, p) {
     }
 }
 
+function closeDualViewModal() {
+    const modal = document.getElementById('dualViewModal');
+    if (modal) modal.style.display = 'none';
+}
+
 window.switchDualRightTeacher = switchDualRightTeacher;
 window.switchDualLeftClass = switchDualLeftClass;
+window.closeDualViewModal = closeDualViewModal;
 
 function renderDualClassGrid() {
     const tbody = document.getElementById('dualClassBody');
@@ -6559,28 +6577,42 @@ async function updateDualSwapAssistant(d, p) {
             const sameSubjCands = candidates.filter(c => c.is_same_domain || c.ai_fit === 'high');
             
             if (sameSubjCands.length > 0) {
-                col1.innerHTML = sameSubjCands.slice(0, 6).map(tch => {
+                col1.innerHTML = sameSubjCands.slice(0, 8).map(tch => {
                     const dispT = resolveTeacherDisplayName(tch.teacher_name, tch.teacher_code);
-                    return `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; padding:6px 10px; background:#ffffff; border-radius:8px; border:1px solid rgba(16,185,129,0.3); box-shadow:0 1px 3px rgba(0,0,0,0.03);">
-                        <div>
-                            <span style="color:#1d1d1f; font-weight:bold;">${dispT}</span>
-                            <span style="font-size:0.75rem; color:#10b981; font-weight:600; margin-left:4px;" title="任教：${tch.teach_subjects || ''}">⭐ 同學科空堂</span>
+                    const tCode = tch.teacher_code || tch.teacher_name || '';
+                    return `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; padding:6px 10px; background:#ffffff; border-radius:8px; border:1px solid rgba(16,185,129,0.3); box-shadow:0 1px 3px rgba(0,0,0,0.03); transition:all 0.15s;" onmouseover="this.style.borderColor='#10b981'" onmouseout="this.style.borderColor='rgba(16,185,129,0.3)'">
+                        <div style="cursor:pointer; display:flex; align-items:center; gap:6px; flex:1; min-width:0;" onclick="switchDualRightTeacher('${tCode}', ${d}, ${p});" title="👉 點擊在右視窗切換顯示 ${dispT} 老師週課表">
+                            <i class="fa-solid fa-chalkboard-user" style="color:#5856d6; font-size:0.85rem; flex-shrink:0;"></i>
+                            <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                                <span style="color:#0071e3; font-weight:bold; text-decoration:underline;">${dispT}</span>
+                                <span style="font-size:0.75rem; color:#10b981; font-weight:600; margin-left:4px;" title="任教：${tch.teach_subjects || ''}">⭐ 同學科空堂</span>
+                            </div>
                         </div>
-                        <button class="solver-action-btn primary-btn" style="flex:none; width:auto; padding:3px 12px; font-size:0.75rem; background:#0071e3; border-radius:6px; cursor:pointer; white-space:nowrap;" onclick="executeAssignSubstitute('${dispT}', '${tch.teacher_code}', ${d}, ${p}, '${subjName}')">選為代課</button>
-                     </div>`;
+                        <div style="display:flex; gap:4px; align-items:center; flex-shrink:0; margin-left:6px;">
+                            <button type="button" class="solver-action-btn" style="flex:none; width:auto; padding:3px 8px; font-size:0.72rem; background:rgba(88,86,214,0.12); color:#5856d6; border:1px solid rgba(88,86,214,0.3); border-radius:6px; cursor:pointer; white-space:nowrap; font-weight:600;" onclick="switchDualRightTeacher('${tCode}', ${d}, ${p});" title="切換右側對照視窗為 ${dispT} 老師課表"><i class="fa-solid fa-arrow-right"></i> 看課表</button>
+                            <button type="button" class="solver-action-btn primary-btn" style="flex:none; width:auto; padding:3px 10px; font-size:0.75rem; background:#0071e3; border-radius:6px; cursor:pointer; white-space:nowrap; font-weight:600;" onclick="executeAssignSubstitute('${dispT}', '${tch.teacher_code}', ${d}, ${p}, '${subjName}')">選為代課</button>
+                        </div>
+                    </div>`;
                 }).join('');
             } else if (candidates.length > 0) {
                 col1.innerHTML = `
                     <div style="color:#d97706; font-size:0.75rem; font-weight:600; margin-bottom:6px;"><i class="fa-solid fa-triangle-exclamation"></i> 當節無同學科空堂教師 (顯示其他空堂教師)：</div>
-                    ${candidates.slice(0, 4).map(tch => {
+                    ${candidates.slice(0, 6).map(tch => {
                         const dispT = resolveTeacherDisplayName(tch.teacher_name, tch.teacher_code);
-                        return `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; padding:6px 10px; background:#ffffff; border-radius:8px; border:1px solid rgba(0,0,0,0.1); box-shadow:0 1px 3px rgba(0,0,0,0.03);">
-                            <div>
-                                <span style="color:#1d1d1f; font-weight:bold;">${dispT}</span>
-                                ${tch.teach_subjects && tch.teach_subjects !== '無資料' ? `<span style="font-size:0.75rem; color:#64748b; margin-left:4px;">(${tch.teach_subjects})</span>` : ''}
+                        const tCode = tch.teacher_code || tch.teacher_name || '';
+                        return `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; padding:6px 10px; background:#ffffff; border-radius:8px; border:1px solid rgba(0,0,0,0.1); box-shadow:0 1px 3px rgba(0,0,0,0.03); transition:all 0.15s;" onmouseover="this.style.borderColor='#0071e3'" onmouseout="this.style.borderColor='rgba(0,0,0,0.1)'">
+                            <div style="cursor:pointer; display:flex; align-items:center; gap:6px; flex:1; min-width:0;" onclick="switchDualRightTeacher('${tCode}', ${d}, ${p});" title="👉 點擊在右視窗切換顯示 ${dispT} 老師週課表">
+                                <i class="fa-solid fa-chalkboard-user" style="color:#5856d6; font-size:0.85rem; flex-shrink:0;"></i>
+                                <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                                    <span style="color:#0071e3; font-weight:bold; text-decoration:underline;">${dispT}</span>
+                                    ${tch.teach_subjects && tch.teach_subjects !== '無資料' ? `<span style="font-size:0.75rem; color:#64748b; margin-left:4px;">(${tch.teach_subjects})</span>` : ''}
+                                </div>
                             </div>
-                            <button class="solver-action-btn primary-btn" style="flex:none; width:auto; padding:3px 12px; font-size:0.75rem; background:#0071e3; border-radius:6px; cursor:pointer; white-space:nowrap;" onclick="executeAssignSubstitute('${dispT}', '${tch.teacher_code}', ${d}, ${p}, '${subjName}')">選為代課</button>
-                         </div>`;
+                            <div style="display:flex; gap:4px; align-items:center; flex-shrink:0; margin-left:6px;">
+                                <button type="button" class="solver-action-btn" style="flex:none; width:auto; padding:3px 8px; font-size:0.72rem; background:rgba(88,86,214,0.12); color:#5856d6; border:1px solid rgba(88,86,214,0.3); border-radius:6px; cursor:pointer; white-space:nowrap; font-weight:600;" onclick="switchDualRightTeacher('${tCode}', ${d}, ${p});" title="切換右側對照視窗為 ${dispT} 老師課表"><i class="fa-solid fa-arrow-right"></i> 看課表</button>
+                                <button type="button" class="solver-action-btn primary-btn" style="flex:none; width:auto; padding:3px 10px; font-size:0.75rem; background:#0071e3; border-radius:6px; cursor:pointer; white-space:nowrap; font-weight:600;" onclick="executeAssignSubstitute('${dispT}', '${tch.teacher_code}', ${d}, ${p}, '${subjName}')">選為代課</button>
+                            </div>
+                        </div>`;
                     }).join('')}
                 `;
             } else {
@@ -6599,12 +6631,25 @@ async function updateDualSwapAssistant(d, p) {
             const otherSlots = dualClassSlotsData.filter(s => !(parseInt(s.day) === d && parseInt(s.period) === p));
             
             if (otherSlots.length > 0) {
-                col2.innerHTML = otherSlots.slice(0, 5).map(s => {
+                col2.innerHTML = otherSlots.slice(0, 8).map(s => {
                     const dispST = resolveTeacherDisplayName(s.teacher_name, s.teacher_code);
-                    return `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; padding:6px 10px; background:#ffffff; border-radius:8px; border:1px solid rgba(0,0,0,0.1); box-shadow:0 1px 3px rgba(0,0,0,0.03);">
-                        <span><strong style="color:#0071e3;">${daysMap[s.day]}第${s.period}節</strong> ${s.subject_name} (${dispST})</span>
-                        <button class="solver-action-btn primary-btn" style="flex:none; width:auto; padding:3px 12px; font-size:0.75rem; background:#d97706; border-radius:6px; cursor:pointer; white-space:nowrap;" onclick="executePerformSlotSwap(${d}, ${p}, ${s.day}, ${s.period}, '${subj1}', '${tch1}', '${s.subject_name}', '${dispST}')">對調此節</button>
-                     </div>`;
+                    const tCodeST = s.teacher_code || s.teacher_name || '';
+                    return `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; padding:6px 10px; background:#ffffff; border-radius:8px; border:1px solid rgba(217,119,6,0.25); box-shadow:0 1px 3px rgba(0,0,0,0.03); transition:all 0.15s;" onmouseover="this.style.borderColor='#d97706'" onmouseout="this.style.borderColor='rgba(217,119,6,0.25)'">
+                        <div style="display:flex; align-items:center; gap:6px; flex:1; min-width:0; overflow:hidden;">
+                            <span style="font-weight:bold; color:#0071e3; cursor:pointer; white-space:nowrap;" onclick="highlightDualSlotSync(${s.day}, ${s.period}); switchDualRightTeacher('${tCodeST}', ${s.day}, ${s.period});" title="👉 點擊對焦此節次並在右視窗開啟 ${dispST} 老師週課表">
+                                ${daysMap[s.day]}第${s.period}節
+                            </span>
+                            <span style="color:#1d1d1f; font-weight:600; white-space:nowrap;">${s.subject_name}</span>
+                            ${dispST ? `
+                            <span style="cursor:pointer; color:#5856d6; font-weight:bold; text-decoration:underline; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" onclick="switchDualRightTeacher('${tCodeST}', ${s.day}, ${s.period});" title="👉 點擊在右視窗切換顯示 ${dispST} 老師週課表">
+                                <i class="fa-solid fa-arrow-right" style="font-size:0.68rem;"></i> ${dispST}
+                            </span>` : ''}
+                        </div>
+                        <div style="display:flex; gap:4px; align-items:center; flex-shrink:0; margin-left:6px;">
+                            ${tCodeST ? `<button type="button" class="solver-action-btn" style="flex:none; width:auto; padding:3px 8px; font-size:0.72rem; background:rgba(88,86,214,0.12); color:#5856d6; border:1px solid rgba(88,86,214,0.3); border-radius:6px; cursor:pointer; white-space:nowrap; font-weight:600;" onclick="switchDualRightTeacher('${tCodeST}', ${s.day}, ${s.period});" title="切換右側對照視窗為 ${dispST} 老師課表"><i class="fa-solid fa-arrow-right"></i> 看課表</button>` : ''}
+                            <button type="button" class="solver-action-btn primary-btn" style="flex:none; width:auto; padding:3px 10px; font-size:0.75rem; background:#d97706; border-radius:6px; cursor:pointer; white-space:nowrap; font-weight:600;" onclick="executePerformSlotSwap(${d}, ${p}, ${s.day}, ${s.period}, '${subj1}', '${tch1}', '${s.subject_name}', '${dispST}')">對調此節</button>
+                        </div>
+                    </div>`;
                 }).join('');
             } else {
                 col2.innerHTML = '<div style="color:#64748b;">無可對調節次</div>';
@@ -6615,7 +6660,12 @@ async function updateDualSwapAssistant(d, p) {
     }
 
     if (col3) {
-        const topFreeTeachers = candidates.slice(0, 5).map(c => c.teacher_name).join('、 ');
+        const freeTeacherChips = candidates.slice(0, 10).map(c => {
+            const dispName = resolveTeacherDisplayName(c.teacher_name, c.teacher_code);
+            const code = c.teacher_code || c.teacher_name || '';
+            return `<span style="background:rgba(88,86,214,0.1); border:1px solid rgba(88,86,214,0.25); color:#5856d6; padding:2px 7px; border-radius:4px; font-size:0.75rem; cursor:pointer; display:inline-flex; align-items:center; gap:3px; font-weight:600; transition:all 0.15s;" onmouseover="this.style.background='rgba(88,86,214,0.25)'" onmouseout="this.style.background='rgba(88,86,214,0.1)'" title="👉 點擊在右視窗切換顯示 ${dispName} 老師週課表" onclick="switchDualRightTeacher('${code}', ${d}, ${p})"><i class="fa-solid fa-user-graduate" style="font-size:0.7rem;"></i> ${dispName}</span>`;
+        }).join(' ') || '<span style="color:#64748b;">無</span>';
+
         col3.innerHTML = `
             <div style="color:#34d399; font-weight:bold; margin-bottom:4px;"><i class="fa-solid fa-door-open"></i> 全校專用教室即時空堂狀態 (${daysMap[d]}第${p}節)：</div>
             <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:6px; max-height:80px; overflow-y:auto;">
@@ -6625,7 +6675,10 @@ async function updateDualSwapAssistant(d, p) {
                     return `<span style="background:rgba(52,211,153,0.15); border:1px solid rgba(52,211,153,0.3); color:#34d399; padding:2px 6px; border-radius:4px; font-size:0.75rem; cursor:pointer;" title="點擊查詢 ${rName} 場地課表" onclick="window.location.hash='#room/${encodeURIComponent(rCode)}'; closeDualViewModal();">🟢 ${rName} (空堂)</span>`;
                 }).join('') || '<span style="color:#64748b;">當節無空閒專用教室</span>'}
             </div>
-            <div style="color:#a78bfa; font-size:0.75rem;"><i class="fa-solid fa-user-clock"></i> 當節全校空堂教師 (${candidates.length}位)：${topFreeTeachers || '無'}</div>
+            <div style="color:#5856d6; font-size:0.78rem; font-weight:600; margin-top:6px;"><i class="fa-solid fa-user-clock"></i> 當節全校空堂教師 (${candidates.length}位，點擊可換右視窗課表)：</div>
+            <div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:4px; max-height:80px; overflow-y:auto;">
+                ${freeTeacherChips}
+            </div>
         `;
     }
 }
