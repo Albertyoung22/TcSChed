@@ -5060,6 +5060,7 @@ def api_substitute_recommend():
         ai_ranks = call_groq_substitute_rank(
             target_subject, target_subject_code, target_class, candidates, cfg
         )
+        use_ai = bool(ai_ranks)
 
         fit_order = {"high": 0, "medium": 1, "low": 2, None: 3}
         for c in candidates:
