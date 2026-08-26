@@ -6569,49 +6569,86 @@ async function updateDualSwapAssistant(d, p) {
     if (col1) {
         if (activeLesson) {
             const sameSubjCands = candidates.filter(c => c.is_same_domain || c.ai_fit === 'high');
+            const sameClassCands = candidates.filter(c => (c.is_same_class || c.is_class_tutor) && !c.is_same_domain && c.ai_fit !== 'high');
+            const otherCands = candidates.filter(c => !c.is_same_domain && c.ai_fit !== 'high' && !c.is_same_class && !c.is_class_tutor);
             
+            const renderCandItem = (tch, badgeHtml, borderStyle, bgStyle) => {
+                const dispT = resolveTeacherDisplayName(tch.teacher_name, tch.teacher_code);
+                const tCode = tch.teacher_code || tch.teacher_name || '';
+                return `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; padding:6px 10px; background:${bgStyle || '#ffffff'}; border-radius:8px; border:${borderStyle || '1px solid rgba(0,0,0,0.1)'}; box-shadow:0 1px 3px rgba(0,0,0,0.03); transition:all 0.15s;" onmouseover="this.style.borderColor='#0071e3'" onmouseout="this.style.borderColor='${(borderStyle || '').includes('rgba') ? borderStyle.split(' ')[2] : 'rgba(0,0,0,0.1)'}'">
+                    <div style="cursor:pointer; display:flex; align-items:center; gap:6px; flex:1; min-width:0;" onclick="switchDualRightTeacher('${tCode}', ${d}, ${p});" title="👉 點擊在右視窗切換顯示 ${dispT} 老師週課表">
+                        <i class="fa-solid fa-chalkboard-user" style="color:#5856d6; font-size:0.85rem; flex-shrink:0;"></i>
+                        <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                            <span style="color:#0071e3; font-weight:bold; text-decoration:underline;">${dispT}</span>
+                            ${badgeHtml}
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:4px; align-items:center; flex-shrink:0; margin-left:6px;">
+                        <button type="button" class="solver-action-btn" style="flex:none; width:auto; padding:3px 8px; font-size:0.72rem; background:rgba(88,86,214,0.12); color:#5856d6; border:1px solid rgba(88,86,214,0.3); border-radius:6px; cursor:pointer; white-space:nowrap; font-weight:600;" onclick="switchDualRightTeacher('${tCode}', ${d}, ${p});" title="切換右側對照視窗為 ${dispT} 老師課表"><i class="fa-solid fa-arrow-right"></i> 看課表</button>
+                        <button type="button" class="solver-action-btn primary-btn" style="flex:none; width:auto; padding:3px 10px; font-size:0.75rem; background:#0071e3; border-radius:6px; cursor:pointer; white-space:nowrap; font-weight:600;" onclick="executeAssignSubstitute('${dispT}', '${tch.teacher_code}', ${d}, ${p}, '${subjName}')">選為代課</button>
+                    </div>
+                </div>`;
+            };
+
+            let htmlBlocks = [];
+
+            // 1. Same subject candidates
             if (sameSubjCands.length > 0) {
-                col1.innerHTML = sameSubjCands.slice(0, 8).map(tch => {
-                    const dispT = resolveTeacherDisplayName(tch.teacher_name, tch.teacher_code);
-                    const tCode = tch.teacher_code || tch.teacher_name || '';
-                    return `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; padding:6px 10px; background:#ffffff; border-radius:8px; border:1px solid rgba(16,185,129,0.3); box-shadow:0 1px 3px rgba(0,0,0,0.03); transition:all 0.15s;" onmouseover="this.style.borderColor='#10b981'" onmouseout="this.style.borderColor='rgba(16,185,129,0.3)'">
-                        <div style="cursor:pointer; display:flex; align-items:center; gap:6px; flex:1; min-width:0;" onclick="switchDualRightTeacher('${tCode}', ${d}, ${p});" title="👉 點擊在右視窗切換顯示 ${dispT} 老師週課表">
-                            <i class="fa-solid fa-chalkboard-user" style="color:#5856d6; font-size:0.85rem; flex-shrink:0;"></i>
-                            <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
-                                <span style="color:#0071e3; font-weight:bold; text-decoration:underline;">${dispT}</span>
-                                <span style="font-size:0.75rem; color:#10b981; font-weight:600; margin-left:4px;" title="任教：${tch.teach_subjects || ''}">⭐ 同學科空堂</span>
-                            </div>
-                        </div>
-                        <div style="display:flex; gap:4px; align-items:center; flex-shrink:0; margin-left:6px;">
-                            <button type="button" class="solver-action-btn" style="flex:none; width:auto; padding:3px 8px; font-size:0.72rem; background:rgba(88,86,214,0.12); color:#5856d6; border:1px solid rgba(88,86,214,0.3); border-radius:6px; cursor:pointer; white-space:nowrap; font-weight:600;" onclick="switchDualRightTeacher('${tCode}', ${d}, ${p});" title="切換右側對照視窗為 ${dispT} 老師課表"><i class="fa-solid fa-arrow-right"></i> 看課表</button>
-                            <button type="button" class="solver-action-btn primary-btn" style="flex:none; width:auto; padding:3px 10px; font-size:0.75rem; background:#0071e3; border-radius:6px; cursor:pointer; white-space:nowrap; font-weight:600;" onclick="executeAssignSubstitute('${dispT}', '${tch.teacher_code}', ${d}, ${p}, '${subjName}')">選為代課</button>
-                        </div>
-                    </div>`;
-                }).join('');
-            } else if (candidates.length > 0) {
-                col1.innerHTML = `
-                    <div style="color:#d97706; font-size:0.75rem; font-weight:600; margin-bottom:6px;"><i class="fa-solid fa-triangle-exclamation"></i> 當節無同學科空堂教師 (顯示其他空堂教師)：</div>
-                    ${candidates.slice(0, 6).map(tch => {
-                        const dispT = resolveTeacherDisplayName(tch.teacher_name, tch.teacher_code);
-                        const tCode = tch.teacher_code || tch.teacher_name || '';
-                        return `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; padding:6px 10px; background:#ffffff; border-radius:8px; border:1px solid rgba(0,0,0,0.1); box-shadow:0 1px 3px rgba(0,0,0,0.03); transition:all 0.15s;" onmouseover="this.style.borderColor='#0071e3'" onmouseout="this.style.borderColor='rgba(0,0,0,0.1)'">
-                            <div style="cursor:pointer; display:flex; align-items:center; gap:6px; flex:1; min-width:0;" onclick="switchDualRightTeacher('${tCode}', ${d}, ${p});" title="👉 點擊在右視窗切換顯示 ${dispT} 老師週課表">
-                                <i class="fa-solid fa-chalkboard-user" style="color:#5856d6; font-size:0.85rem; flex-shrink:0;"></i>
-                                <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
-                                    <span style="color:#0071e3; font-weight:bold; text-decoration:underline;">${dispT}</span>
-                                    ${tch.teach_subjects && tch.teach_subjects !== '無資料' ? `<span style="font-size:0.75rem; color:#64748b; margin-left:4px;">(${tch.teach_subjects})</span>` : ''}
-                                </div>
-                            </div>
-                            <div style="display:flex; gap:4px; align-items:center; flex-shrink:0; margin-left:6px;">
-                                <button type="button" class="solver-action-btn" style="flex:none; width:auto; padding:3px 8px; font-size:0.72rem; background:rgba(88,86,214,0.12); color:#5856d6; border:1px solid rgba(88,86,214,0.3); border-radius:6px; cursor:pointer; white-space:nowrap; font-weight:600;" onclick="switchDualRightTeacher('${tCode}', ${d}, ${p});" title="切換右側對照視窗為 ${dispT} 老師課表"><i class="fa-solid fa-arrow-right"></i> 看課表</button>
-                                <button type="button" class="solver-action-btn primary-btn" style="flex:none; width:auto; padding:3px 10px; font-size:0.75rem; background:#0071e3; border-radius:6px; cursor:pointer; white-space:nowrap; font-weight:600;" onclick="executeAssignSubstitute('${dispT}', '${tch.teacher_code}', ${d}, ${p}, '${subjName}')">選為代課</button>
-                            </div>
-                        </div>`;
-                    }).join('')}
-                `;
-            } else {
-                col1.innerHTML = '<div style="color:#64748b; padding:6px;">當前時段無全校可用空堂教師</div>';
+                htmlBlocks.push(`
+                    <div style="font-size:0.75rem; font-weight:bold; color:#10b981; margin-bottom:4px; display:flex; align-items:center; gap:4px;">
+                        <i class="fa-solid fa-circle-check"></i> 同科目可代課教師 (空堂)：
+                    </div>
+                `);
+                sameSubjCands.slice(0, 6).forEach(tch => {
+                    const sameClassTag = tch.is_class_tutor ? '<span style="font-size:0.72rem; color:#7c3aed; font-weight:bold; margin-left:4px;">👑 本班導師</span>' : (tch.is_same_class ? `<span style="font-size:0.72rem; color:#d97706; font-weight:600; margin-left:4px;">🏫 本班任課</span>` : '');
+                    const badge = `<span style="font-size:0.75rem; color:#10b981; font-weight:600; margin-left:4px;" title="任教：${tch.teach_subjects || ''}">⭐ 同學科空堂</span>${sameClassTag}`;
+                    htmlBlocks.push(renderCandItem(tch, badge, '1px solid rgba(16,185,129,0.35)', '#ffffff'));
+                });
             }
+
+            // 2. Same class teachers (任教同一班級教師群 / 該班導師)
+            if (sameClassCands.length > 0) {
+                const headerText = (sameSubjCands.length === 0) 
+                    ? `<div style="color:#d97706; font-size:0.78rem; font-weight:bold; margin-bottom:6px; display:flex; align-items:center; gap:4px;"><i class="fa-solid fa-triangle-exclamation"></i> 無同科目空堂，【首選推薦任教本班教師 (空堂)】：</div>`
+                    : `<div style="color:#d97706; font-size:0.75rem; font-weight:bold; margin:8px 0 4px 0; display:flex; align-items:center; gap:4px;"><i class="fa-solid fa-users"></i> 任教本班級教師 (空堂・推薦代課)：</div>`;
+                
+                htmlBlocks.push(headerText);
+                sameClassCands.slice(0, 6).forEach(tch => {
+                    const tutorTag = tch.is_class_tutor ? `<span style="font-size:0.72rem; color:#7c3aed; font-weight:bold; margin-left:4px;">👑 本班導師 (空堂)</span>` : '';
+                    const subjDesc = tch.same_class_subjects ? `(${tch.same_class_subjects})` : (tch.teach_subjects && tch.teach_subjects !== '無資料' ? `(${tch.teach_subjects})` : '');
+                    const badge = `<span style="font-size:0.75rem; color:#d97706; font-weight:600; margin-left:4px;" title="在該班任教科目：${tch.same_class_subjects || tch.teach_subjects || ''}">🏫 本班任課${subjDesc}</span>${tutorTag}`;
+                    htmlBlocks.push(renderCandItem(tch, badge, '1px solid rgba(217,119,6,0.3)', 'rgba(217,119,6,0.02)'));
+                });
+            }
+
+            // 3. If no same subject AND no same class, show other schoolwide free teachers
+            if (sameSubjCands.length === 0 && sameClassCands.length === 0) {
+                if (otherCands.length > 0) {
+                    htmlBlocks.push(`
+                        <div style="color:#64748b; font-size:0.75rem; font-weight:600; margin-bottom:6px;"><i class="fa-solid fa-circle-info"></i> 無同科目或同班任課空堂，顯示全校其他空堂教師：</div>
+                    `);
+                    otherCands.slice(0, 6).forEach(tch => {
+                        const badge = tch.teach_subjects && tch.teach_subjects !== '無資料' ? `<span style="font-size:0.75rem; color:#64748b; margin-left:4px;">(${tch.teach_subjects})</span>` : '';
+                        htmlBlocks.push(renderCandItem(tch, badge, '1px solid rgba(0,0,0,0.1)', '#ffffff'));
+                    });
+                } else {
+                    htmlBlocks.push('<div style="color:#64748b; padding:6px;">當前時段無全校可用空堂教師</div>');
+                }
+            } else if (otherCands.length > 0 && sameSubjCands.length === 0) {
+                htmlBlocks.push(`
+                    <details style="margin-top:6px;">
+                        <summary style="font-size:0.75rem; color:#64748b; cursor:pointer; font-weight:600;">＋ 展開其他全校空堂教師 (${otherCands.length}位)</summary>
+                        <div style="margin-top:4px;">
+                            ${otherCands.slice(0, 6).map(tch => {
+                                const badge = tch.teach_subjects && tch.teach_subjects !== '無資料' ? `<span style="font-size:0.75rem; color:#64748b; margin-left:4px;">(${tch.teach_subjects})</span>` : '';
+                                return renderCandItem(tch, badge, '1px solid rgba(0,0,0,0.08)', '#ffffff');
+                            }).join('')}
+                        </div>
+                    </details>
+                `);
+            }
+
+            col1.innerHTML = htmlBlocks.join('');
         } else {
             col1.innerHTML = '<div style="color:#10b981; font-weight:bold; padding:8px; background:rgba(16,185,129,0.1); border-radius:6px;">🟢 此節次班級無課 (空堂)，無需請假調代課</div>';
         }
