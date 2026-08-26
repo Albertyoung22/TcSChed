@@ -6568,19 +6568,39 @@ async function updateDualSwapAssistant(d, p) {
 
     if (col1) {
         if (activeLesson) {
-            const sameSubjCands = candidates.filter(c => c.is_same_domain || c.ai_fit === 'high');
-            const sameClassCands = candidates.filter(c => (c.is_same_class || c.is_class_tutor) && !c.is_same_domain && c.ai_fit !== 'high');
-            const otherCands = candidates.filter(c => !c.is_same_domain && c.ai_fit !== 'high' && !c.is_same_class && !c.is_class_tutor);
+            const sameClassCands = candidates.filter(c => c.is_same_class || c.is_class_tutor);
+            const otherCands = candidates.filter(c => !c.is_same_class && !c.is_class_tutor);
             
-            const renderCandItem = (tch, badgeHtml, borderStyle, bgStyle) => {
+            const renderCandItem = (tch, highlightStyle) => {
                 const dispT = resolveTeacherDisplayName(tch.teacher_name, tch.teacher_code);
                 const tCode = tch.teacher_code || tch.teacher_name || '';
-                return `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; padding:6px 10px; background:${bgStyle || '#ffffff'}; border-radius:8px; border:${borderStyle || '1px solid rgba(0,0,0,0.1)'}; box-shadow:0 1px 3px rgba(0,0,0,0.03); transition:all 0.15s;" onmouseover="this.style.borderColor='#0071e3'" onmouseout="this.style.borderColor='${(borderStyle || '').includes('rgba') ? borderStyle.split(' ')[2] : 'rgba(0,0,0,0.1)'}'">
-                    <div style="cursor:pointer; display:flex; align-items:center; gap:6px; flex:1; min-width:0;" onclick="switchDualRightTeacher('${tCode}', ${d}, ${p});" title="👉 點擊在右視窗切換顯示 ${dispT} 老師週課表">
-                        <i class="fa-solid fa-chalkboard-user" style="color:#5856d6; font-size:0.85rem; flex-shrink:0;"></i>
-                        <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
-                            <span style="color:#0071e3; font-weight:bold; text-decoration:underline;">${dispT}</span>
-                            ${badgeHtml}
+                
+                // Badges
+                let relationBadge = '';
+                if (tch.is_class_tutor) {
+                    relationBadge = `<span style="font-size:0.72rem; background:#7c3aed; color:#ffffff; padding:1px 6px; border-radius:4px; font-weight:bold; margin-left:4px;">👑 本班導師</span>`;
+                } else if (tch.is_same_class) {
+                    const subjDesc = tch.same_class_subjects ? ` (${tch.same_class_subjects})` : '';
+                    relationBadge = `<span style="font-size:0.72rem; background:#d97706; color:#ffffff; padding:1px 6px; border-radius:4px; font-weight:600; margin-left:4px;">🏫 本班任課${subjDesc}</span>`;
+                } else if (tch.is_exact_same_subj) {
+                    relationBadge = `<span style="font-size:0.72rem; background:#10b981; color:#ffffff; padding:1px 6px; border-radius:4px; font-weight:600; margin-left:4px;">⭐ 同科目</span>`;
+                }
+
+                const teachSubjs = tch.teach_subjects && tch.teach_subjects !== '無資料' ? tch.teach_subjects : '專任/導師';
+                const borderColor = highlightStyle ? 'rgba(245,158,11,0.45)' : 'rgba(0,0,0,0.1)';
+                const bg = highlightStyle ? 'rgba(245,158,11,0.03)' : '#ffffff';
+
+                return `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; padding:6px 10px; background:${bg}; border-radius:8px; border:1px solid ${borderColor}; box-shadow:0 1px 3px rgba(0,0,0,0.03); transition:all 0.15s;" onmouseover="this.style.borderColor='#0071e3'" onmouseout="this.style.borderColor='${borderColor}'">
+                    <div style="cursor:pointer; display:flex; align-items:flex-start; gap:6px; flex:1; min-width:0;" onclick="switchDualRightTeacher('${tCode}', ${d}, ${p});" title="👉 點擊在右視窗切換顯示 ${dispT} 老師週課表">
+                        <i class="fa-solid fa-chalkboard-user" style="color:#5856d6; font-size:0.85rem; margin-top:2px; flex-shrink:0;"></i>
+                        <div style="overflow:hidden; min-width:0;">
+                            <div style="display:flex; align-items:center; flex-wrap:wrap; gap:4px;">
+                                <span style="color:#0071e3; font-weight:bold; text-decoration:underline;">${dispT}</span>
+                                ${relationBadge}
+                            </div>
+                            <div style="font-size:0.73rem; color:#475569; margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="任教全部科目：${teachSubjs}">
+                                📚 任教：<span style="color:#1e293b; font-weight:600;">${teachSubjs}</span>
+                            </div>
                         </div>
                     </div>
                     <div style="display:flex; gap:4px; align-items:center; flex-shrink:0; margin-left:6px;">
@@ -6592,63 +6612,35 @@ async function updateDualSwapAssistant(d, p) {
 
             let htmlBlocks = [];
 
-            // 1. Same subject candidates
-            if (sameSubjCands.length > 0) {
+            // 1. 任教本班級教師 (當節空堂)
+            if (sameClassCands.length > 0) {
                 htmlBlocks.push(`
-                    <div style="font-size:0.75rem; font-weight:bold; color:#10b981; margin-bottom:4px; display:flex; align-items:center; gap:4px;">
-                        <i class="fa-solid fa-circle-check"></i> 同科目可代課教師 (空堂)：
+                    <div style="color:#d97706; font-size:0.78rem; font-weight:bold; margin-bottom:6px; display:flex; align-items:center; gap:4px;">
+                        <i class="fa-solid fa-users"></i> 任教本班級教師 (當節空堂・代課首選)：
                     </div>
                 `);
-                sameSubjCands.slice(0, 6).forEach(tch => {
-                    const sameClassTag = tch.is_class_tutor ? '<span style="font-size:0.72rem; color:#7c3aed; font-weight:bold; margin-left:4px;">👑 本班導師</span>' : (tch.is_same_class ? `<span style="font-size:0.72rem; color:#d97706; font-weight:600; margin-left:4px;">🏫 本班任課</span>` : '');
-                    const badge = `<span style="font-size:0.75rem; color:#10b981; font-weight:600; margin-left:4px;" title="任教：${tch.teach_subjects || ''}">⭐ 同學科空堂</span>${sameClassTag}`;
-                    htmlBlocks.push(renderCandItem(tch, badge, '1px solid rgba(16,185,129,0.35)', '#ffffff'));
+                sameClassCands.forEach(tch => {
+                    htmlBlocks.push(renderCandItem(tch, true));
                 });
             }
 
-            // 2. Same class teachers (任教同一班級教師群 / 該班導師)
-            if (sameClassCands.length > 0) {
-                const headerText = (sameSubjCands.length === 0) 
-                    ? `<div style="color:#d97706; font-size:0.78rem; font-weight:bold; margin-bottom:6px; display:flex; align-items:center; gap:4px;"><i class="fa-solid fa-triangle-exclamation"></i> 無同科目空堂，【首選推薦任教本班教師 (空堂)】：</div>`
-                    : `<div style="color:#d97706; font-size:0.75rem; font-weight:bold; margin:8px 0 4px 0; display:flex; align-items:center; gap:4px;"><i class="fa-solid fa-users"></i> 任教本班級教師 (空堂・推薦代課)：</div>`;
+            // 2. 全校其他空堂教師
+            if (otherCands.length > 0) {
+                const headerText = sameClassCands.length > 0
+                    ? `<div style="color:#0071e3; font-size:0.78rem; font-weight:bold; margin:8px 0 4px 0; display:flex; align-items:center; gap:4px;"><i class="fa-solid fa-school"></i> 全校其他空堂教師 (${otherCands.length} 位・請依科目自選)：</div>`
+                    : `<div style="color:#0071e3; font-size:0.78rem; font-weight:bold; margin-bottom:6px; display:flex; align-items:center; gap:4px;"><i class="fa-solid fa-school"></i> 全校當前空堂教師 (${otherCands.length} 位・請依科目自選)：</div>`;
                 
                 htmlBlocks.push(headerText);
-                sameClassCands.slice(0, 6).forEach(tch => {
-                    const tutorTag = tch.is_class_tutor ? `<span style="font-size:0.72rem; color:#7c3aed; font-weight:bold; margin-left:4px;">👑 本班導師 (空堂)</span>` : '';
-                    const subjDesc = tch.same_class_subjects ? `(${tch.same_class_subjects})` : (tch.teach_subjects && tch.teach_subjects !== '無資料' ? `(${tch.teach_subjects})` : '');
-                    const badge = `<span style="font-size:0.75rem; color:#d97706; font-weight:600; margin-left:4px;" title="在該班任教科目：${tch.same_class_subjects || tch.teach_subjects || ''}">🏫 本班任課${subjDesc}</span>${tutorTag}`;
-                    htmlBlocks.push(renderCandItem(tch, badge, '1px solid rgba(217,119,6,0.3)', 'rgba(217,119,6,0.02)'));
+                otherCands.forEach(tch => {
+                    htmlBlocks.push(renderCandItem(tch, false));
                 });
             }
 
-            // 3. If no same subject AND no same class, show other schoolwide free teachers
-            if (sameSubjCands.length === 0 && sameClassCands.length === 0) {
-                if (otherCands.length > 0) {
-                    htmlBlocks.push(`
-                        <div style="color:#64748b; font-size:0.75rem; font-weight:600; margin-bottom:6px;"><i class="fa-solid fa-circle-info"></i> 無同科目或同班任課空堂，顯示全校其他空堂教師：</div>
-                    `);
-                    otherCands.slice(0, 6).forEach(tch => {
-                        const badge = tch.teach_subjects && tch.teach_subjects !== '無資料' ? `<span style="font-size:0.75rem; color:#64748b; margin-left:4px;">(${tch.teach_subjects})</span>` : '';
-                        htmlBlocks.push(renderCandItem(tch, badge, '1px solid rgba(0,0,0,0.1)', '#ffffff'));
-                    });
-                } else {
-                    htmlBlocks.push('<div style="color:#64748b; padding:6px;">當前時段無全校可用空堂教師</div>');
-                }
-            } else if (otherCands.length > 0 && sameSubjCands.length === 0) {
-                htmlBlocks.push(`
-                    <details style="margin-top:6px;">
-                        <summary style="font-size:0.75rem; color:#64748b; cursor:pointer; font-weight:600;">＋ 展開其他全校空堂教師 (${otherCands.length}位)</summary>
-                        <div style="margin-top:4px;">
-                            ${otherCands.slice(0, 6).map(tch => {
-                                const badge = tch.teach_subjects && tch.teach_subjects !== '無資料' ? `<span style="font-size:0.75rem; color:#64748b; margin-left:4px;">(${tch.teach_subjects})</span>` : '';
-                                return renderCandItem(tch, badge, '1px solid rgba(0,0,0,0.08)', '#ffffff');
-                            }).join('')}
-                        </div>
-                    </details>
-                `);
+            if (htmlBlocks.length === 0) {
+                col1.innerHTML = '<div style="color:#64748b; padding:6px;">當前時段無全校可用空堂教師</div>';
+            } else {
+                col1.innerHTML = htmlBlocks.join('');
             }
-
-            col1.innerHTML = htmlBlocks.join('');
         } else {
             col1.innerHTML = '<div style="color:#10b981; font-weight:bold; padding:8px; background:rgba(16,185,129,0.1); border-radius:6px;">🟢 此節次班級無課 (空堂)，無需請假調代課</div>';
         }
