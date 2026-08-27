@@ -22,6 +22,256 @@
         #headerSemesterBox, #dbBadge, #importDbfBtn {
             display: none !important;
         }
+
+        /* ==========================================
+           Mobile Mode & Responsive Schedule Cards
+           ========================================== */
+        .mobile-mode-badge {
+            background: rgba(0, 113, 227, 0.1);
+            color: #0071e3;
+            border: 1px solid rgba(0, 113, 227, 0.25);
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 0.78rem;
+            font-weight: 700;
+        }
+
+        /* Day Selector Bar */
+        .mobile-day-bar {
+            display: none;
+            margin: 12px 0 16px 0;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            padding: 4px 2px;
+        }
+        .mobile-day-bar::-webkit-scrollbar {
+            display: none;
+        }
+        .mobile-day-scroll {
+            display: flex;
+            gap: 8px;
+            min-width: max-content;
+            padding: 2px;
+        }
+        .mobile-day-pill {
+            background: #ffffff;
+            border: 1.5px solid #e2e8f0;
+            color: #475569;
+            font-size: 0.9rem;
+            font-weight: 600;
+            padding: 8px 18px;
+            border-radius: 24px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+            user-select: none;
+            white-space: nowrap;
+        }
+        .mobile-day-pill:active {
+            transform: scale(0.96);
+        }
+        .mobile-day-pill.active {
+            background: linear-gradient(135deg, #0071e3, #0284c7);
+            color: #ffffff;
+            border-color: #0071e3;
+            box-shadow: 0 4px 14px rgba(0, 113, 227, 0.35);
+            font-weight: 700;
+        }
+
+        /* Mobile Cards Layout */
+        .mobile-cards-container {
+            display: none;
+            flex-direction: column;
+            gap: 14px;
+            margin-bottom: 24px;
+        }
+        .mobile-day-group {
+            background: rgba(255, 255, 255, 0.92);
+            border-radius: 16px;
+            border: 1px solid rgba(226, 232, 240, 0.9);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+            overflow: hidden;
+        }
+        .mobile-day-group-header {
+            background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+            padding: 12px 16px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .mobile-day-group-header .count-badge {
+            background: #0071e3;
+            color: #ffffff;
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-weight: 700;
+        }
+        .mobile-cards-list {
+            display: flex;
+            flex-direction: column;
+            divide-y: 1px solid #f1f5f9;
+        }
+        .mobile-lesson-card {
+            padding: 14px 16px;
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            border-bottom: 1px solid #f1f5f9;
+            transition: background 0.15s ease;
+        }
+        .mobile-lesson-card:last-child {
+            border-bottom: none;
+        }
+        .mobile-lesson-card:active {
+            background: rgba(0, 113, 227, 0.04);
+        }
+        .mobile-period-badge {
+            min-width: 58px;
+            text-align: center;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 6px 4px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            flex-shrink: 0;
+        }
+        .mobile-period-num {
+            font-size: 0.88rem;
+            font-weight: 800;
+            color: #1e293b;
+        }
+        .mobile-period-time {
+            font-size: 0.68rem;
+            color: #64748b;
+            font-weight: 500;
+        }
+        .mobile-card-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .mobile-card-title-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .mobile-subj-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #0f172a;
+            letter-spacing: -0.2px;
+        }
+        .mobile-class-tag {
+            background: linear-gradient(135deg, rgba(0, 113, 227, 0.12), rgba(2, 132, 199, 0.12));
+            color: #0071e3;
+            border: 1px solid rgba(0, 113, 227, 0.25);
+            font-size: 0.78rem;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 6px;
+        }
+        .mobile-card-meta-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.82rem;
+            color: #475569;
+            flex-wrap: wrap;
+        }
+        .mobile-meta-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .mobile-empty-slot {
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            border-bottom: 1px solid #f8fafc;
+            opacity: 0.6;
+        }
+        .mobile-empty-slot .mobile-period-badge {
+            background: #fafafa;
+            border-color: #f1f5f9;
+        }
+        .mobile-empty-text {
+            font-size: 0.85rem;
+            color: #94a3b8;
+            font-weight: 500;
+        }
+
+        /* Toggle Rules */
+        body.view-mode-mobile .mobile-day-bar {
+            display: block;
+        }
+        body.view-mode-mobile .mobile-cards-container {
+            display: flex;
+        }
+        body.view-mode-mobile #scheduleTableWrapper,
+        body.view-mode-mobile #scheduleTable {
+            display: none !important;
+        }
+
+        body.view-mode-desktop .mobile-day-bar,
+        body.view-mode-desktop .mobile-cards-container {
+            display: none !important;
+        }
+        body.view-mode-desktop #scheduleTableWrapper,
+        body.view-mode-desktop #scheduleTable {
+            display: table !important;
+        }
+
+        /* Touch & Mobile Responsive Defaults for Small Screens */
+        @media (max-width: 768px) {
+            .app-header {
+                padding: 10px 12px;
+            }
+            .header-actions {
+                width: 100%;
+                justify-content: flex-start;
+                margin-top: 8px;
+            }
+            .solver-panel-btn {
+                padding: 6px 10px;
+                font-size: 0.8rem;
+                height: 34px;
+            }
+            .quick-grid {
+                grid-template-columns: repeat(auto-fill, minmax(85px, 1fr)) !important;
+                gap: 8px !important;
+            }
+            .quick-btn {
+                min-height: 44px !important;
+                font-size: 0.9rem !important;
+                padding: 8px 4px !important;
+            }
+            .schedule-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            .action-buttons {
+                width: 100%;
+                justify-content: flex-start;
+                overflow-x: auto;
+                padding-bottom: 4px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -42,6 +292,9 @@
             </div>
 
             <div class="header-actions" style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: flex-end;">
+                <button id="modeToggleBtn" class="solver-panel-btn" onclick="toggleScheduleViewMode()" style="background: linear-gradient(135deg, rgba(0, 113, 227, 0.12), rgba(168, 85, 247, 0.15)); border: 1.5px solid #0071e3; color: #0071e3; padding: 6px 14px; font-size: 0.85rem; height: 36px; cursor: pointer; border-radius: 10px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(0, 113, 227, 0.15);" title="在『📱 手機卡片模式』與『💻 電腦總覽模式』之間自由切換">
+                    <i class="fa-solid fa-mobile-screen-button" id="modeToggleIcon" style="font-size: 1rem;"></i> <span id="modeToggleText">手機模式</span>
+                </button>
                 <a href="/showcase" target="_blank" class="solver-panel-btn" style="background: linear-gradient(135deg, rgba(0, 240, 255, 0.25), rgba(255, 0, 127, 0.25)); border: 1px solid #00f0ff; color: #00f0ff; padding: 5px 12px; font-size: 0.85rem; height: 36px; text-decoration: none; display: inline-flex; align-items: center; gap: 5px; font-weight: 700; box-shadow: 0 0 12px rgba(0, 240, 255, 0.4);" title="開啟系統簡介、核心亮點與動態 AI 語音導覽頁面">
                     <i class="fa-solid fa-wand-magic-sparkles" style="color: #ff007f;"></i> 系統亮點與 AI 導覽
                 </a>
@@ -215,8 +468,30 @@
                 </div>
             </div>
 
-            <!-- Schedule Grid Table -->
-            <div class="table-responsive glass">
+            <!-- Mobile Day Filter Bar (Visible in Mobile Mode) -->
+            <div id="mobileDayBar" class="mobile-day-bar no-print">
+                <div class="mobile-day-scroll">
+                    <button type="button" class="mobile-day-pill active" data-day="today" onclick="selectMobileDay('today')">
+                        <i class="fa-solid fa-star" style="color: #fbbf24;"></i> 今日課表
+                    </button>
+                    <button type="button" class="mobile-day-pill" data-day="1" onclick="selectMobileDay(1)">週一</button>
+                    <button type="button" class="mobile-day-pill" data-day="2" onclick="selectMobileDay(2)">週二</button>
+                    <button type="button" class="mobile-day-pill" data-day="3" onclick="selectMobileDay(3)">週三</button>
+                    <button type="button" class="mobile-day-pill" data-day="4" onclick="selectMobileDay(4)">週四</button>
+                    <button type="button" class="mobile-day-pill" data-day="5" onclick="selectMobileDay(5)">週五</button>
+                    <button type="button" class="mobile-day-pill" data-day="all" onclick="selectMobileDay('all')">
+                        <i class="fa-solid fa-calendar-week"></i> 全週清單
+                    </button>
+                </div>
+            </div>
+
+            <!-- Mobile Cards Container (Visible in Mobile Mode) -->
+            <div id="mobileCardsContainer" class="mobile-cards-container no-print">
+                <!-- Dynamically populated day cards -->
+            </div>
+
+            <!-- Schedule Grid Table (Visible in Desktop Mode) -->
+            <div class="table-responsive glass" id="scheduleTableWrapper">
                 <table class="schedule-table" id="scheduleTable">
                     <thead>
                         <tr>
@@ -2303,5 +2578,225 @@
 
     <!-- JS Scripts with Cache-Buster -->
     <script src="/static/js/app.js?v=20260827_v14"></script>
+
+    <!-- Mobile View & Responsive Day-Card Controller -->
+    <script>
+        // =========================================================================
+        // Mobile Mode & Day-Card Scheduling View Controller
+        // =========================================================================
+        let currentPortalViewMode = 'desktop'; // 'mobile' or 'desktop'
+        let currentSelectedMobileDay = 'today'; // 'today', 1, 2, 3, 4, 5, or 'all'
+
+        function initPortalViewMode() {
+            const savedMode = localStorage.getItem('teacher_portal_view_mode');
+            const isSmallScreen = window.innerWidth <= 768;
+            
+            // If user previously chose a mode, use it; otherwise auto-select based on screen width
+            if (savedMode === 'mobile' || savedMode === 'desktop') {
+                setViewMode(savedMode);
+            } else {
+                setViewMode(isSmallScreen ? 'mobile' : 'desktop');
+            }
+        }
+
+        function toggleScheduleViewMode() {
+            const newMode = currentPortalViewMode === 'mobile' ? 'desktop' : 'mobile';
+            setViewMode(newMode);
+            localStorage.setItem('teacher_portal_view_mode', newMode);
+        }
+
+        function setViewMode(mode) {
+            currentPortalViewMode = mode;
+            const modeToggleBtn = document.getElementById('modeToggleBtn');
+            const modeToggleIcon = document.getElementById('modeToggleIcon');
+            const modeToggleText = document.getElementById('modeToggleText');
+
+            if (mode === 'mobile') {
+                document.body.classList.remove('view-mode-desktop');
+                document.body.classList.add('view-mode-mobile');
+                if (modeToggleIcon) modeToggleIcon.className = 'fa-solid fa-desktop';
+                if (modeToggleText) modeToggleText.textContent = '電腦表格模式';
+                if (modeToggleBtn) {
+                    modeToggleBtn.title = '切換為電腦全週表格檢視模式';
+                    modeToggleBtn.style.background = 'linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(6, 182, 212, 0.15))';
+                    modeToggleBtn.style.borderColor = '#10b981';
+                    modeToggleBtn.style.color = '#059669';
+                }
+                renderMobileScheduleCards();
+            } else {
+                document.body.classList.remove('view-mode-mobile');
+                document.body.classList.add('view-mode-desktop');
+                if (modeToggleIcon) modeToggleIcon.className = 'fa-solid fa-mobile-screen-button';
+                if (modeToggleText) modeToggleText.textContent = '手機卡片模式';
+                if (modeToggleBtn) {
+                    modeToggleBtn.title = '切換為手機單日卡片檢視模式';
+                    modeToggleBtn.style.background = 'linear-gradient(135deg, rgba(0, 113, 227, 0.12), rgba(168, 85, 247, 0.15))';
+                    modeToggleBtn.style.borderColor = '#0071e3';
+                    modeToggleBtn.style.color = '#0071e3';
+                }
+            }
+        }
+
+        function getTodaySchoolDay() {
+            const jsDay = new Date().getDay(); // 0 is Sunday, 1 is Mon, 5 is Fri, 6 is Sat
+            if (jsDay >= 1 && jsDay <= 5) return jsDay;
+            return 1; // Default to Monday on weekends
+        }
+
+        function selectMobileDay(dayKey) {
+            currentSelectedMobileDay = dayKey;
+            document.querySelectorAll('.mobile-day-pill').forEach(btn => {
+                if (btn.dataset.day == dayKey) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+            renderMobileScheduleCards();
+        }
+
+        function renderMobileScheduleCards() {
+            const container = document.getElementById('mobileCardsContainer');
+            const scheduleBody = document.getElementById('scheduleBody');
+            if (!container || !scheduleBody) return;
+
+            const dayNames = { 1: "星期一", 2: "星期二", 3: "星期三", 4: "星期四", 5: "星期五" };
+            const todayDay = getTodaySchoolDay();
+            const targetDay = currentSelectedMobileDay === 'today' ? todayDay : currentSelectedMobileDay;
+
+            // Extract table data from scheduleBody
+            const daySlots = { 1: [], 2: [], 3: [], 4: [], 5: [] };
+            const rows = scheduleBody.querySelectorAll('tr');
+
+            rows.forEach((row, pIdx) => {
+                const period = pIdx + 1;
+                const timeCol = row.querySelector('.time-col');
+                const timeText = timeCol ? (timeCol.querySelector('.period-time')?.textContent || '') : '';
+                const periodName = timeCol ? (timeCol.querySelector('.period-name')?.textContent || `第${period}節`) : `第${period}節`;
+
+                const cells = row.querySelectorAll('td.interactive-slot');
+                cells.forEach((cell, dIdx) => {
+                    const day = dIdx + 1;
+                    const items = cell.querySelectorAll('.lesson-item');
+                    if (items.length > 0) {
+                        items.forEach(item => {
+                            const subj = item.querySelector('.subject-name')?.textContent || item.textContent || '';
+                            const classOrTeacher = item.querySelector('.class-name')?.textContent || item.querySelector('.teacher-name')?.textContent || '';
+                            const room = item.querySelector('.room-name')?.textContent || '';
+                            daySlots[day].push({
+                                period,
+                                periodName,
+                                timeText,
+                                subject: subj.trim(),
+                                targetName: classOrTeacher.trim(),
+                                room: room.trim(),
+                                isLesson: true,
+                                rawHtml: item.innerHTML
+                            });
+                        });
+                    } else {
+                        daySlots[day].push({
+                            period,
+                            periodName,
+                            timeText,
+                            isLesson: false
+                        });
+                    }
+                });
+            });
+
+            container.innerHTML = '';
+
+            const daysToRender = targetDay === 'all' ? [1, 2, 3, 4, 5] : [parseInt(targetDay, 10)];
+
+            let totalLessonsCount = 0;
+            daysToRender.forEach(d => {
+                const lessons = (daySlots[d] || []).filter(x => x.isLesson);
+                totalLessonsCount += lessons.length;
+            });
+
+            if (daysToRender.length === 0 || isNaN(daysToRender[0])) {
+                container.innerHTML = `<div style="text-align: center; padding: 40px 20px; color: #94a3b8;"><i class="fa-solid fa-calendar-xmark fa-2x"></i><p style="margin-top: 8px;">暫無課表資料</p></div>`;
+                return;
+            }
+
+            daysToRender.forEach(d => {
+                const allSlots = daySlots[d] || [];
+                const actualLessons = allSlots.filter(x => x.isLesson);
+                const isToday = d === todayDay;
+
+                const group = document.createElement('div');
+                group.className = 'mobile-day-group';
+
+                const header = document.createElement('div');
+                header.className = 'mobile-day-group-header';
+                header.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span>${dayNames[d] || `星期${d}`}</span>
+                        ${isToday ? '<span style="background: #fbbf24; color: #78350f; font-size: 0.72rem; padding: 2px 7px; border-radius: 6px; font-weight: 800;">今日</span>' : ''}
+                    </div>
+                    <span class="count-badge">${actualLessons.length} 堂課</span>
+                `;
+                group.appendChild(header);
+
+                const list = document.createElement('div');
+                list.className = 'mobile-cards-list';
+
+                allSlots.forEach(slot => {
+                    if (slot.isLesson) {
+                        const card = document.createElement('div');
+                        card.className = 'mobile-lesson-card';
+                        card.innerHTML = `
+                            <div class="mobile-period-badge">
+                                <span class="mobile-period-num">${slot.periodName}</span>
+                                <span class="mobile-period-time">${slot.timeText}</span>
+                            </div>
+                            <div class="mobile-card-content">
+                                <div class="mobile-card-title-row">
+                                    <span class="mobile-subj-title">${slot.subject}</span>
+                                    ${slot.targetName ? `<span class="mobile-class-tag">${slot.targetName}</span>` : ''}
+                                </div>
+                                <div class="mobile-card-meta-row">
+                                    ${slot.room ? `<span class="mobile-meta-item"><i class="fa-solid fa-location-dot" style="color: #6366f1;"></i> ${slot.room}</span>` : ''}
+                                    <span class="mobile-meta-item"><i class="fa-solid fa-clock" style="color: #64748b;"></i> ${slot.timeText || '常規課堂'}</span>
+                                </div>
+                            </div>
+                        `;
+                        list.appendChild(card);
+                    } else if (targetDay !== 'all') {
+                        // In single-day view, display empty periods for clarity
+                        const emptySlot = document.createElement('div');
+                        emptySlot.className = 'mobile-empty-slot';
+                        emptySlot.innerHTML = `
+                            <div class="mobile-period-badge">
+                                <span class="mobile-period-num">${slot.periodName}</span>
+                                <span class="mobile-period-time">${slot.timeText}</span>
+                            </div>
+                            <span class="mobile-empty-text"><i class="fa-regular fa-circle" style="font-size: 0.75rem; margin-right: 4px;"></i> 無課堂（空堂 / 備課）</span>
+                        `;
+                        list.appendChild(emptySlot);
+                    }
+                });
+
+                group.appendChild(list);
+                container.appendChild(group);
+            });
+        }
+
+        // Hook DOM changes on scheduleBody to automatically refresh mobile cards
+        document.addEventListener('DOMContentLoaded', () => {
+            initPortalViewMode();
+            
+            const scheduleBody = document.getElementById('scheduleBody');
+            if (scheduleBody) {
+                const observer = new MutationObserver(() => {
+                    if (currentPortalViewMode === 'mobile') {
+                        renderMobileScheduleCards();
+                    }
+                });
+                observer.observe(scheduleBody, { childList: true, subtree: true });
+            }
+        });
+    </script>
 </body>
 </html>
