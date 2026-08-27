@@ -95,6 +95,7 @@ def get_local_ip():
     """Gets the local machine LAN IP address (e.g. 192.168.x.x)."""
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.settimeout(0.5)
         s.connect(('8.8.8.8', 80))
         ip = s.getsockname()[0]
         s.close()
