@@ -1179,18 +1179,28 @@ def api_open_browser():
 
 @app.route("/api/server-info", methods=["GET"])
 def api_server_info():
+    """Returns local server network status and real IP address for cross-device links."""
     try:
         is_cloud = "render" in request.host.lower() or os.environ.get("RENDER") == "true"
+        local_ip = get_local_ip()
+        host = request.host
+        port = host.split(":")[-1] if ":" in host else "5000"
+        scheme = request.scheme or "http"
+        
         if is_cloud:
-            protocol = "https"
-            lan_url = f"{protocol}://{request.host}"
+            lan_url = f"https://{host}"
         else:
-            local_ip = get_local_ip()
-            port = request.host.split(":")[-1] if ":" in request.host else "5000"
-            lan_url = f"http://{local_ip}:{port}"
+            lan_url = f"{scheme}://{local_ip}:{port}" if port not in ("80", "443") else f"{scheme}://{local_ip}"
+            
+        cloud_url = "https://tucheng-school-schedule.onrender.com"
+        github_url = "https://github.com/Albertyoung22/TcSChed"
         return jsonify({
             "status": "success",
-            "lan_url": lan_url
+            "local_ip": local_ip,
+            "port": port,
+            "lan_url": lan_url,
+            "cloud_url": cloud_url,
+            "github_url": github_url
         })
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
@@ -6387,27 +6397,7 @@ def api_config_groq():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
-@app.route("/api/server-info", methods=["GET"])
-def api_server_info():
-    """Returns local server network status and real IP address for cross-device links."""
-    try:
-        local_ip = get_local_ip()
-        host = request.host
-        port = host.split(":")[-1] if ":" in host else "5000"
-        scheme = request.scheme or "http"
-        lan_url = f"{scheme}://{local_ip}:{port}" if port not in ("80", "443") else f"{scheme}://{local_ip}"
-        cloud_url = "https://tucheng-school-schedule.onrender.com"
-        github_url = "https://github.com/YOUR_GITHUB_OWNER/YOUR_GITHUB_REPO"
-        return jsonify({
-            "status": "success",
-            "local_ip": local_ip,
-            "port": port,
-            "lan_url": lan_url,
-            "cloud_url": cloud_url,
-            "github_url": github_url
-        })
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+
 
 @app.route("/api/save-config-rule", methods=["POST"])
 def api_save_config_rule():
