@@ -137,10 +137,85 @@ XINHE_CLASS_MAPPING = {
     "S303": "603", "高三仁": "603",
 }
 
+def xinhe_class_to_dbf(raw_code):
+    if not raw_code:
+        return ""
+    raw_code = str(raw_code).strip()
+    if raw_code in XINHE_CLASS_MAPPING:
+        return XINHE_CLASS_MAPPING[raw_code]
+    
+    import re
+    # J701 -> 101, J801 -> 201, J901 -> 301, S101 -> 401, S201 -> 501, S301 -> 601
+    m = re.match(r'^([JS])(\d)(\d{2})$', raw_code, re.IGNORECASE)
+    if m:
+        prefix, grade, room = m.groups()
+        room_num = int(room)
+        if prefix.upper() == 'J':
+            if grade == '7': return f"1{room_num:02d}"
+            elif grade == '8': return f"2{room_num:02d}"
+            elif grade == '9': return f"3{room_num:02d}"
+        elif prefix.upper() == 'S':
+            if grade == '1': return f"4{room_num:02d}"
+            elif grade == '2': return f"5{room_num:02d}"
+            elif grade == '3': return f"6{room_num:02d}"
+            
+    # 701 -> 101, 801 -> 201, 901 -> 301
+    m2 = re.match(r'^([789])(\d{2})$', raw_code)
+    if m2:
+        grade, room = m2.groups()
+        room_num = int(room)
+        if grade == '7': return f"1{room_num:02d}"
+        if grade == '8': return f"2{room_num:02d}"
+        if grade == '9': return f"3{room_num:02d}"
+
+    # 國101 -> 101, 國201 -> 201, 國301 -> 301
+    m3 = re.match(r'^國([123])(\d{2})$', raw_code)
+    if m3:
+        grade, room = m3.groups()
+        room_num = int(room)
+        if grade == '1': return f"1{room_num:02d}"
+        if grade == '2': return f"2{room_num:02d}"
+        if grade == '3': return f"3{room_num:02d}"
+
+    # 高一忠 -> 401, etc.
+    class_order = ["忠", "孝", "仁", "愛", "信", "義", "和", "平", "公", "誠", "毅", "勇"]
+    m4 = re.match(r'^高([一二三])([\u4e00-\u9fa5])$', raw_code)
+    if m4:
+        grade_str, class_char = m4.groups()
+        grade_map = {"一": "4", "二": "5", "三": "6"}
+        grade_prefix = grade_map.get(grade_str)
+        if grade_prefix and class_char in class_order:
+            class_num = class_order.index(class_char) + 1
+            return f"{grade_prefix}{class_num:02d}"
+            
+    return raw_code
+
+def dbf_class_to_xinhe(code):
+    if not code:
+        return ""
+    code_str = str(code).strip()
+    if len(code_str) == 3 and code_str.isdigit():
+        grade_digit = code_str[0]
+        class_num = code_str[1:]
+        if grade_digit == '1':
+            return f"J7{class_num}"
+        elif grade_digit == '2':
+            return f"J8{class_num}"
+        elif grade_digit == '3':
+            return f"J9{class_num}"
+        elif grade_digit == '4':
+            return f"S1{class_num}"
+        elif grade_digit == '5':
+            return f"S2{class_num}"
+        elif grade_digit == '6':
+            return f"S3{class_num}"
+    return code_str
+
 def load_xinhe_excel(excel_path, classes=None, teacher_name_map=None, teacher_code_map=None):
     """讀取欣河雲端新系統的配課匯出 Excel，回傳 schedules list 與 classrooms dict。
     
     欄位對照：
+    主動轉換：
       國中部: 班級 J701 / 國101 -> 101, 科目 J201 -> 201
       高中部: 班級 S101 / 高一忠 -> 401, 科目 S201 -> 201
       教師: 優先依教師姓名對應 teacher.dbf 的代碼
@@ -196,7 +271,7 @@ def load_xinhe_excel(excel_path, classes=None, teacher_name_map=None, teacher_co
             ud_raw         = get_col(row, '上下修', '0')
 
             # 1. 班級代碼精確轉換 (國中: J701->101, 高中: S101->401)
-            class_code = XINHE_CLASS_MAPPING.get(class_code_raw) or XINHE_CLASS_MAPPING.get(class_name_raw) or class_code_raw
+            class_code = xinhe_class_to_dbf(class_code_raw) or xinhe_class_to_dbf(class_name_raw) or class_code_raw
             class_name = class_name_lookup.get(class_code, class_name_raw)
 
             # 2. 教師代碼精確轉換 (優先依教師姓名反查 DBF 代碼)
@@ -211,6 +286,9 @@ def load_xinhe_excel(excel_path, classes=None, teacher_name_map=None, teacher_co
                     teach_code = teacher_code_map.get(clean, clean)
                 else:
                     teach_code = clean
+
+            if not teach_code and teach_name:
+                teach_code = teach_name
 
             # 3. 科目代碼轉換
             subj_code = strip_prefix(subj_code_raw)
@@ -417,6 +495,8 @@ def load_schedule_data():
             for s in schedules:
                 tc = str(s.get("teacher_code", "")).strip()
                 tn = str(s.get("teacher_name", "")).strip() or tc
+                if not tc and tn:
+                    tc = tn
                 if tc and tn and tc not in teachers_map and not tn.startswith("備用"):
                     teachers_map[tc] = {
                         "code": tc,
@@ -1093,6 +1173,24 @@ def api_open_browser():
         return jsonify({
             "status": "success",
             "message": f"已成功在預設 WEB 瀏覽器中開啟真實 IP 網址：{target_url}",
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/server-info", methods=["GET"])
+def api_server_info():
+    try:
+        is_cloud = "render" in request.host.lower() or os.environ.get("RENDER") == "true"
+        if is_cloud:
+            protocol = "https"
+            lan_url = f"{protocol}://{request.host}"
+        else:
+            local_ip = get_local_ip()
+            port = request.host.split(":")[-1] if ":" in request.host else "5000"
+            lan_url = f"http://{local_ip}:{port}"
+        return jsonify({
+            "status": "success",
+            "lan_url": lan_url
         })
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
@@ -6708,7 +6806,7 @@ def api_export_shinher_excel():
                 tutor_name = c.get("tutor", "")
                 tutor_code = t_name_to_code.get(tutor_name, "")
                 rows.append({
-                    "班級代碼": c.get("code", ""),
+                    "班級代碼": dbf_class_to_xinhe(c.get("code", "")),
                     "班級名稱": c.get("name", ""),
                     "導師代碼": tutor_code,
                     "導師姓名": tutor_name,
@@ -6747,7 +6845,7 @@ def api_export_shinher_excel():
                     rows.append({
                         "學年": year,
                         "學期": term,
-                        "班級代碼": cc,
+                        "班級代碼": dbf_class_to_xinhe(cc),
                         "班級名稱": cn,
                         "科目代碼": sub.get("subject_code"),
                         "科目名稱": sub.get("subject_name"),
