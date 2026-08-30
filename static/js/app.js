@@ -626,6 +626,12 @@ function renderScheduleGrid(type, code, slots) {
                 if (!isManualEditMode || !selectedSourceItem) return;
                 if (e.target.closest('.lesson-block')) return;
                 
+                if (cell.classList.contains('slot-forbidden')) {
+                    showToast("⛔ 此時段有衝堂衝突！正在為您計算 AI 連鎖對調解法...");
+                    fetchChainSwapSuggestions(selectedSourceItem.id);
+                    return;
+                }
+
                 const innerBlock = cell.querySelector('.lesson-block');
                 const targetId = innerBlock ? innerBlock.dataset.id : null;
                 executeSwap(selectedSourceItem.id, d, p, targetId);
@@ -719,6 +725,11 @@ function renderScheduleGrid(type, code, slots) {
                         }
                         
                         if (selectedSourceItem) {
+                            if (cell.classList.contains('slot-forbidden')) {
+                                showToast("⛔ 此時段有衝堂衝突！正在為您計算 AI 連鎖對調解法...");
+                                fetchChainSwapSuggestions(selectedSourceItem.id);
+                                return;
+                            }
                             executeSwap(selectedSourceItem.id, d, p, lesson.id);
                             return;
                         }
@@ -1305,6 +1316,10 @@ async function executeSwap(sourceId, targetDay, targetPeriod, targetId, isUndoRe
             showToast(res.message);
             updateManualControlButtons();
             handleHashChange();
+        } else if (res.status === 'conflict_forbidden') {
+            if (confirm(res.message + "\n\n💡 是否立即計算並查看「AI 3向/4向連鎖對調解法」？")) {
+                fetchChainSwapSuggestions(sourceId);
+            }
         } else {
             showToast("調整失敗：" + res.message);
         }
@@ -1319,7 +1334,7 @@ async function fetchChainSwapSuggestions(itemId) {
         const modal = document.getElementById('chainSwapModal');
         const container = document.getElementById('chainSwapContainer');
         if (modal && container) {
-            container.innerHTML = '<div style="text-align: center; color: #94a3b8; padding: 24px;"><i class="fa-solid fa-spinner fa-spin" style="font-size:1.5rem; color:#fbbf24; margin-bottom:8px; display:block;"></i>正在計算 3 向環狀連鎖對調解法...</div>';
+            container.innerHTML = '<div style="text-align: center; color: #94a3b8; padding: 24px;"><i class="fa-solid fa-spinner fa-spin" style="font-size:1.5rem; color:#fbbf24; margin-bottom:8px; display:block;"></i>正在計算 AI 多向連鎖對調解法 (3角 / 4角環狀置換)...</div>';
             modal.style.display = 'flex';
         }
 
