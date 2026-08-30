@@ -418,21 +418,11 @@ def get_solved_excel_path():
             return path
     return None
 
-def load_schedule_data():
-    """Loads all schedule data from DBF files and caches it."""
+def load_schedule_data(force_reload=False):
+    """Loads all schedule data from DBF files or Xinhe Excel and caches it."""
     global _cached_data, _db_mtimes
-    
-    def natural_sort_key(s):
-        import re
-        return [int(text) if text.isdigit() else text.lower() for text in re.split(r'(\d+)', str(s))]
-    
-    def natural_sort_key(s):
-        import re
-        return [int(text) if text.isdigit() else text.lower() for text in re.split(r'(\d+)', str(s))]
-    
-    def natural_sort_key(s):
-        import re
-        return [int(text) if text.isdigit() else text.lower() for text in re.split(r'(\d+)', str(s))]
+    if not force_reload and isinstance(_cached_data, dict) and "schedules" in _cached_data:
+        return _cached_data
     
     def natural_sort_key(s):
         import re
@@ -511,6 +501,14 @@ def load_schedule_data():
             classes_list = sorted(list(classes_map.values()), key=lambda x: natural_sort_key(x["code"]))
             teachers_list = sorted(list(teachers_map.values()), key=lambda x: natural_sort_key(x["code"]))
             classrooms_list = [{"code": k, "name": v} for k, v in classrooms_dict.items()]
+
+            # 若系統中已有調課/解算後的 solved_schedules，課表清單採用最新狀態
+            active_solved = cfg.get("solved_schedules", [])
+            if isinstance(active_solved, list) and len(active_solved) > 0:
+                schedules = [normalize_schedule_record(r) for r in active_solved if isinstance(r, dict)]
+            else:
+                cfg["solved_schedules"] = schedules
+                save_config_rules(cfg)
 
             _cached_data = {
                 "dbf_dir": "",
@@ -899,6 +897,12 @@ def load_schedule_data():
                 s["teacher_name"] = custom_assign[ckey].get("teacher_name", s["teacher_name"])
             filtered_schedules.append(s)
         schedules = filtered_schedules
+        active_solved = cfg.get("solved_schedules", [])
+        if isinstance(active_solved, list) and len(active_solved) > 0:
+            schedules = [normalize_schedule_record(r) for r in active_solved if isinstance(r, dict)]
+        else:
+            cfg["solved_schedules"] = schedules
+            save_config_rules(cfg)
 
         _cached_data = {
             "dbf_dir": dbf_dir,
@@ -2454,7 +2458,10 @@ def api_execute_swap():
         save_config_rules(cfg)
         
         global _cached_data
-        _cached_data = None
+        if isinstance(_cached_data, dict):
+            _cached_data["schedules"] = solved
+        else:
+            _cached_data = None
         
         try:
             solved_excel = os.path.join(os.path.dirname(__file__), "School_Schedule_Solved.xlsx")
@@ -2474,6 +2481,361 @@ def api_execute_swap():
         import traceback
         traceback.print_exc()
         return jsonify({"status": "error", "message": f"手調失敗: {str(e)}"}), 500
+
+@app.route("/api/suggest-chain-swap/<item_id>")
+def api_suggest_chain_swap(item_id):
+    """
+    Computes intelligent multi-way chain/cycle swap recommendations (e.g. 3-way cyclic swaps or empty-slot chain shifts)
+    when direct 2-way swaps have conflicts or to optimize schedule flow.
+    """
+    try:
+        solved = get_current_solved_schedules()
+        cfg = load_config_rules()
+
+        item = None
+        for s in solved:
+            if str(s.get("id")) == str(item_id):
+                item = s
+                break
+        if not item and solved:
+            try:
+                idx = int(item_id)
+                if 0 <= idx < len(solved):
+                    item = solved[idx]
+            except Exception:
+                pass
+
+        if not item:
+            return jsonify({"status": "error", "message": "找不到該課程項目"}), 404
+
+        s_day = str(item.get("day", "1"))
+        s_period = str(item.get("period", "1"))
+        s_teacher = str(item.get("teacher_name", "")).strip()
+        s_tcode = str(item.get("teacher_code", "")).strip()
+        s_class = str(item.get("class_name", "")).strip()
+        s_subj = str(item.get("subject_name", "")).strip()
+        s_id = str(item.get("id"))
+
+        # Precompute teacher busy slots: (teacher, day, period) -> set(item_ids)
+        teacher_busy = {}
+        for it in solved:
+            t = str(it.get("teacher_name", "")).strip()
+            tc = str(it.get("teacher_code", "")).strip()
+            d = str(it.get("day"))
+            p = str(it.get("period"))
+            iid = str(it.get("id"))
+            for tkey in filter(None, [t, tc]):
+                key = (tkey, d, p)
+                if key not in teacher_busy:
+                    teacher_busy[key] = set()
+                teacher_busy[key].add(iid)
+
+        custom_no_teach = cfg.get("custom_no_teach", {})
+
+        def is_teacher_free(t_name, t_code, day, period, exclude_ids):
+            if not t_name and not t_code:
+                return True
+            d_str = str(day)
+            p_str = str(period)
+            ex_set = set(str(x) for x in exclude_ids)
+            for tkey in filter(None, [t_name, t_code]):
+                if f"{d_str}-{p_str}" in custom_no_teach.get(tkey, []):
+                    return False
+                occupants = teacher_busy.get((tkey, d_str, p_str), set())
+                if occupants - ex_set:
+                    return False
+            return True
+
+        chains = []
+        seen_combos = set()
+        max_results = 16
+
+        # 1. Category 1: Same-Class 3-Way Cycle Swap (A -> B -> C -> A)
+        if s_class:
+            class_lessons = [x for x in solved if str(x.get("class_name", "")).strip() == s_class and str(x.get("id")) != s_id]
+            # Group by (day, period) to avoid split-grouping conflicts
+            slot_map = {}
+            for x in class_lessons:
+                sk = (str(x.get("day")), str(x.get("period")))
+                slot_map.setdefault(sk, []).append(x)
+
+            single_slot_lessons = [items[0] for items in slot_map.values() if len(items) == 1]
+
+            for B in single_slot_lessons:
+                b_day = str(B.get("day"))
+                b_period = str(B.get("period"))
+                b_id = str(B.get("id"))
+                b_teacher = str(B.get("teacher_name", "")).strip()
+                b_tcode = str(B.get("teacher_code", "")).strip()
+                b_subj = str(B.get("subject_name", "")).strip()
+
+                if (b_day, b_period) == (s_day, s_period):
+                    continue
+                # Can A move to B's slot?
+                if not is_teacher_free(s_teacher, s_tcode, b_day, b_period, [s_id, b_id]):
+                    continue
+
+                for C in single_slot_lessons:
+                    c_day = str(C.get("day"))
+                    c_period = str(C.get("period"))
+                    c_id = str(C.get("id"))
+                    c_teacher = str(C.get("teacher_name", "")).strip()
+                    c_tcode = str(C.get("teacher_code", "")).strip()
+                    c_subj = str(C.get("subject_name", "")).strip()
+
+                    if (c_day, c_period) in [(s_day, s_period), (b_day, b_period)]:
+                        continue
+
+                    combo_key = tuple(sorted([b_id, c_id]))
+                    if combo_key in seen_combos:
+                        continue
+
+                    # Can B move to C's slot?
+                    if not is_teacher_free(b_teacher, b_tcode, c_day, c_period, [b_id, c_id]):
+                        continue
+                    # Can C move to A's slot?
+                    if not is_teacher_free(c_teacher, c_tcode, s_day, s_period, [c_id, s_id]):
+                        continue
+
+                    seen_combos.add(combo_key)
+                    moves = [
+                        {"id": s_id, "day": b_day, "period": b_period},
+                        {"id": b_id, "day": c_day, "period": c_period},
+                        {"id": c_id, "day": s_day, "period": s_period}
+                    ]
+                    desc = (
+                        f"1. <b>【{s_subj}】</b>({s_teacher or '未指定'}) 移至 <b>週{b_day}第{b_period}節</b><br>"
+                        f"2. <b>【{b_subj}】</b>({b_teacher or '未指定'}) 移至 <b>週{c_day}第{c_period}節</b><br>"
+                        f"3. <b>【{c_subj}】</b>({c_teacher or '未指定'}) 移至 原<b>週{s_day}第{s_period}節</b><br>"
+                        f"<div style='color: #34d399; font-size: 0.82rem; margin-top: 4px;'><i class='fa-solid fa-circle-check'></i> 三方教師時段皆無衝堂與禁排限制，班級時段完全守恆。</div>"
+                    )
+                    chains.append({
+                        "type": "班級內 3 向環狀對調",
+                        "description": desc,
+                        "moves": moves
+                    })
+                    if len(chains) >= 8:
+                        break
+                if len(chains) >= 8:
+                    break
+
+        # 1b. Category 1b: Same-Class 4-Way Multi-Corner Cycle (A -> B -> C -> D -> A)
+        if len(chains) < max_results and s_class:
+            four_way_count = 0
+            for B in single_slot_lessons:
+                b_day, b_period, b_id = str(B.get("day")), str(B.get("period")), str(B.get("id"))
+                b_teacher, b_tcode, b_subj = str(B.get("teacher_name", "")).strip(), str(B.get("teacher_code", "")).strip(), str(B.get("subject_name", "")).strip()
+                if (b_day, b_period) == (s_day, s_period):
+                    continue
+                if not is_teacher_free(s_teacher, s_tcode, b_day, b_period, [s_id, b_id]):
+                    continue
+
+                for C in single_slot_lessons:
+                    c_day, c_period, c_id = str(C.get("day")), str(C.get("period")), str(C.get("id"))
+                    c_teacher, c_tcode, c_subj = str(C.get("teacher_name", "")).strip(), str(C.get("teacher_code", "")).strip(), str(C.get("subject_name", "")).strip()
+                    if (c_day, c_period) in [(s_day, s_period), (b_day, b_period)]:
+                        continue
+                    if not is_teacher_free(b_teacher, b_tcode, c_day, c_period, [b_id, c_id]):
+                        continue
+
+                    for D in single_slot_lessons:
+                        d_day, d_period, d_id = str(D.get("day")), str(D.get("period")), str(D.get("id"))
+                        d_teacher, d_tcode, d_subj = str(D.get("teacher_name", "")).strip(), str(D.get("teacher_code", "")).strip(), str(D.get("subject_name", "")).strip()
+                        if (d_day, d_period) in [(s_day, s_period), (b_day, b_period), (c_day, c_period)]:
+                            continue
+
+                        combo_key_4 = tuple(sorted([b_id, c_id, d_id]))
+                        if combo_key_4 in seen_combos:
+                            continue
+
+                        if not is_teacher_free(c_teacher, c_tcode, d_day, d_period, [c_id, d_id]):
+                            continue
+                        if not is_teacher_free(d_teacher, d_tcode, s_day, s_period, [d_id, s_id]):
+                            continue
+
+                        seen_combos.add(combo_key_4)
+                        moves = [
+                            {"id": s_id, "day": b_day, "period": b_period},
+                            {"id": b_id, "day": c_day, "period": c_period},
+                            {"id": c_id, "day": d_day, "period": d_period},
+                            {"id": d_id, "day": s_day, "period": s_period}
+                        ]
+                        desc = (
+                            f"1. <b>【{s_subj}】</b>({s_teacher or '未指定'}) 移至 <b>週{b_day}第{b_period}節</b><br>"
+                            f"2. <b>【{b_subj}】</b>({b_teacher or '未指定'}) 移至 <b>週{c_day}第{c_period}節</b><br>"
+                            f"3. <b>【{c_subj}】</b>({c_teacher or '未指定'}) 移至 <b>週{d_day}第{d_period}節</b><br>"
+                            f"4. <b>【{d_subj}】</b>({d_teacher or '未指定'}) 移至 原<b>週{s_day}第{s_period}節</b><br>"
+                            f"<div style='color: #a78bfa; font-size: 0.82rem; margin-top: 4px;'><i class='fa-solid fa-circle-nodes'></i> 4角多向連鎖：四方教師時段零衝堂零禁排，班級時段完全守恆。</div>"
+                        )
+                        chains.append({
+                            "type": "4角多向連鎖對調",
+                            "description": desc,
+                            "moves": moves
+                        })
+                        four_way_count += 1
+                        if four_way_count >= 6 or len(chains) >= max_results:
+                            break
+                    if four_way_count >= 6 or len(chains) >= max_results:
+                        break
+                if four_way_count >= 6 or len(chains) >= max_results:
+                    break
+
+        # 2. Category 2: Same-Class 2-Step Empty Slot Chain
+        if len(chains) < max_results and s_class:
+            occupied_class_slots = set((str(x.get("day")), str(x.get("period"))) for x in solved if str(x.get("class_name", "")).strip() == s_class)
+            empty_class_slots = []
+            for d in range(1, 6):
+                for p in range(1, 8):
+                    if (str(d), str(p)) not in occupied_class_slots:
+                        empty_class_slots.append((str(d), str(p)))
+
+            if empty_class_slots:
+                class_lessons = [x for x in solved if str(x.get("class_name", "")).strip() == s_class and str(x.get("id")) != s_id]
+                for B in class_lessons:
+                    b_day = str(B.get("day"))
+                    b_period = str(B.get("period"))
+                    b_id = str(B.get("id"))
+                    b_teacher = str(B.get("teacher_name", "")).strip()
+                    b_tcode = str(B.get("teacher_code", "")).strip()
+                    b_subj = str(B.get("subject_name", "")).strip()
+
+                    if not is_teacher_free(s_teacher, s_tcode, b_day, b_period, [s_id, b_id]):
+                        continue
+
+                    for (e_day, e_period) in empty_class_slots:
+                        if is_teacher_free(b_teacher, b_tcode, e_day, e_period, [b_id]):
+                            moves = [
+                                {"id": s_id, "day": b_day, "period": b_period},
+                                {"id": b_id, "day": e_day, "period": e_period}
+                            ]
+                            desc = (
+                                f"1. <b>【{s_subj}】</b>({s_teacher or '未指定'}) 移至 <b>週{b_day}第{b_period}節</b><br>"
+                                f"2. 原 <b>【{b_subj}】</b>({b_teacher or '未指定'}) 順移至 <b>週{e_day}第{e_period}節 空堂</b><br>"
+                                f"<div style='color: #38bdf8; font-size: 0.82rem; margin-top: 4px;'><i class='fa-solid fa-arrow-right'></i> 原週{s_day}第{s_period}節釋出為空堂，無衝堂問題。</div>"
+                            )
+                            chains.append({
+                                "type": "推移至空堂連鎖",
+                                "description": desc,
+                                "moves": moves
+                            })
+                            if len(chains) >= max_results:
+                                break
+                    if len(chains) >= max_results:
+                        break
+
+        return jsonify({
+            "status": "success",
+            "chains": chains,
+            "count": len(chains)
+        })
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"status": "error", "message": f"計算連鎖對調失敗: {str(e)}"}), 500
+
+
+@app.route("/api/execute-chain-swap", methods=["POST"])
+def api_execute_chain_swap():
+    """
+    Executes multiple moves of a chain swap atomically, saving the state to solved_schedules
+    and recording undo history.
+    """
+    try:
+        req = request.get_json(silent=True) or {}
+        moves = req.get("moves", [])
+        if not moves:
+            return jsonify({"status": "error", "message": "未提供任何連鎖對調移動資訊"}), 400
+
+        cfg = load_config_rules()
+        solved = get_current_solved_schedules()
+
+        item_map = {str(s.get("id")): s for s in solved}
+        for idx, s in enumerate(solved):
+            if str(idx) not in item_map:
+                item_map[str(idx)] = s
+
+        old_states = []
+        details = []
+
+        for m in moves:
+            mid = str(m.get("id"))
+            target_item = item_map.get(mid)
+            if not target_item:
+                return jsonify({"status": "error", "message": f"找不到課程項目 (ID: {mid})"}), 404
+
+            old_d = str(target_item.get("day", "1"))
+            old_p = str(target_item.get("period", "1"))
+            new_d = str(m.get("day"))
+            new_p = str(m.get("period"))
+
+            old_states.append({
+                "id": str(target_item.get("id")),
+                "old_day": old_d,
+                "old_period": old_p,
+                "new_day": new_d,
+                "new_period": new_p,
+                "subject": str(target_item.get("subject_name", "")),
+                "teacher": str(target_item.get("teacher_name", "")),
+                "class_name": str(target_item.get("class_name", ""))
+            })
+
+            target_item["day"] = new_d
+            target_item["period"] = new_p
+            target_item["manual_locked"] = True
+            details.append(f"【{target_item.get('subject_name', '')}】至週{new_d}第{new_p}節")
+
+        import time, datetime
+        summary_msg = f"成功執行連鎖對調！已將 " + "、".join(details)
+        swap_record = {
+            "id": f"swap_{int(time.time() * 1000)}",
+            "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "time_short": datetime.datetime.now().strftime("%H:%M:%S"),
+            "type": "chain_swap",
+            "message": summary_msg,
+            "chain_moves": old_states,
+            "source_id": old_states[0]["id"] if old_states else None,
+            "source_subject": old_states[0]["subject"] if old_states else None,
+            "source_teacher": old_states[0]["teacher"] if old_states else None,
+            "source_class": old_states[0]["class_name"] if old_states else None,
+            "source_old_day": old_states[0]["old_day"] if old_states else None,
+            "source_old_period": old_states[0]["old_period"] if old_states else None,
+            "source_new_day": old_states[0]["new_day"] if old_states else None,
+            "source_new_period": old_states[0]["new_period"] if old_states else None,
+        }
+        if "swap_history" not in cfg:
+            cfg["swap_history"] = []
+        cfg["swap_history"].append(swap_record)
+        if len(cfg["swap_history"]) > 150:
+            cfg["swap_history"] = cfg["swap_history"][-150:]
+
+        cfg["solved_schedules"] = solved
+        save_config_rules(cfg)
+
+        global _cached_data
+        if isinstance(_cached_data, dict):
+            _cached_data["schedules"] = solved
+        else:
+            _cached_data = None
+
+        try:
+            solved_excel = os.path.join(os.path.dirname(__file__), "School_Schedule_Solved.xlsx")
+            import pandas as pd
+            df = pd.DataFrame(solved)
+            df.to_excel(solved_excel, index=False)
+        except Exception as ee:
+            print(f"[Warning] Failed to update Solved Excel: {ee}")
+
+        return jsonify({
+            "status": "success",
+            "message": summary_msg,
+            "solved": solved,
+            "history_count": len(cfg["swap_history"])
+        })
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"status": "error", "message": f"連鎖對調執行失敗: {str(e)}"}), 500
+
 
 @app.route("/api/swap-history")
 def api_get_swap_history():
@@ -2512,29 +2874,41 @@ def api_undo_swap():
             return jsonify({"status": "error", "message": "找不到該筆調課紀錄"}), 404
             
         solved = get_current_solved_schedules()
-        
-        # 1. Revert source item
-        s_id = str(record.get("source_id"))
-        s_old_d = str(record.get("source_old_day"))
-        s_old_p = str(record.get("source_old_period"))
-        
-        for s in solved:
-            if str(s.get("id")) == s_id:
-                s["day"] = s_old_d
-                s["period"] = s_old_p
-                break
-                
-        # 2. Revert target item if two-way swap
-        t_id = record.get("target_id")
-        if t_id:
-            t_id = str(t_id)
-            t_old_d = str(record.get("target_old_day"))
-            t_old_p = str(record.get("target_old_period"))
+
+        # Check if record has multi-step chain moves
+        if record.get("chain_moves"):
+            for cm in record["chain_moves"]:
+                c_id = str(cm.get("id"))
+                c_old_d = str(cm.get("old_day"))
+                c_old_p = str(cm.get("old_period"))
+                for s in solved:
+                    if str(s.get("id")) == c_id:
+                        s["day"] = c_old_d
+                        s["period"] = c_old_p
+                        break
+        else:
+            # 1. Revert source item
+            s_id = str(record.get("source_id"))
+            s_old_d = str(record.get("source_old_day"))
+            s_old_p = str(record.get("source_old_period"))
+            
             for s in solved:
-                if str(s.get("id")) == t_id:
-                    s["day"] = t_old_d
-                    s["period"] = t_old_p
+                if str(s.get("id")) == s_id:
+                    s["day"] = s_old_d
+                    s["period"] = s_old_p
                     break
+                    
+            # 2. Revert target item if two-way swap
+            t_id = record.get("target_id")
+            if t_id:
+                t_id = str(t_id)
+                t_old_d = str(record.get("target_old_day"))
+                t_old_p = str(record.get("target_old_period"))
+                for s in solved:
+                    if str(s.get("id")) == t_id:
+                        s["day"] = t_old_d
+                        s["period"] = t_old_p
+                        break
                     
         # Remove this record from history
         history.remove(record)
@@ -2543,7 +2917,10 @@ def api_undo_swap():
         save_config_rules(cfg)
         
         global _cached_data
-        _cached_data = None
+        if isinstance(_cached_data, dict):
+            _cached_data["schedules"] = solved
+        else:
+            _cached_data = None
         
         try:
             solved_excel = os.path.join(os.path.dirname(__file__), "School_Schedule_Solved.xlsx")
@@ -5969,13 +6346,19 @@ def normalize_schedule_record(r):
     }
 
 def get_current_solved_schedules():
-    # 優先從 load_schedule_data 取得目前生效課表（支援欣河 Excel、claspv.dbf、已解算課表）
+    """
+    Returns the active, currently solved/adjusted schedules.
+    Priority 1: cfg['solved_schedules'] in config_rules.json (contains all manual swaps and AI solves)
+    Priority 2: School_Schedule_Solved.xlsx
+    Priority 3: load_schedule_data() (initial raw DBF or Xinhe Excel data)
+    """
     try:
-        data = load_schedule_data()
-        if isinstance(data, dict) and data.get("schedules"):
-            return [normalize_schedule_record(r) for r in data["schedules"] if isinstance(r, dict)]
+        cfg = load_config_rules()
+        solved = cfg.get("solved_schedules", [])
+        if isinstance(solved, list) and len(solved) > 0:
+            return [normalize_schedule_record(r) for r in solved if isinstance(r, dict)]
     except Exception as e:
-        print(f"[警告] load_schedule_data 載入課表失敗: {e}")
+        print(f"[警告] 讀取 config_rules.json 之 solved_schedules 失敗: {e}")
 
     excel_path = os.path.join(os.path.dirname(__file__), "School_Schedule_Solved.xlsx")
     solved = []
@@ -5986,20 +6369,32 @@ def get_current_solved_schedules():
             import pandas as pd
             df = pd.read_excel(excel_path)
             solved = df.to_dict(orient="records")
+            if solved:
+                return [normalize_schedule_record(r) for r in solved if isinstance(r, dict)]
         except Exception as e:
             print(f"[警告] 讀取 School_Schedule_Solved.xlsx 失敗: {e}")
 
-    # Priority 3: Fallback to config_rules.json
-    if not solved:
-        cfg = load_config_rules()
-        solved = cfg.get("solved_schedules", [])
+    # Priority 3: Fallback to load_schedule_data (initial import)
+    try:
+        data = load_schedule_data()
+        if isinstance(data, dict) and data.get("schedules"):
+            raw_schedules = [normalize_schedule_record(r) for r in data["schedules"] if isinstance(r, dict)]
+            if raw_schedules:
+                try:
+                    cfg = load_config_rules()
+                    cfg["solved_schedules"] = raw_schedules
+                    save_config_rules(cfg)
+                except Exception:
+                    pass
+                return raw_schedules
+    except Exception as e:
+        print(f"[警告] load_schedule_data 載入課表失敗: {e}")
 
     # Priority 4: Fallback to default 6 class generator
-    if not solved:
-        solved = generate_default_6class_schedule()
-        cfg = load_config_rules()
-        cfg["solved_schedules"] = solved
-        save_config_rules(cfg)
+    solved = generate_default_6class_schedule()
+    cfg = load_config_rules()
+    cfg["solved_schedules"] = solved
+    save_config_rules(cfg)
 
     normalized = [normalize_schedule_record(r) for r in solved if isinstance(r, dict)]
     return normalized
