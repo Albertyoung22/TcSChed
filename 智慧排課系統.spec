@@ -13,7 +13,7 @@ a = Analysis(
         ('templates', 'templates'),
         ('static', 'static'),
     ],
-    hiddenimports=['dbfread', 'ortools.sat.python.cp_model', 'waitress', 'flask', 'jinja2'],
+    hiddenimports=['dbfread', 'ortools.sat.python.cp_model', 'waitress', 'flask', 'jinja2', 'pandas', 'openpyxl'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
