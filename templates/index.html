@@ -2276,201 +2276,6 @@
                     </button>
                 </div>
             </div>
-    <!-- AI Chain Swap Modal -->
-    <div id="chainSwapModal" class="modal-overlay" style="display: none; z-index: 100000;">
-        <div class="modal-content glass" style="max-width: 680px; width: 94vw; padding: 24px; border-radius: 16px;">
-            <div class="modal-header" style="padding: 0 0 16px 0; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
-                <h3 style="margin: 0; color: #fbbf24; font-size: 1.15rem; display: flex; align-items: center; gap: 8px;">
-                    <i class="fa-solid fa-wand-magic-sparkles"></i> <span>AI 3向連鎖環狀對調建議</span>
-                </h3>
-                <div class="modal-header-actions">
-                    <button class="maximize-modal-btn" onclick="toggleModalMaximize('chainSwapModal')" title="全螢幕最大化展開/還原視窗">
-                        <i class="fa-solid fa-expand"></i>
-                    </button>
-                    <button class="close-modal-btn" onclick="document.getElementById('chainSwapModal').style.display='none'">&times;</button>
-                </div>
-            </div>
-            <div class="modal-body" style="padding: 16px 0; max-height: 60vh; overflow-y: auto;" id="chainSwapContainer">
-                <div style="text-align: center; color: var(--text-muted); padding: 24px;">計算連鎖建議中...</div>
-            </div>
-            <div class="modal-footer" style="padding-top: 16px; border-top: 1px solid var(--border-color); text-align: right;">
-                <button type="button" onclick="document.getElementById('chainSwapModal').style.display='none'" style="background: transparent; border: 1px solid var(--border-color); color: #475569; padding: 6px 16px; border-radius: 8px; cursor: pointer;">關閉</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Swap Notification Slip Modal -->
-    <div id="swapSlipModal" class="modal-overlay" style="display: none; z-index: 100005;">
-        <div class="modal-content glass" style="max-width: 780px; width: 95vw; padding: 24px; border-radius: 16px; background: #ffffff;">
-            <div class="modal-header no-print" style="padding: 0 0 16px 0; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
-                <h3 style="margin: 0; color: #4ade80; font-size: 1.15rem; display: flex; align-items: center; gap: 8px;">
-                    <i class="fa-solid fa-file-invoice"></i> <span>手動調排課通知聯單</span>
-                </h3>
-                <div class="modal-header-actions">
-                    <button type="button" onclick="window.print()" style="background: #22c55e; border: none; color: #1d1d1f; padding: 6px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 6px;">
-                        <i class="fa-solid fa-print"></i> 列印聯單
-                    </button>
-                    <button class="maximize-modal-btn" onclick="toggleModalMaximize('swapSlipModal')" title="全螢幕最大化展開/還原視窗">
-                        <i class="fa-solid fa-expand"></i>
-                    </button>
-                    <button class="close-modal-btn" onclick="document.getElementById('swapSlipModal').style.display='none'">&times;</button>
-                </div>
-            </div>
-            <div class="modal-body" style="padding: 16px 0;" id="swapSlipContent">
-                <!-- Dynamic printable content -->
-            </div>
-        </div>
-    <!-- Cross Class/Teacher Swap Picker Modal -->
-    <div id="crossSwapModal" class="modal-overlay" style="display: none; z-index: 100002;">
-        <div class="modal-content glass" style="max-width: 900px; width: 95vw; padding: 24px; border-radius: 16px; background: #ffffff;">
-            <div class="modal-header" style="padding: 0 0 16px 0; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
-                <h3 style="margin: 0; color: #60a5fa; font-size: 1.15rem; display: flex; align-items: center; gap: 8px;">
-                    <i class="fa-solid fa-earth-americas"></i> <span>跨班級 / 跨教師 課程對調選擇器</span>
-                </h3>
-                <div class="modal-header-actions">
-                    <button class="maximize-modal-btn" onclick="toggleModalMaximize('crossSwapModal')" title="全螢幕最大化展開/還原視窗">
-                        <i class="fa-solid fa-expand"></i>
-                    </button>
-                    <button class="close-modal-btn" onclick="document.getElementById('crossSwapModal').style.display='none'">&times;</button>
-                </div>
-            </div>
-            <div class="modal-body" style="padding: 16px 0; display: flex; flex-direction: column; gap: 14px;">
-                <div style="background: #f8fafc; padding: 12px 16px; border-radius: 10px; border: 1px solid rgba(96, 165, 250, 0.3); display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
-                    <div style="font-size: 0.9rem; color: #334155;">
-                        已選擇來源課程：<strong id="crossSwapSourceText" style="color: #38bdf8;">未選擇</strong>
-                    </div>
-                    <div style="display: flex; gap: 8px; align-items: center; margin-left: auto;">
-                        <label style="font-size: 0.85rem; color: #475569;">對調目標：</label>
-                        <select id="crossSwapTypeSelect" style="padding: 6px 12px; border-radius: 6px; background: #f8fafc; color: #1d1d1f; border: 1px solid var(--border-color);">
-                            <option value="class">選擇全校其他班級...</option>
-                            <option value="teacher">選擇全校其他教師...</option>
-                        </select>
-                        <select id="crossSwapTargetSelect" style="padding: 6px 12px; border-radius: 6px; background: #f8fafc; color: #1d1d1f; border: 1px solid var(--border-color); min-width: 140px;">
-                        </select>
-                    </div>
-                </div>
-
-                <div id="crossSwapGridContainer" style="max-height: 55vh; overflow-y: auto;">
-                    <div style="text-align: center; color: #475569; padding: 32px;">請於上方選擇欲對調的目標班級或教師</div>
-                </div>
-            </div>
-            <div class="modal-footer" style="padding-top: 16px; border-top: 1px solid var(--border-color); text-align: right;">
-                <button type="button" onclick="document.getElementById('crossSwapModal').style.display='none'" style="background: transparent; border: 1px solid var(--border-color); color: #475569; padding: 6px 16px; border-radius: 8px; cursor: pointer;">關閉</button>
-            </div>
-        </div>
-    <!-- Health Check Inspector Modal -->
-    <div id="healthCheckModal" class="modal-overlay" style="display: none; z-index: 100008;">
-        <div class="modal-content glass" style="max-width: 720px; width: 94vw; padding: 24px; border-radius: 16px; background: #ffffff;">
-            <div class="modal-header" style="padding: 0 0 16px 0; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
-                <h3 style="margin: 0; color: #f472b6; font-size: 1.15rem; display: flex; align-items: center; gap: 8px;">
-                    <i class="fa-solid fa-notes-medical"></i> <span>全校排課規則與衝突一鍵健康診斷</span>
-                </h3>
-                <div class="modal-header-actions">
-                    <button class="maximize-modal-btn" onclick="toggleModalMaximize('healthCheckModal')" title="全螢幕最大化展開/還原視窗">
-                        <i class="fa-solid fa-expand"></i>
-                    </button>
-                    <button class="close-modal-btn" onclick="document.getElementById('healthCheckModal').style.display='none'">&times;</button>
-                </div>
-            </div>
-            <div class="modal-body" style="padding: 16px 0; max-height: 60vh; overflow-y: auto;" id="healthCheckContainer">
-                <!-- Health Check Results -->
-            </div>
-            <div class="modal-footer" style="padding-top: 16px; border-top: 1px solid var(--border-color); text-align: right;">
-                <button type="button" onclick="document.getElementById('healthCheckModal').style.display='none'" style="background: transparent; border: 1px solid var(--border-color); color: #475569; padding: 6px 16px; border-radius: 8px; cursor: pointer;">關閉</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Swap History & Undo Log Modal -->
-    <div id="swapHistoryModal" class="modal-overlay no-print" style="display: none; z-index: 100009;">
-        <div class="modal-content glass" style="max-width: 680px; width: 94vw; border-radius: 16px;">
-            <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding: 18px 24px;">
-                <div class="modal-title" style="display: flex; align-items: center; gap: 12px;">
-                    <i class="fa-solid fa-clock-rotate-left modal-icon" style="color: #0071e3; font-size: 1.4rem;"></i>
-                    <div>
-                        <h2 style="margin: 0; font-size: 1.25rem;">調課歷程紀錄與復原管理</h2>
-                        <p class="sub-text" style="margin: 2px 0 0 0; font-size: 0.82rem; color: var(--text-secondary);">記錄所有手動調課、微調與連鎖對調動作，支援隨時一鍵反向復原</p>
-                    </div>
-                </div>
-                <div class="modal-header-actions">
-                    <button class="maximize-modal-btn" onclick="toggleModalMaximize('swapHistoryModal')" title="全螢幕最大化展開/還原視窗">
-                        <i class="fa-solid fa-expand"></i>
-                    </button>
-                    <button type="button" class="close-modal-btn" onclick="document.getElementById('swapHistoryModal').style.display='none'">&times;</button>
-                </div>
-            </div>
-            <div class="modal-body" style="max-height: 55vh; overflow-y: auto; padding: 20px 24px;">
-        </div>
-
-        <!-- Suggestion Quick Chips -->
-        <div style="padding: 6px 12px; background: #ffffff; border-top: 1px solid rgba(255, 255, 255, 0.05); display: flex; gap: 6px; overflow-x: auto; white-space: nowrap;">
-            <button id="aiDiagnoseChipBtn" class="ai-chip-btn" style="background: rgba(244, 63, 94, 0.15); color: #f43f5e; border: 1px solid rgba(244, 63, 94, 0.3); border-radius: 12px; padding: 3px 10px; font-size: 0.75rem; cursor: pointer; font-weight: bold;">🔍 AI 一鍵診斷排課瓶頸</button>
-            <button class="ai-chip-btn" style="background: linear-gradient(135deg, rgba(168, 85, 247, 0.3), rgba(99, 102, 241, 0.3)); color: #1d1d1f; font-weight: bold; border: 1px solid rgba(168, 85, 247, 0.5); border-radius: 12px; padding: 3px 10px; font-size: 0.75rem; cursor: pointer;">🚀 全部一次 AI 自動設定</button>
-            <button class="ai-chip-btn" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 12px; padding: 3px 10px; font-size: 0.75rem; cursor: pointer;">幫全校排共同班會與社團</button>
-            <button class="ai-chip-btn" style="background: rgba(52, 211, 153, 0.15); color: #34d399; border: 1px solid rgba(52, 211, 153, 0.3); border-radius: 12px; padding: 3px 10px; font-size: 0.75rem; cursor: pointer;">一鍵對接專用教室</button>
-        </div>
-
-        <!-- Chat Input Bar -->
-        <div style="padding: 10px; border-top: 1px solid rgba(255, 255, 255, 0.1); display: flex; gap: 8px; background: #ffffff;">
-            <input type="text" id="aiChatInput" placeholder="請輸入對話需求 (如: 幫全校排共同班會)..." style="flex: 1; padding: 8px 12px; border-radius: 8px; background: #f8fafc; color: #1d1d1f; border: 1px solid var(--border-color); font-size: 0.85rem; outline: none;">
-            <button id="sendAiChatBtn" style="background: #6366f1; color: #1d1d1f; border: none; border-radius: 8px; padding: 8px 14px; cursor: pointer; font-size: 0.85rem; font-weight: bold;">
-                <i class="fa-solid fa-paper-plane"></i>
-            </button>
-        </div>
-    </div>
-
-    <!-- Lesson Note Modal Dialog -->
-    <div id="noteModal" class="modal-overlay" style="display: none; z-index: 100000;">
-        <div class="modal-content glass" style="max-width: 520px; width: 92vw; padding: 24px; border-radius: 16px;">
-            <div class="modal-header" style="padding: 0 0 16px 0; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
-                <h3 style="margin: 0; color: #0f172a; font-size: 1.15rem; display: flex; align-items: center; gap: 8px;">
-                    <i class="fa-solid fa-pen-to-square" style="color: #38bdf8;"></i> <span id="noteModalTitle">課表/調課事項註記</span>
-                </h3>
-                <div class="modal-header-actions">
-                    <button class="maximize-modal-btn" onclick="toggleModalMaximize('noteModal')" title="全螢幕最大化展開/還原視窗">
-                        <i class="fa-solid fa-expand"></i>
-                    </button>
-                    <button class="close-modal-btn" onclick="closeNoteModal()">&times;</button>
-                </div>
-            </div>
-            <div class="modal-body" style="padding: 16px 0; display: flex; flex-direction: column; gap: 14px;">
-                <input type="hidden" id="noteTargetKey">
-                <input type="hidden" id="selectedNoteType" value="調課">
-                
-                <div>
-                    <label style="font-size: 0.85rem; color: #475569; font-weight: 600; margin-bottom: 6px; display: block;">註記類型 (點選標籤)：</label>
-                    <div style="display: flex; gap: 8px; flex-wrap: wrap;" id="noteTypeSelector">
-                        <button type="button" class="btn-note-tag active" data-type="兼課" onclick="selectNoteType('兼課')" style="padding: 5px 12px; border-radius: 6px; border: 1px solid #f59e0b; background: rgba(245, 158, 11, 0.25); color: #f59e0b; cursor: pointer; font-size: 0.82rem; font-weight: bold;">💼 兼課</button>
-                        <button type="button" class="btn-note-tag" data-type="調課" onclick="selectNoteType('調課')" style="padding: 5px 12px; border-radius: 6px; border: 1px solid #fbbf24; background: transparent; color: #475569; cursor: pointer; font-size: 0.82rem;">🔁 調課</button>
-                        <button type="button" class="btn-note-tag" data-type="代課" onclick="selectNoteType('代課')" style="padding: 5px 12px; border-radius: 6px; border: 1px solid #38bdf8; background: transparent; color: #475569; cursor: pointer; font-size: 0.82rem;">👤 代課</button>
-                        <button type="button" class="btn-note-tag" data-type="段考" onclick="selectNoteType('段考')" style="padding: 5px 12px; border-radius: 6px; border: 1px solid #ef4444; background: transparent; color: #475569; cursor: pointer; font-size: 0.82rem;">📝 段考</button>
-                        <button type="button" class="btn-note-tag" data-type="地點" onclick="selectNoteType('地點')" style="padding: 5px 12px; border-radius: 6px; border: 1px solid #34d399; background: transparent; color: #475569; cursor: pointer; font-size: 0.82rem;">📍 地點</button>
-                        <button type="button" class="btn-note-tag" data-type="備註" onclick="selectNoteType('備註')" style="padding: 5px 12px; border-radius: 6px; border: 1px solid #a78bfa; background: transparent; color: #475569; cursor: pointer; font-size: 0.82rem;">📌 備註</button>
-                    </div>
-                </div>
-
-                <div>
-                    <label style="font-size: 0.85rem; color: #475569; font-weight: 600; margin-bottom: 6px; display: block;">註記說明內容：</label>
-                    <textarea id="noteTextInput" rows="3" placeholder="請輸入註記說明內容 (如: 由游貞維老師代課、或第1次段考考場)..." style="width: 100%; padding: 10px; border-radius: 8px; background: #ffffff; color: #1d1d1f; border: 1px solid var(--border-color); font-size: 0.9rem; outline: none; box-sizing: border-box;"></textarea>
-                </div>
-
-                <div>
-                    <label style="font-size: 0.8rem; color: #475569; margin-bottom: 4px; display: block;">註記人/單位：</label>
-                    <input type="text" id="noteAuthorInput" value="教務處" style="width: 100%; padding: 6px 10px; border-radius: 6px; background: #ffffff; color: #1d1d1f; border: 1px solid var(--border-color); font-size: 0.85rem; box-sizing: border-box;">
-                </div>
-            </div>
-
-            <div class="modal-footer" style="padding-top: 16px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
-                <button type="button" onclick="deleteLessonNote()" id="deleteNoteBtn" style="background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.4); color: #f87171; padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; display: none;">
-                    <i class="fa-solid fa-trash-can"></i> 刪除註記
-                </button>
-                <div style="margin-left: auto; display: flex; gap: 8px;">
-                    <button type="button" onclick="closeNoteModal()" style="background: transparent; border: 1px solid var(--border-color); color: #475569; padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: 0.85rem;">取消</button>
-                    <button type="button" onclick="saveLessonNote()" style="background: #6366f1; border: none; color: #1d1d1f; padding: 6px 18px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.85rem;">
-                        <i class="fa-solid fa-floppy-disk"></i> 儲存註記
-                    </button>
-                </div>
-            </div>
         </div>
     </div>
     <!-- AI Chain Swap Modal -->
@@ -2478,7 +2283,7 @@
         <div class="modal-content glass" style="max-width: 680px; width: 94vw; padding: 24px; border-radius: 16px;">
             <div class="modal-header" style="padding: 0 0 16px 0; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
                 <h3 style="margin: 0; color: #fbbf24; font-size: 1.15rem; display: flex; align-items: center; gap: 8px;">
-                    <i class="fa-solid fa-wand-magic-sparkles"></i> <span>AI 3向連鎖環狀對調建議</span>
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> <span>AI 多向連鎖環狀對調建議 (3角 / 4角調)</span>
                 </h3>
                 <div class="modal-header-actions">
                     <button class="maximize-modal-btn" onclick="toggleModalMaximize('chainSwapModal')" title="全螢幕最大化展開/還原視窗">
@@ -3095,6 +2900,6 @@
     </script>
 
     <!-- JS Scripts with Cache-Buster -->
-    <script src="/static/js/app.js?v=20260827_v14"></script>
+    <script src="/static/js/app.js?v=20260831_v2"></script>
 </body>
 </html>
