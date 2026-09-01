@@ -921,6 +921,46 @@ def load_schedule_data(force_reload=False):
         traceback.print_exc()
         return {"error": f"Failed to parse DBF files: {str(e)}"}
 
+@app.route("/ping")
+@app.route("/healthz")
+def ping():
+    """輕量健康檢查端點，供外部定時監控或自我探測呼叫以防止 Render 休眠。"""
+    return jsonify({"status": "ok", "service": "tcsched"}), 200
+
+# --- Keep-Alive 保持連線機制 (參考 FatePurple 實作，專門針對 Render 免費版防休眠) ---
+def keep_alive_pinger():
+    """定期對伺服器發送自身請求，防止 Render 免費版進入休眠。"""
+    import time
+    import urllib.request
+    from datetime import datetime, timezone, timedelta
+
+    # 取得 Render 公開網址 (優先讀取 Render 自動注入的 RENDER_EXTERNAL_URL)
+    base_url = os.environ.get("RENDER_EXTERNAL_URL", "https://tcsched.onrender.com").rstrip("/")
+    url = f"{base_url}/ping"
+    print(f"🚀 [保持連線] 啟動背景探測器：{url}", flush=True)
+
+    # 伺服器剛啟動時等待 60 秒讓 Gunicorn 完全就緒
+    time.sleep(60)
+
+    tz_tw = timezone(timedelta(hours=8))
+    while True:
+        try:
+            time.sleep(600)  # 每 10 分鐘 (600 秒) 發送一次 (Render 閒置 15 分鐘會休眠)
+            now_str = datetime.now(tz_tw).strftime("%Y-%m-%d %H:%M:%S")
+            req = urllib.request.Request(
+                url,
+                headers={"User-Agent": "Render-KeepAlive/1.0"}
+            )
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                print(f"⏰ [保持連線] {now_str} 探測成功，狀態碼：{resp.status}", flush=True)
+        except Exception as e:
+            print(f"⚠️ [保持連線] 探測異常：{e}", flush=True)
+            time.sleep(60)
+
+# 僅在 Render 雲端環境 (或指定 KEEP_ALIVE=true) 啟動背景探測器，不影響本機執行
+if os.environ.get("RENDER") or os.environ.get("KEEP_ALIVE") == "true":
+    threading.Thread(target=keep_alive_pinger, daemon=True).start()
+
 @app.route("/")
 def index():
     return render_template("index.html")
@@ -2248,6 +2288,24 @@ def check_manual_swap_conflicts(source_item, target_day, target_period, target_i
         t_teacher = str(target_item.get("teacher_name", "")).strip()
         t_tcode = str(target_item.get("teacher_code", "")).strip()
         t_class = str(target_item.get("class_name", "")).strip()
+        t_subject = str(target_item.get("subject_name", "")).strip()
+        
+        # 4d. Check if swapping tutoring class with a regular class
+        def is_tutoring_subject(subj_name):
+            if not subj_name:
+                return False
+            s = str(subj_name).strip()
+            if s.startswith("輔導活動") or s == "輔導" or "輔導室" in s:
+                return False
+            if s.endswith("輔導") or ("輔導" in s[1:]):
+                return True
+            if any(kw in s for kw in ["第八", "8節", "課後", "補救"]):
+                return True
+            return False
+            
+        if is_tutoring_subject(s_subject) != is_tutoring_subject(t_subject):
+            is_forbidden = True
+            warnings.append(f"⛔ 類別限制：輔導課【{s_subject}】與正課【{t_subject}】不能互調！")
         
         # 4a. Target Teacher Conflict on old_day & old_period
         if t_teacher:
@@ -2487,8 +2545,21 @@ def api_suggest_chain_swap(item_id):
     """
     Computes intelligent multi-way chain/cycle swap recommendations (e.g. 3-way cyclic swaps or empty-slot chain shifts)
     when direct 2-way swaps have conflicts or to optimize schedule flow.
+    Supports user toggle options:
+      - protect_consec: protect consecutive blocks (default: true)
+      - max_daily: max 2 periods per subject per day (default: true)
+      - check_venue: specialized venue capacity check (default: true)
+      - max_consec_hours: teacher max consecutive teaching <= 3 (default: true)
+      - allow_4way: include 4-corner multi-way chain cycle (default: true)
     """
     try:
+        # Read user options
+        opt_protect_consec = request.args.get("protect_consec", "1").lower() in ["1", "true", "yes"]
+        opt_max_daily = request.args.get("max_daily", "1").lower() in ["1", "true", "yes"]
+        opt_check_venue = request.args.get("check_venue", "1").lower() in ["1", "true", "yes"]
+        opt_max_consec_hours = request.args.get("max_consec_hours", "1").lower() in ["1", "true", "yes"]
+        opt_allow_4way = request.args.get("allow_4way", "1").lower() in ["1", "true", "yes"]
+
         solved = get_current_solved_schedules()
         cfg = load_config_rules()
 
@@ -2518,19 +2589,70 @@ def api_suggest_chain_swap(item_id):
 
         # Precompute teacher busy slots: (teacher, day, period) -> set(item_ids)
         teacher_busy = {}
+        teacher_day_periods = {}
         for it in solved:
             t = str(it.get("teacher_name", "")).strip()
             tc = str(it.get("teacher_code", "")).strip()
             d = str(it.get("day"))
             p = str(it.get("period"))
             iid = str(it.get("id"))
+            try:
+                p_int = int(p)
+            except Exception:
+                p_int = None
+
             for tkey in filter(None, [t, tc]):
                 key = (tkey, d, p)
                 if key not in teacher_busy:
                     teacher_busy[key] = set()
                 teacher_busy[key].add(iid)
+                if p_int is not None:
+                    teacher_day_periods.setdefault((tkey, d), set()).add((p_int, iid))
 
         custom_no_teach = cfg.get("custom_no_teach", {})
+        venue_caps = cfg.get("venue_capacities", {})
+
+        def is_tutoring_subject(subj_name):
+            if not subj_name:
+                return False
+            s = str(subj_name).strip()
+            if s.startswith("輔導活動") or s == "輔導" or "輔導室" in s:
+                return False
+            if s.endswith("輔導") or ("輔導" in s[1:]):
+                return True
+            if any(kw in s for kw in ["第八", "8節", "課後", "補救"]):
+                return True
+            return False
+
+        def get_subject_venue(subj_name):
+            if not subj_name or not venue_caps:
+                return None
+            sn = str(subj_name).strip()
+            for vname in venue_caps.keys():
+                if vname in sn:
+                    return vname
+                if ("資訊" in sn or "電腦" in sn) and ("電腦" in vname or "資訊" in vname):
+                    return vname
+                if ("理化" in sn or "實驗" in sn) and ("實驗" in vname or "理化" in vname):
+                    return vname
+                if "音樂" in sn and "音樂" in vname:
+                    return vname
+                if "美術" in sn and "美術" in vname:
+                    return vname
+                if "家政" in sn and "家政" in vname:
+                    return vname
+                if "體育" in sn and ("體育" in vname or "操場" in vname or "球場" in vname):
+                    return vname
+            return None
+
+        venue_occupancy = {}
+        if opt_check_venue and venue_caps:
+            for it in solved:
+                v = get_subject_venue(it.get("subject_name"))
+                if v:
+                    vd = str(it.get("day"))
+                    vp = str(it.get("period"))
+                    venue_occupancy[(v, vd, vp)] = venue_occupancy.get((v, vd, vp), 0) + 1
 
         def is_teacher_free(t_name, t_code, day, period, exclude_ids):
             if not t_name and not t_code:
@@ -2546,16 +2668,90 @@ def api_suggest_chain_swap(item_id):
                     return False
             return True
 
+        def would_cause_overwork(t_name, t_code, day, period, move_id):
+            if not opt_max_consec_hours or not t_name and not t_code:
+                return False
+            try:
+                p_int = int(period)
+            except Exception:
+                return False
+
+            for tkey in filter(None, [t_name, t_code]):
+                slots = set()
+                for (ep, eid) in teacher_day_periods.get((tkey, str(day)), set()):
+                    if eid != str(move_id):
+                        slots.add(ep)
+                slots.add(p_int)
+                sorted_p = sorted(slots)
+                streak = 0
+                last_p = -999
+                for p_curr in sorted_p:
+                    if p_curr == last_p + 1:
+                        streak += 1
+                        if streak >= 4:
+                            return True
+                    else:
+                        streak = 1
+                    last_p = p_curr
+            return False
+
+        def venue_has_capacity(subj_name, day, period, old_day, old_period):
+            if not opt_check_venue or not venue_caps:
+                return True
+            v = get_subject_venue(subj_name)
+            if not v:
+                return True
+            cap = venue_caps.get(v, 99)
+            curr = venue_occupancy.get((v, str(day), str(period)), 0)
+            if str(day) == str(old_day) and str(period) == str(old_period):
+                return True
+            return (curr + 1) <= cap
+
         chains = []
         seen_combos = set()
         max_results = 16
 
+        # Precompute consecutive lesson pairs in this class & day subject counts
+        class_lessons = [x for x in solved if str(x.get("class_name", "")).strip() == s_class]
+        consec_lesson_ids = set()
+        class_day_subj_count = {}
+        for x in class_lessons:
+            cd = str(x.get("day"))
+            cs = str(x.get("subject_name", "")).strip()
+            class_day_subj_count[(cd, cs)] = class_day_subj_count.get((cd, cs), 0) + 1
+
+        if opt_protect_consec:
+            for x1 in class_lessons:
+                d1 = str(x1.get("day"))
+                p1_str = str(x1.get("period"))
+                s1 = str(x1.get("subject_name", "")).strip()
+                t1 = str(x1.get("teacher_name", "")).strip()
+                try:
+                    p1 = int(p1_str)
+                except Exception:
+                    continue
+                for x2 in class_lessons:
+                    if str(x2.get("day")) == d1:
+                        try:
+                            p2 = int(x2.get("period"))
+                        except Exception:
+                            continue
+                        if p2 == p1 + 1 and str(x2.get("subject_name", "")).strip() == s1 and str(x2.get("teacher_name", "")).strip() == t1:
+                            consec_lesson_ids.add(str(x1.get("id")))
+                            consec_lesson_ids.add(str(x2.get("id")))
+
+        is_source_tutoring = is_tutoring_subject(s_subj)
+
         # 1. Category 1: Same-Class 3-Way Cycle Swap (A -> B -> C -> A)
-        if s_class:
-            class_lessons = [x for x in solved if str(x.get("class_name", "")).strip() == s_class and str(x.get("id")) != s_id]
-            # Group by (day, period) to avoid split-grouping conflicts
+        if s_class and not (opt_protect_consec and s_id in consec_lesson_ids):
             slot_map = {}
             for x in class_lessons:
+                if str(x.get("id")) == s_id:
+                    continue
+                if is_tutoring_subject(x.get("subject_name")) != is_source_tutoring:
+                    continue
+                if opt_protect_consec and str(x.get("id")) in consec_lesson_ids:
+                    continue
                 sk = (str(x.get("day")), str(x.get("period")))
                 slot_map.setdefault(sk, []).append(x)
 
@@ -2573,6 +2769,12 @@ def api_suggest_chain_swap(item_id):
                     continue
                 # Can A move to B's slot?
                 if not is_teacher_free(s_teacher, s_tcode, b_day, b_period, [s_id, b_id]):
+                    continue
+                if would_cause_overwork(s_teacher, s_tcode, b_day, b_period, s_id):
+                    continue
+                if not venue_has_capacity(s_subj, b_day, b_period, s_day, s_period):
+                    continue
+                if opt_max_daily and b_day != s_day and class_day_subj_count.get((b_day, s_subj), 0) >= 2:
                     continue
 
                 for C in single_slot_lessons:
@@ -2593,8 +2795,21 @@ def api_suggest_chain_swap(item_id):
                     # Can B move to C's slot?
                     if not is_teacher_free(b_teacher, b_tcode, c_day, c_period, [b_id, c_id]):
                         continue
+                    if would_cause_overwork(b_teacher, b_tcode, c_day, c_period, b_id):
+                        continue
+                    if not venue_has_capacity(b_subj, c_day, c_period, b_day, b_period):
+                        continue
+                    if opt_max_daily and c_day != b_day and class_day_subj_count.get((c_day, b_subj), 0) >= 2:
+                        continue
+
                     # Can C move to A's slot?
                     if not is_teacher_free(c_teacher, c_tcode, s_day, s_period, [c_id, s_id]):
+                        continue
+                    if would_cause_overwork(c_teacher, c_tcode, s_day, s_period, c_id):
+                        continue
+                    if not venue_has_capacity(c_subj, s_day, s_period, c_day, c_period):
+                        continue
+                    if opt_max_daily and s_day != c_day and class_day_subj_count.get((s_day, c_subj), 0) >= 2:
                         continue
 
                     seen_combos.add(combo_key)
@@ -2603,16 +2818,28 @@ def api_suggest_chain_swap(item_id):
                         {"id": b_id, "day": c_day, "period": c_period},
                         {"id": c_id, "day": s_day, "period": s_period}
                     ]
+                    badges = ["3角環狀置換", "零衝堂"]
+                    if opt_protect_consec:
+                        badges.append("連堂保護")
+                    if opt_max_daily:
+                        badges.append("單日同科≤2")
+                    if opt_check_venue:
+                        badges.append("場地容量合規")
+                    if opt_max_consec_hours:
+                        badges.append("作息防疲勞")
+
+                    badge_html = "".join(f"<span style='background: rgba(52, 211, 153, 0.15); color: #34d399; font-size: 0.72rem; padding: 2px 7px; border-radius: 4px; border: 1px solid rgba(52, 211, 153, 0.3); font-weight: 600;'><i class='fa-solid fa-check'></i> {b}</span>" for b in badges)
                     desc = (
                         f"1. <b>【{s_subj}】</b>({s_teacher or '未指定'}) 移至 <b>週{b_day}第{b_period}節</b><br>"
                         f"2. <b>【{b_subj}】</b>({b_teacher or '未指定'}) 移至 <b>週{c_day}第{c_period}節</b><br>"
                         f"3. <b>【{c_subj}】</b>({c_teacher or '未指定'}) 移至 原<b>週{s_day}第{s_period}節</b><br>"
-                        f"<div style='color: #34d399; font-size: 0.82rem; margin-top: 4px;'><i class='fa-solid fa-circle-check'></i> 三方教師時段皆無衝堂與禁排限制，班級時段完全守恆。</div>"
+                        f"<div style='margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px;'>{badge_html}</div>"
                     )
                     chains.append({
                         "type": "班級內 3 向環狀對調",
                         "description": desc,
-                        "moves": moves
+                        "moves": moves,
+                        "badges": badges
                     })
                     if len(chains) >= 8:
                         break
@@ -2620,7 +2847,7 @@ def api_suggest_chain_swap(item_id):
                     break
 
         # 1b. Category 1b: Same-Class 4-Way Multi-Corner Cycle (A -> B -> C -> D -> A)
-        if len(chains) < max_results and s_class:
+        if opt_allow_4way and len(chains) < max_results and s_class and not (opt_protect_consec and s_id in consec_lesson_ids):
             four_way_count = 0
             for B in single_slot_lessons:
                 b_day, b_period, b_id = str(B.get("day")), str(B.get("period")), str(B.get("id"))
@@ -2629,6 +2856,12 @@ def api_suggest_chain_swap(item_id):
                     continue
                 if not is_teacher_free(s_teacher, s_tcode, b_day, b_period, [s_id, b_id]):
                     continue
+                if would_cause_overwork(s_teacher, s_tcode, b_day, b_period, s_id):
+                    continue
+                if not venue_has_capacity(s_subj, b_day, b_period, s_day, s_period):
+                    continue
+                if opt_max_daily and b_day != s_day and class_day_subj_count.get((b_day, s_subj), 0) >= 2:
+                    continue
 
                 for C in single_slot_lessons:
                     c_day, c_period, c_id = str(C.get("day")), str(C.get("period")), str(C.get("id"))
@@ -2636,6 +2869,12 @@ def api_suggest_chain_swap(item_id):
                     if (c_day, c_period) in [(s_day, s_period), (b_day, b_period)]:
                         continue
                     if not is_teacher_free(b_teacher, b_tcode, c_day, c_period, [b_id, c_id]):
+                        continue
+                    if would_cause_overwork(b_teacher, b_tcode, c_day, c_period, b_id):
+                        continue
+                    if not venue_has_capacity(b_subj, c_day, c_period, b_day, b_period):
+                        continue
+                    if opt_max_daily and c_day != b_day and class_day_subj_count.get((c_day, b_subj), 0) >= 2:
                         continue
 
                     for D in single_slot_lessons:
@@ -2650,7 +2889,20 @@ def api_suggest_chain_swap(item_id):
 
                         if not is_teacher_free(c_teacher, c_tcode, d_day, d_period, [c_id, d_id]):
                             continue
+                        if would_cause_overwork(c_teacher, c_tcode, d_day, d_period, c_id):
+                            continue
+                        if not venue_has_capacity(c_subj, d_day, d_period, c_day, c_period):
+                            continue
+                        if opt_max_daily and d_day != c_day and class_day_subj_count.get((d_day, c_subj), 0) >= 2:
+                            continue
+
                         if not is_teacher_free(d_teacher, d_tcode, s_day, s_period, [d_id, s_id]):
+                            continue
+                        if would_cause_overwork(d_teacher, d_tcode, s_day, s_period, d_id):
+                            continue
+                        if not venue_has_capacity(d_subj, s_day, s_period, d_day, d_period):
+                            continue
+                        if opt_max_daily and s_day != d_day and class_day_subj_count.get((s_day, d_subj), 0) >= 2:
                             continue
 
                         seen_combos.add(combo_key_4)
@@ -2660,17 +2912,29 @@ def api_suggest_chain_swap(item_id):
                             {"id": c_id, "day": d_day, "period": d_period},
                             {"id": d_id, "day": s_day, "period": s_period}
                         ]
+                        badges = ["4角多向連鎖", "零衝堂"]
+                        if opt_protect_consec:
+                            badges.append("連堂保護")
+                        if opt_max_daily:
+                            badges.append("單日同科≤2")
+                        if opt_check_venue:
+                            badges.append("場地容量合規")
+                        if opt_max_consec_hours:
+                            badges.append("作息防疲勞")
+
+                        badge_html = "".join(f"<span style='background: rgba(167, 139, 250, 0.15); color: #a78bfa; font-size: 0.72rem; padding: 2px 7px; border-radius: 4px; border: 1px solid rgba(167, 139, 250, 0.3); font-weight: 600;'><i class='fa-solid fa-circle-nodes'></i> {b}</span>" for b in badges)
                         desc = (
                             f"1. <b>【{s_subj}】</b>({s_teacher or '未指定'}) 移至 <b>週{b_day}第{b_period}節</b><br>"
                             f"2. <b>【{b_subj}】</b>({b_teacher or '未指定'}) 移至 <b>週{c_day}第{c_period}節</b><br>"
                             f"3. <b>【{c_subj}】</b>({c_teacher or '未指定'}) 移至 <b>週{d_day}第{d_period}節</b><br>"
                             f"4. <b>【{d_subj}】</b>({d_teacher or '未指定'}) 移至 原<b>週{s_day}第{s_period}節</b><br>"
-                            f"<div style='color: #a78bfa; font-size: 0.82rem; margin-top: 4px;'><i class='fa-solid fa-circle-nodes'></i> 4角多向連鎖：四方教師時段零衝堂零禁排，班級時段完全守恆。</div>"
+                            f"<div style='margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px;'>{badge_html}</div>"
                         )
                         chains.append({
                             "type": "4角多向連鎖對調",
                             "description": desc,
-                            "moves": moves
+                            "moves": moves,
+                            "badges": badges
                         })
                         four_way_count += 1
                         if four_way_count >= 6 or len(chains) >= max_results:
@@ -2681,7 +2945,7 @@ def api_suggest_chain_swap(item_id):
                     break
 
         # 2. Category 2: Same-Class 2-Step Empty Slot Chain
-        if len(chains) < max_results and s_class:
+        if len(chains) < max_results and s_class and not (opt_protect_consec and s_id in consec_lesson_ids):
             occupied_class_slots = set((str(x.get("day")), str(x.get("period"))) for x in solved if str(x.get("class_name", "")).strip() == s_class)
             empty_class_slots = []
             for d in range(1, 6):
@@ -2690,8 +2954,8 @@ def api_suggest_chain_swap(item_id):
                         empty_class_slots.append((str(d), str(p)))
 
             if empty_class_slots:
-                class_lessons = [x for x in solved if str(x.get("class_name", "")).strip() == s_class and str(x.get("id")) != s_id]
-                for B in class_lessons:
+                class_lessons_cand = [x for x in class_lessons if str(x.get("id")) != s_id and not (opt_protect_consec and str(x.get("id")) in consec_lesson_ids)]
+                for B in class_lessons_cand:
                     b_day = str(B.get("day"))
                     b_period = str(B.get("period"))
                     b_id = str(B.get("id"))
@@ -2701,32 +2965,51 @@ def api_suggest_chain_swap(item_id):
 
                     if not is_teacher_free(s_teacher, s_tcode, b_day, b_period, [s_id, b_id]):
                         continue
+                    if would_cause_overwork(s_teacher, s_tcode, b_day, b_period, s_id):
+                        continue
+                    if not venue_has_capacity(s_subj, b_day, b_period, s_day, s_period):
+                        continue
 
                     for (e_day, e_period) in empty_class_slots:
-                        if is_teacher_free(b_teacher, b_tcode, e_day, e_period, [b_id]):
-                            moves = [
-                                {"id": s_id, "day": b_day, "period": b_period},
-                                {"id": b_id, "day": e_day, "period": e_period}
-                            ]
-                            desc = (
-                                f"1. <b>【{s_subj}】</b>({s_teacher or '未指定'}) 移至 <b>週{b_day}第{b_period}節</b><br>"
-                                f"2. 原 <b>【{b_subj}】</b>({b_teacher or '未指定'}) 順移至 <b>週{e_day}第{e_period}節 空堂</b><br>"
-                                f"<div style='color: #38bdf8; font-size: 0.82rem; margin-top: 4px;'><i class='fa-solid fa-arrow-right'></i> 原週{s_day}第{s_period}節釋出為空堂，無衝堂問題。</div>"
-                            )
-                            chains.append({
-                                "type": "推移至空堂連鎖",
-                                "description": desc,
-                                "moves": moves
-                            })
-                            if len(chains) >= max_results:
-                                break
+                        if not is_teacher_free(b_teacher, b_tcode, e_day, e_period, [b_id]):
+                            continue
+                        if would_cause_overwork(b_teacher, b_tcode, e_day, e_period, b_id):
+                            continue
+                        if not venue_has_capacity(b_subj, e_day, e_period, b_day, b_period):
+                            continue
+
+                        moves = [
+                            {"id": s_id, "day": b_day, "period": b_period},
+                            {"id": b_id, "day": e_day, "period": e_period}
+                        ]
+                        badges = ["推移至空堂", "零衝堂"]
+                        desc = (
+                            f"1. <b>【{s_subj}】</b>({s_teacher or '未指定'}) 移至 <b>週{b_day}第{b_period}節</b><br>"
+                            f"2. 原 <b>【{b_subj}】</b>({b_teacher or '未指定'}) 順移至 <b>週{e_day}第{e_period}節 空堂</b><br>"
+                            f"<div style='color: #38bdf8; font-size: 0.82rem; margin-top: 4px;'><i class='fa-solid fa-arrow-right'></i> 原週{s_day}第{s_period}節釋出為空堂，無衝堂問題。</div>"
+                        )
+                        chains.append({
+                            "type": "推移至空堂連鎖",
+                            "description": desc,
+                            "moves": moves,
+                            "badges": badges
+                        })
+                        if len(chains) >= max_results:
+                            break
                     if len(chains) >= max_results:
                         break
 
         return jsonify({
             "status": "success",
             "chains": chains,
-            "count": len(chains)
+            "count": len(chains),
+            "options": {
+                "protect_consec": opt_protect_consec,
+                "max_daily": opt_max_daily,
+                "check_venue": opt_check_venue,
+                "max_consec_hours": opt_max_consec_hours,
+                "allow_4way": opt_allow_4way
+            }
         })
     except Exception as e:
         import traceback
@@ -5424,7 +5707,8 @@ def api_substitute_recommend():
         if target_subject_code.lower() in ("nan", "none", "null"):
             target_subject_code = ""
         
-        print(f"[DEBUG] recommend: absent_tcode={absent_tcode}, day={day}, period={period}, found_course={absent_course is not None}, target_subj={target_subject}, target_class={target_class}")
+        if os.environ.get("DEBUG_RECOMMEND"):
+            print(f"[DEBUG] recommend: absent_tcode={absent_tcode}, day={day}, period={period}, found_course={absent_course is not None}, target_subj={target_subject}, target_class={target_class}")
 
         # Build per-teacher subject list (unique subject names they teach)
         teacher_subjects_map = {}
