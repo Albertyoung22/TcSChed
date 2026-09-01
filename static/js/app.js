@@ -948,6 +948,8 @@ function setupSolverPanel() {
                 
                 solverConsole.innerHTML += `<p class="success-msg"><i class="fa-solid fa-circle-check"></i> [成功] ${data.message || '排課順利完成，已成功產生最佳化課表 Excel 檔案！'}</p>`;
                 showToast("AI 自動排課成功！");
+                if (window.CyberAudio) CyberAudio.playVictory();
+                if (window.CyberVisuals) CyberVisuals.hudToast("🏆 AI 最佳化排課完成", data.message || "CP-SAT 運算完畢，全校最佳化課表已全部生成！", "fa-crown", "success");
                 
                 if (window.location.hash) {
                     handleHashChange();
@@ -955,6 +957,8 @@ function setupSolverPanel() {
                 fetchMetadata();
             } else {
                 solverConsole.innerHTML += `<p class="error-msg"><i class="fa-solid fa-triangle-exclamation"></i> [錯誤] ${data.message || '排課求解失敗，請檢查限制條件是否互斥。'}</p>`;
+                if (window.CyberAudio) CyberAudio.playWarning();
+                if (window.CyberVisuals) CyberVisuals.hudToast("⚠️ 排課求解未收斂", data.message || "請檢查是否有過度嚴苛的排課限制條件", "fa-triangle-exclamation", "error");
                 if (data.logs && data.logs.length > 0) {
                     for (const logLine of data.logs) {
                         solverConsole.innerHTML += `<p class="system-msg" style="color: #fda4af;">> ${logLine}</p>`;
@@ -964,6 +968,7 @@ function setupSolverPanel() {
         } catch (error) {
             console.error(error);
             solverConsole.innerHTML += `<p class="error-msg"><i class="fa-solid fa-circle-xmark"></i> [錯誤] 連線伺服器時發生異常，無法啟動排課模組。</p>`;
+            if (window.CyberAudio) CyberAudio.playWarning();
         } finally {
             runSolverBtn.disabled = false;
             validateSolverBtn.disabled = false;
@@ -1305,6 +1310,8 @@ async function executeSwap(sourceId, targetDay, targetPeriod, targetId, isUndoRe
         
         const res = await response.json();
         if (res.status === 'success') {
+            if (window.CyberAudio) CyberAudio.playSuccess();
+            if (window.CyberVisuals) CyberVisuals.hudToast("✨ 調課對調成功", res.message, "fa-circle-check", "success");
             if (!isUndoRedoAction) {
                 manualSwapRedoStack = [];
                 swapSlipRecords.push({
@@ -1317,10 +1324,13 @@ async function executeSwap(sourceId, targetDay, targetPeriod, targetId, isUndoRe
             updateManualControlButtons();
             handleHashChange();
         } else if (res.status === 'conflict_forbidden') {
+            if (window.CyberAudio) CyberAudio.playWarning();
+            if (window.CyberVisuals) CyberVisuals.hudToast("⛔ 衝堂硬性衝突", res.message, "fa-triangle-exclamation", "error");
             if (confirm(res.message + "\n\n💡 是否立即計算並查看「AI 3向/4向連鎖對調解法」？")) {
                 fetchChainSwapSuggestions(sourceId);
             }
         } else {
+            if (window.CyberAudio) CyberAudio.playWarning();
             showToast("調整失敗：" + res.message);
         }
     } catch (e) {
@@ -1329,24 +1339,50 @@ async function executeSwap(sourceId, targetDay, targetPeriod, targetId, isUndoRe
     }
 }
 
+let currentChainSwapItemId = null;
+
+function reloadChainSwapSuggestions() {
+    if (currentChainSwapItemId) {
+        fetchChainSwapSuggestions(currentChainSwapItemId);
+    }
+}
+
 async function fetchChainSwapSuggestions(itemId) {
     try {
+        currentChainSwapItemId = itemId;
         const modal = document.getElementById('chainSwapModal');
         const container = document.getElementById('chainSwapContainer');
         if (modal && container) {
-            container.innerHTML = '<div style="text-align: center; color: #94a3b8; padding: 24px;"><i class="fa-solid fa-spinner fa-spin" style="font-size:1.5rem; color:#fbbf24; margin-bottom:8px; display:block;"></i>正在計算 AI 多向連鎖對調解法 (3角 / 4角環狀置換)...</div>';
+            container.innerHTML = '<div style="text-align: center; color: #94a3b8; padding: 24px;"><i class="fa-solid fa-spinner fa-spin" style="font-size:1.5rem; color:#fbbf24; margin-bottom:8px; display:block;"></i>正在根據所選約束計算 AI 多向連鎖對調解法 (3角 / 4角環狀置換)...</div>';
             modal.style.display = 'flex';
         }
 
-        const response = await fetch(`/api/suggest-chain-swap/${itemId}`);
+        // Gather options
+        const optProtectConsec = document.getElementById('chainOptProtectConsec') ? document.getElementById('chainOptProtectConsec').checked : true;
+        const optMaxDaily = document.getElementById('chainOptMaxDaily') ? document.getElementById('chainOptMaxDaily').checked : true;
+        const optCheckVenue = document.getElementById('chainOptCheckVenue') ? document.getElementById('chainOptCheckVenue').checked : true;
+        const optMaxConsecHours = document.getElementById('chainOptMaxConsecHours') ? document.getElementById('chainOptMaxConsecHours').checked : true;
+        const optAllow4Way = document.getElementById('chainOptAllow4Way') ? document.getElementById('chainOptAllow4Way').checked : true;
+
+        const queryParams = new URLSearchParams({
+            protect_consec: optProtectConsec ? '1' : '0',
+            max_daily: optMaxDaily ? '1' : '0',
+            check_venue: optCheckVenue ? '1' : '0',
+            max_consec_hours: optMaxConsecHours ? '1' : '0',
+            allow_4way: optAllow4Way ? '1' : '0'
+        });
+
+        const response = await fetch(`/api/suggest-chain-swap/${itemId}?${queryParams.toString()}`);
         const data = await response.json();
 
         if (data.status === 'error' || !data.chains || data.chains.length === 0) {
             container.innerHTML = `
                 <div style="text-align: center; padding: 32px 16px; color: #94a3b8;">
-                    <i class="fa-solid fa-circle-info" style="font-size: 2rem; color: #38bdf8; margin-bottom: 12px; display: block;"></i>
-                    <div style="font-size: 1.05rem; font-weight: 600; color: #f8fafc; margin-bottom: 6px;">未發現可行的 3 向連鎖對調組合</div>
-                    <div style="font-size: 0.85rem; color: #94a3b8;">該課程目前無完全無衝突的環狀輪換方案，建議調整禁排或衝突之教師時段。</div>
+                    <i class="fa-solid fa-filter-circle-xmark" style="font-size: 2.2rem; color: #f59e0b; margin-bottom: 12px; display: block;"></i>
+                    <div style="font-size: 1.05rem; font-weight: 600; color: #f8fafc; margin-bottom: 6px;">在目前選項下未發現可行的連鎖對調組合</div>
+                    <div style="font-size: 0.85rem; color: #94a3b8; line-height: 1.6; max-width: 480px; margin: 0 auto;">
+                        可能因教師禁排、連堂保護或專科教室容量已滿。請嘗試<b>取消勾選上方部分選項</b>（例如放寬連堂保護或勾選包含4角調）以獲取更多替代路徑。
+                    </div>
                 </div>`;
             return;
         }
@@ -1355,14 +1391,14 @@ async function fetchChainSwapSuggestions(itemId) {
         data.chains.forEach((chain, idx) => {
             const movesStr = JSON.stringify(chain.moves).replace(/"/g, '&quot;');
             html += `
-                <div style="background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px;">
-                    <div style="font-size: 0.92rem; font-weight: 600; color: #fbbf24; display: flex; justify-content: space-between; align-items: center;">
-                        <span><i class="fa-solid fa-circle-nodes"></i> 方案 ${idx + 1} (${chain.type})</span>
-                        <button type="button" onclick="executeChainSwap(${movesStr})" style="background: #eab308; border: none; color: #0f172a; padding: 5px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 0.82rem;">
+                <div style="background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(251, 191, 36, 0.3); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+                    <div style="font-size: 0.92rem; font-weight: 600; color: #fbbf24; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                        <span><i class="fa-solid fa-circle-nodes"></i> 方案 ${idx + 1} · ${chain.type}</span>
+                        <button type="button" onclick="executeChainSwap(${movesStr})" style="background: #eab308; border: none; color: #0f172a; padding: 5px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 0.82rem; display: flex; align-items: center; gap: 6px;">
                             <i class="fa-solid fa-bolt"></i> 執行此連鎖對調
                         </button>
                     </div>
-                    <div style="font-size: 0.85rem; color: #cbd5e1; line-height: 1.6; background: rgba(15, 23, 42, 0.5); padding: 8px 12px; border-radius: 8px;">
+                    <div style="font-size: 0.85rem; color: #cbd5e1; line-height: 1.6; background: rgba(15, 23, 42, 0.5); padding: 10px 14px; border-radius: 8px;">
                         ${chain.description}
                     </div>
                 </div>`;
@@ -1386,6 +1422,8 @@ async function executeChainSwap(moves) {
         });
         const res = await response.json();
         if (res.status === 'success') {
+            if (window.CyberAudio) CyberAudio.playSuccess();
+            if (window.CyberVisuals) CyberVisuals.hudToast("✨ 連鎖對調執行成功", res.message, "fa-wand-magic-sparkles", "success");
             document.getElementById('chainSwapModal').style.display = 'none';
             resetManualEditState();
             swapSlipRecords.push({
@@ -1567,6 +1605,10 @@ function openSwapSlipModal() {
 
     content.innerHTML = html;
     modal.style.display = 'flex';
+    if (window.CyberVisuals) {
+        const printArea = document.getElementById('printableSlipArea');
+        if (printArea) CyberVisuals.triggerSealCeremony(printArea);
+    }
 }
 
 // Settings and Rules Panel Logic
@@ -6305,6 +6347,29 @@ async function loadDualViewData() {
         renderDualClassGrid();
         renderDualTeacherGrid();
 
+        // Setup synchronized vertical scrolling between left and right schedule tables
+        const leftWrapper = document.querySelector('#dualClassBody')?.closest('.table-responsive');
+        const rightWrapper = document.querySelector('#dualTeacherBody')?.closest('.table-responsive');
+        if (leftWrapper && rightWrapper && !leftWrapper._syncInit) {
+            leftWrapper._syncInit = true;
+            let isSyncingLeft = false;
+            let isSyncingRight = false;
+            leftWrapper.addEventListener('scroll', () => {
+                if (!isSyncingLeft) {
+                    isSyncingRight = true;
+                    rightWrapper.scrollTop = leftWrapper.scrollTop;
+                }
+                isSyncingLeft = false;
+            });
+            rightWrapper.addEventListener('scroll', () => {
+                if (!isSyncingRight) {
+                    isSyncingLeft = true;
+                    leftWrapper.scrollTop = rightWrapper.scrollTop;
+                }
+                isSyncingRight = false;
+            });
+        }
+
         if (dualSelectedDay && dualSelectedPeriod) {
             highlightDualSlotSync(dualSelectedDay, dualSelectedPeriod);
         } else {
@@ -6391,8 +6456,44 @@ function closeDualViewModal() {
 }
 
 window.switchDualRightTeacher = switchDualRightTeacher;
+function toggleDualAssistantPanel() {
+    const panel = document.getElementById('dualSwapAssistantPanel');
+    const btnText = document.getElementById('toggleDualAssistantText');
+    if (!panel) return;
+    panel.classList.toggle('collapsed');
+    if (btnText) {
+        btnText.textContent = panel.classList.contains('collapsed') ? '展開調代課助手' : '收合調代課助手';
+    }
+}
+
+window.switchDualRightTeacher = switchDualRightTeacher;
 window.switchDualLeftClass = switchDualLeftClass;
 window.closeDualViewModal = closeDualViewModal;
+window.toggleDualAssistantPanel = toggleDualAssistantPanel;
+
+function setDualSlotHover(d, p, isHover) {
+    if (isHover) {
+        // Highlight entire row p in both tables
+        document.querySelectorAll(`#dualClassBody tr:nth-child(${p}) td, #dualTeacherBody tr:nth-child(${p}) td`).forEach(el => {
+            el.classList.add('crosshair-row');
+        });
+        // Highlight entire column d in both tables (index d+1 because index 1 is period name)
+        document.querySelectorAll(`#dualClassBody tr td:nth-child(${d + 1}), #dualTeacherBody tr td:nth-child(${d + 1})`).forEach(el => {
+            el.classList.add('crosshair-col');
+        });
+        // Highlight headers
+        document.querySelectorAll(`#dualViewModal thead th:nth-child(${d + 1})`).forEach(th => th.classList.add('crosshair-header'));
+        // Highlight the two target intersection cells with strong blue halo
+        document.querySelectorAll(`#dualClassBody td[data-day="${d}"][data-period="${p}"], #dualTeacherBody td[data-day="${d}"][data-period="${p}"]`).forEach(el => {
+            el.classList.add('crosshair-target');
+        });
+    } else {
+        document.querySelectorAll('#dualViewModal td.crosshair-row').forEach(el => el.classList.remove('crosshair-row'));
+        document.querySelectorAll('#dualViewModal td.crosshair-col').forEach(el => el.classList.remove('crosshair-col'));
+        document.querySelectorAll('#dualViewModal thead th.crosshair-header').forEach(th => th.classList.remove('crosshair-header'));
+        document.querySelectorAll('#dualViewModal td.crosshair-target').forEach(el => el.classList.remove('crosshair-target'));
+    }
+}
 
 function renderDualClassGrid() {
     const tbody = document.getElementById('dualClassBody');
@@ -6418,28 +6519,31 @@ function renderDualClassGrid() {
     tbody.innerHTML = '';
     for (let p = 1; p <= 8; p++) {
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td style="font-weight:bold; background:rgba(255,255,255,0.02); text-align:center;">第${p}節</td>`;
+        tr.innerHTML = `<td style="font-weight:bold; background:#f8fafc; text-align:center;">第${p}節</td>`;
         for (let d = 1; d <= 5; d++) {
             const td = document.createElement('td');
-            td.style.cursor = 'pointer';
             td.dataset.day = d;
             td.dataset.period = p;
             td.className = 'dual-cell-slot';
 
             const lessons = grid[p-1][d-1];
             if (lessons.length === 0) {
-                td.innerHTML = '<span style="color:#64748b; font-size:0.7rem;">- 空堂 -</span>';
+                td.innerHTML = '<span style="color:#94a3b8; font-size:0.75rem;">無課堂</span>';
             } else {
                 td.innerHTML = lessons.map(l => {
                     const tCode = l.teacher_code || l.teacher_name || '';
                     const tName = l.teacher_name || l.teacher_code || '';
-                    const tLink = tName ? `<span onclick="event.stopPropagation(); switchDualRightTeacher('${tCode}', ${d}, ${p});" style="color:#0071e3; font-weight:bold; cursor:pointer; text-decoration:underline;" title="👉 點擊讓右視窗切換顯示 ${tName} 老師課表"><i class="fa-solid fa-arrow-right" style="font-size:0.68rem;"></i> ${tName}</span>` : '';
+                    const tLink = tName ? `<span class="dual-slot-pill" onclick="event.stopPropagation(); switchDualRightTeacher('${tCode}', ${d}, ${p});" style="background:rgba(0,113,227,0.08); border:1px solid rgba(0,113,227,0.2); color:#0071e3;" title="👉 點擊讓右側對照 ${tName} 老師課表"><i class="fa-solid fa-arrow-right" style="font-size:0.62rem;"></i> ${tName}</span>` : '';
                     const hasRoom = l.room_name && String(l.room_name).trim() !== '' && String(l.room_name).toLowerCase() !== 'nan' && String(l.room_name).toLowerCase() !== 'none' && String(l.room_name).toLowerCase() !== 'null';
-                    const roomTag = hasRoom ? ` <span style="color:#64748b; font-size:0.75rem;">[${l.room_name}]</span>` : '';
-                    return `<div style="font-weight:bold; color:#1d1d1f;">${l.subject_name}</div>
-                            <div style="font-size:0.75rem; margin-top:2px;">${tLink}${roomTag}</div>`;
-                }).join('<hr style="border:0; border-top:1px dashed rgba(0,0,0,0.1); margin:4px 0;">');
+                    const roomTag = hasRoom ? ` <span style="color:#64748b; font-size:0.7rem;">[${l.room_name}]</span>` : '';
+                    return `<div style="font-weight:700; color:#0f172a; font-size:0.86rem; line-height:1.2;">${l.subject_name}</div>
+                            <div style="font-size:0.75rem; margin-top:3px; display:flex; align-items:center; justify-content:center; gap:3px; flex-wrap:wrap;">${tLink}${roomTag}</div>`;
+                }).join('<hr style="border:0; border-top:1px dashed rgba(0,0,0,0.1); margin:3px 0;">');
             }
+
+            // Crosshair sync hover
+            td.addEventListener('mouseenter', () => setDualSlotHover(d, p, true));
+            td.addEventListener('mouseleave', () => setDualSlotHover(d, p, false));
 
             td.addEventListener('click', () => {
                 highlightDualSlotSync(d, p);
@@ -6474,28 +6578,35 @@ function renderDualTeacherGrid() {
     tbody.innerHTML = '';
     for (let p = 1; p <= 8; p++) {
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td style="font-weight:bold; background:rgba(0,0,0,0.02); text-align:center;">第${p}節</td>`;
+        tr.innerHTML = `<td style="font-weight:bold; background:#f8fafc; text-align:center;">第${p}節</td>`;
         for (let d = 1; d <= 5; d++) {
             const td = document.createElement('td');
-            td.style.cursor = 'pointer';
             td.dataset.day = d;
             td.dataset.period = p;
             td.className = 'dual-cell-slot';
 
             const lessons = grid[p-1][d-1];
             if (lessons.length === 0) {
-                td.innerHTML = '<span style="color:#28a745; font-size:0.75rem; font-weight:bold;">🟢 空堂 (無課)</span>';
+                td.innerHTML = '<span style="color:#16a34a; font-size:0.75rem; font-weight:700; background:rgba(34,197,94,0.08); padding:2px 8px; border-radius:6px; border:1px solid rgba(34,197,94,0.2);">🟢 空堂</span>';
             } else {
                 td.innerHTML = lessons.map(l => {
                     const cCode = l.class_code || l.class_name || '';
                     const cName = l.class_name || l.class_code || '';
-                    const cLink = cName ? `<span onclick="event.stopPropagation(); switchDualLeftClass('${cCode}', ${d}, ${p});" style="color:#0071e3; font-weight:bold; cursor:pointer; text-decoration:underline;" title="👈 點擊讓左視窗切換顯示 ${cName} 班級課表"><i class="fa-solid fa-arrow-left" style="font-size:0.68rem;"></i> ${cName}</span>` : '';
+                    const isCurrentClass = (cCode === dualViewCurrentClass || cName === dualViewCurrentClass);
+                    const pillBg = isCurrentClass ? 'rgba(79,70,229,0.12)' : 'rgba(88,86,214,0.08)';
+                    const pillBorder = isCurrentClass ? '1px solid rgba(79,70,229,0.3)' : '1px solid rgba(88,86,214,0.2)';
+                    const pillColor = isCurrentClass ? '#4338ca' : '#5856d6';
+                    const cLink = cName ? `<span class="dual-slot-pill" onclick="event.stopPropagation(); switchDualLeftClass('${cCode}', ${d}, ${p});" style="background:${pillBg}; border:${pillBorder}; color:${pillColor};" title="👈 點擊讓左側對照 ${cName} 班級課表"><i class="fa-solid fa-arrow-left" style="font-size:0.62rem;"></i> ${cName}</span>` : '';
                     const hasRoom = l.room_name && String(l.room_name).trim() !== '' && String(l.room_name).toLowerCase() !== 'nan' && String(l.room_name).toLowerCase() !== 'none' && String(l.room_name).toLowerCase() !== 'null';
-                    const roomTag = hasRoom ? ` <span style="color:#64748b; font-size:0.75rem;">[${l.room_name}]</span>` : '';
-                    return `<div style="font-weight:bold; color:#1d1d1f;">${cLink} ${l.subject_name}</div>
-                            <div style="font-size:0.75rem; color:#64748b; margin-top:2px;">${roomTag}</div>`;
-                }).join('<hr style="border:0; border-top:1px dashed rgba(0,0,0,0.1); margin:4px 0;">');
+                    const roomTag = hasRoom ? ` <span style="color:#64748b; font-size:0.7rem;">[${l.room_name}]</span>` : '';
+                    return `<div style="font-weight:700; color:#0f172a; font-size:0.86rem; line-height:1.2;">${cLink} ${l.subject_name}</div>
+                            <div style="font-size:0.75rem; color:#64748b; margin-top:3px;">${roomTag}</div>`;
+                }).join('<hr style="border:0; border-top:1px dashed rgba(0,0,0,0.1); margin:3px 0;">');
             }
+
+            // Crosshair sync hover
+            td.addEventListener('mouseenter', () => setDualSlotHover(d, p, true));
+            td.addEventListener('mouseleave', () => setDualSlotHover(d, p, false));
 
             td.addEventListener('click', () => {
                 highlightDualSlotSync(d, p);
@@ -6510,21 +6621,77 @@ function highlightDualSlotSync(d, p) {
     dualSelectedDay = d;
     dualSelectedPeriod = p;
 
+    // Reset previous states safely with removeProperty
     document.querySelectorAll('#dualClassBody td, #dualTeacherBody td').forEach(td => {
-        td.style.background = '';
-        td.style.boxShadow = '';
+        td.classList.remove('dual-active-sync', 'dual-status-free', 'dual-status-match', 'dual-status-conflict', 'crosshair-target');
+        td.style.removeProperty('background-color');
+        td.style.removeProperty('box-shadow');
     });
 
     const classCell = document.querySelector(`#dualClassBody td[data-day="${d}"][data-period="${p}"]`);
     const teacherCell = document.querySelector(`#dualTeacherBody td[data-day="${d}"][data-period="${p}"]`);
 
     if (classCell) {
-        classCell.style.background = 'rgba(56, 189, 248, 0.25)';
-        classCell.style.boxShadow = 'inset 0 0 0 2px #38bdf8';
+        classCell.classList.add('dual-active-sync');
+        classCell.style.setProperty('background-color', '#7dd3fc', 'important');
+        classCell.style.setProperty('box-shadow', 'inset 0 0 0 3.5px #0284c7, 0 4px 18px rgba(2, 132, 199, 0.6)', 'important');
     }
+
+    let statusBadgeHtml = '';
+    let teacherStatusDesc = '';
+    const t = findTeacherInMetadata(dualViewCurrentTeacher);
+    const tName = resolveTeacherDisplayName(t ? t.name : dualViewCurrentTeacher, dualViewCurrentTeacher);
+
     if (teacherCell) {
-        teacherCell.style.background = 'rgba(129, 140, 248, 0.25)';
-        teacherCell.style.boxShadow = 'inset 0 0 0 2px #818cf8';
+        // Evaluate semantic relationship for the teacher at (d, p)
+        const tLessons = dualTeacherSlotsData.filter(s => parseInt(s.day) === d && parseInt(s.period) === p);
+        if (tLessons.length === 0) {
+            // Teacher is completely free at this slot
+            teacherCell.classList.add('dual-status-free');
+            teacherCell.style.setProperty('background-color', '#86efac', 'important');
+            teacherCell.style.setProperty('box-shadow', 'inset 0 0 0 3.5px #16a34a, 0 4px 18px rgba(22, 163, 74, 0.6)', 'important');
+            statusBadgeHtml = `<span style="background:#16a34a; color:#fff; padding:4px 12px; border-radius:6px; font-weight:700; font-size:0.85rem;"><i class="fa-solid fa-circle-check"></i> 🟢 完全空堂 (可調課/代課)</span>`;
+            teacherStatusDesc = `🟢 ${tName} 老師本節完全無課，調課或代課最佳選擇！`;
+        } else {
+            const teachesCurrentClass = tLessons.some(l => (l.class_code === dualViewCurrentClass || l.class_name === dualViewCurrentClass));
+            if (teachesCurrentClass) {
+                // Teacher is teaching the exact target class (match)
+                teacherCell.classList.add('dual-status-match');
+                teacherCell.style.setProperty('background-color', '#c7d2fe', 'important');
+                teacherCell.style.setProperty('box-shadow', 'inset 0 0 0 3.5px #4338ca, 0 4px 18px rgba(67, 56, 202, 0.6)', 'important');
+                statusBadgeHtml = `<span style="background:#4338ca; color:#fff; padding:4px 12px; border-radius:6px; font-weight:700; font-size:0.85rem;"><i class="fa-solid fa-star"></i> ★ 本科本班授課</span>`;
+                teacherStatusDesc = `★ ${tName} 老師本節正在此班授課（${tLessons[0].subject_name}）`;
+            } else {
+                // Teacher is occupied with another class (conflict)
+                teacherCell.classList.add('dual-status-conflict');
+                teacherCell.style.setProperty('background-color', '#fca5a5', 'important');
+                teacherCell.style.setProperty('box-shadow', 'inset 0 0 0 3.5px #dc2626, 0 4px 18px rgba(220, 38, 38, 0.6)', 'important');
+                const busyClass = tLessons.map(l => (l.class_name || l.class_code) + ' ' + l.subject_name).join(', ');
+                statusBadgeHtml = `<span style="background:#dc2626; color:#fff; padding:4px 12px; border-radius:6px; font-weight:700; font-size:0.85rem;"><i class="fa-solid fa-triangle-exclamation"></i> ⚠️ 忙碌衝堂 (${busyClass})</span>`;
+                teacherStatusDesc = `⚠️ ${tName} 老師本節在 ${busyClass} 授課中，時段衝突！`;
+            }
+        }
+    }
+
+    // Update Live Comparison Banner
+    const daysMap = ['', '週一', '週二', '週三', '週四', '週五'];
+    const cls = metadata.classes ? metadata.classes.find(c => c.code === dualViewCurrentClass || c.name === dualViewCurrentClass) : null;
+    const clsName = cls ? (cls.name || cls.code) : dualViewCurrentClass;
+    const classLessons = dualClassSlotsData.filter(s => parseInt(s.day) === d && parseInt(s.period) === p);
+    const clsLessonDesc = classLessons.length > 0 
+        ? classLessons.map(l => `【${l.subject_name}】(任課: ${l.teacher_name || '未指派'})`).join(', ')
+        : '無課程 (班級空堂)';
+
+    const bannerText = document.getElementById('dualLiveComparisonText');
+    const bannerBadge = document.getElementById('dualLiveComparisonBadge');
+    if (bannerText) {
+        bannerText.innerHTML = `<span style="background:#0284c7; color:#fff; padding:2px 8px; border-radius:4px; font-size:0.82rem; margin-right:4px;">${daysMap[d]} 第${p}節</span> 
+            <span>班級【${clsName}】：${clsLessonDesc}</span>
+            <span style="color:#64748b; margin:0 6px;">⇄</span>
+            <span>${teacherStatusDesc}</span>`;
+    }
+    if (bannerBadge && statusBadgeHtml) {
+        bannerBadge.innerHTML = statusBadgeHtml;
     }
 
     updateDualSwapAssistant(d, p);
