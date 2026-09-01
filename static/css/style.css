@@ -1477,51 +1477,133 @@ body {
 }
 
 #dualViewGridSplit {
+#dualViewGridSplit {
     display: grid !important;
     grid-template-columns: 1fr 1fr !important;
-    gap: 16px !important;
+    gap: 14px !important;
+    align-items: stretch !important;
 }
 
 #dualViewModal .schedule-table {
     min-width: 0 !important;
     width: 100% !important;
     table-layout: fixed !important;
+    border-collapse: collapse !important;
 }
 
 #dualViewModal .table-responsive {
     overflow-x: hidden !important;
+    overflow-y: visible !important;
     margin-bottom: 0 !important;
 }
 
-#dualViewModal .schedule-table th,
+#dualViewModal .schedule-table th {
+    padding: 8px 4px !important;
+    font-size: 0.84rem !important;
+    height: 36px !important;
+    max-height: 36px !important;
+    text-align: center !important;
+    background: #f8fafc !important;
+    color: #334155 !important;
+    font-weight: 700 !important;
+    border: 1px solid rgba(0, 0, 0, 0.08) !important;
+}
+
 #dualViewModal .schedule-table td {
-    padding: 6px 4px !important;
+    padding: 4px 6px !important;
     font-size: 0.82rem !important;
     word-break: break-all !important;
+    height: 64px !important;
+    max-height: 64px !important;
+    vertical-align: middle !important;
+    text-align: center !important;
+    border: 1px solid rgba(0, 0, 0, 0.08) !important;
+    box-sizing: border-box !important;
 }
 
 #dualViewModal .schedule-table th:first-child,
 #dualViewModal .schedule-table td:first-child {
-    width: 13% !important;
+    width: 12% !important;
+    background: #f8fafc !important;
+    font-weight: 700 !important;
+    color: #475569 !important;
+    font-size: 0.82rem !important;
 }
 
 #dualViewModal .schedule-table th:not(:first-child),
 #dualViewModal .schedule-table td:not(:first-child) {
-    width: 17.4% !important;
+    width: 17.6% !important;
 }
 
 .dual-cell-slot {
-    padding: 6px 4px !important;
-    min-height: 52px !important;
-    text-align: center !important;
-    vertical-align: middle !important;
-    border: 1px solid rgba(0, 0, 0, 0.08) !important;
-    background: #ffffff !important;
-    transition: all 0.15s ease !important;
+    position: relative;
+    background-color: #ffffff;
+    cursor: pointer !important;
+    transition: background-color 0.08s ease, box-shadow 0.08s ease;
+    user-select: none;
 }
 
-.dual-cell-slot:hover {
-    background: rgba(0, 113, 227, 0.06) !important;
+/* Crosshair Sync Hover Effect - Super Vivid & Crisp */
+.dual-cell-slot.crosshair-row,
+.dual-cell-slot.crosshair-col {
+    background-color: #e0f2fe !important;
+}
+
+.dual-cell-slot.crosshair-target,
+.dual-cell-slot.dual-hover-sync {
+    background-color: #bae6fd !important;
+    box-shadow: inset 0 0 0 3px #0284c7, 0 3px 12px rgba(2, 132, 199, 0.45) !important;
+    z-index: 35 !important;
+}
+
+/* Active Slot Highlight (Primary Clicked on Left Class Table) */
+.dual-cell-slot.dual-active-sync {
+    background-color: #bae6fd !important;
+    box-shadow: inset 0 0 0 3px #0284c7, 0 4px 16px rgba(2, 132, 199, 0.5) !important;
+    z-index: 50 !important;
+}
+
+/* Semantic Status: Teacher is completely free at this slot - Super Vivid Green */
+.dual-cell-slot.dual-status-free {
+    background-color: #bbf7d0 !important;
+    box-shadow: inset 0 0 0 3px #16a34a, 0 4px 16px rgba(22, 163, 74, 0.5) !important;
+    z-index: 50 !important;
+}
+
+/* Semantic Status: Teacher is teaching the same target class (match) - Super Vivid Indigo */
+.dual-cell-slot.dual-status-match {
+    background-color: #c7d2fe !important;
+    box-shadow: inset 0 0 0 3px #4338ca, 0 4px 16px rgba(67, 56, 202, 0.5) !important;
+    z-index: 50 !important;
+}
+
+/* Semantic Status: Teacher is busy in another class (conflict/busy) - Super Vivid Red */
+.dual-cell-slot.dual-status-conflict {
+    background-color: #fca5a5 !important;
+    box-shadow: inset 0 0 0 3px #dc2626, 0 4px 16px rgba(220, 38, 38, 0.5) !important;
+    z-index: 50 !important;
+}
+
+/* Cell badge pill */
+.dual-slot-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    transition: all 0.12s ease;
+}
+
+.dual-slot-pill:hover {
+    transform: translateY(-1px);
+    filter: brightness(0.95);
+}
+
+/* Collapsible Swap Assistant Panel */
+#dualSwapAssistantPanel.collapsed {
+    display: none !important;
 }
 
 /* ==========================================================================
