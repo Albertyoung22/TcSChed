@@ -1,0 +1,335 @@
+/* =========================================================================
+   🌌 CyberCeremony.css - 智慧排課系統 未來科技視覺與儀式感動效
+   High-End Glassmorphism, HUD Glow & Micro-interactions
+   ========================================================================= */
+
+/* 1. 點擊光波漣漪 (Cyber Click Ripple) */
+.cyber-click-ripple {
+    position: fixed;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 2px solid #0284c7;
+    pointer-events: none;
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.85;
+    animation: cyberRippleExpand 0.55s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+    z-index: 999999;
+}
+
+@keyframes cyberRippleExpand {
+    0% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 0.9;
+        box-shadow: 0 0 10px #38bdf8;
+    }
+    100% {
+        transform: translate(-50%, -50%) scale(6.5);
+        opacity: 0;
+        box-shadow: 0 0 25px rgba(56, 189, 248, 0);
+    }
+}
+
+/* 2. 調課成功光環迸發 (Slot Flash Pulse) */
+.cyber-slot-flash-success {
+    animation: slotPulseSuccess 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+}
+
+@keyframes slotPulseSuccess {
+    0% {
+        background-color: #86efac !important;
+        box-shadow: inset 0 0 0 3px #16a34a, 0 0 24px rgba(22, 163, 74, 0.8) !important;
+        transform: scale(0.97);
+    }
+    50% {
+        transform: scale(1.03);
+        box-shadow: inset 0 0 0 3px #16a34a, 0 0 32px rgba(22, 163, 74, 0.9) !important;
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+.cyber-slot-flash-warning {
+    animation: slotPulseWarning 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+}
+
+@keyframes slotPulseWarning {
+    0% {
+        background-color: #fde047 !important;
+        box-shadow: inset 0 0 0 3px #ca8a04, 0 0 24px rgba(202, 138, 4, 0.8) !important;
+        transform: scale(0.97);
+    }
+    50% {
+        transform: scale(1.03);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* 3. 賽博 HUD 浮動狀態卡 (Cyber HUD Toast Hub) */
+#cyberToastHub {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    z-index: 100000;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    pointer-events: none;
+}
+
+.cyber-hud-toast {
+    pointer-events: auto;
+    width: 330px;
+    background: rgba(15, 23, 42, 0.88);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border: 1px solid rgba(56, 189, 248, 0.35);
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35), 0 0 15px rgba(56, 189, 248, 0.2);
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    gap: 12px;
+    position: relative;
+    overflow: hidden;
+    color: #ffffff;
+    animation: toastSlideIn 0.38s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    transition: all 0.3s ease;
+}
+
+.cyber-hud-toast.closing {
+    animation: toastSlideOut 0.32s cubic-bezier(0.7, 0, 0.84, 0) forwards;
+}
+
+@keyframes toastSlideIn {
+    from {
+        opacity: 0;
+        transform: translateX(60px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+}
+
+@keyframes toastSlideOut {
+    from {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+    to {
+        opacity: 0;
+        transform: translateX(60px) scale(0.9);
+    }
+}
+
+.cyber-hud-toast.success {
+    border-color: rgba(74, 222, 128, 0.5);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35), 0 0 15px rgba(74, 222, 128, 0.25);
+}
+
+.cyber-hud-toast.error {
+    border-color: rgba(248, 113, 113, 0.5);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35), 0 0 15px rgba(248, 113, 113, 0.25);
+}
+
+.cyber-toast-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, rgba(2, 132, 199, 0.3), rgba(56, 189, 248, 0.1));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    color: #38bdf8;
+    flex-shrink: 0;
+    border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.cyber-hud-toast.success .cyber-toast-icon {
+    background: linear-gradient(135deg, rgba(22, 163, 74, 0.3), rgba(74, 222, 128, 0.1));
+    color: #4ade80;
+    border-color: rgba(74, 222, 128, 0.3);
+}
+
+.cyber-hud-toast.error .cyber-toast-icon {
+    background: linear-gradient(135deg, rgba(220, 38, 38, 0.3), rgba(248, 113, 113, 0.1));
+    color: #f87171;
+    border-color: rgba(248, 113, 113, 0.3);
+}
+
+.cyber-toast-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.cyber-toast-title {
+    font-size: 0.92rem;
+    font-weight: 800;
+    color: #f8fafc;
+    margin-bottom: 2px;
+    letter-spacing: -0.2px;
+}
+
+.cyber-toast-desc {
+    font-size: 0.78rem;
+    color: #94a3b8;
+    line-height: 1.35;
+    word-break: break-word;
+}
+
+.cyber-toast-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 2.5px;
+    width: 100%;
+    background: linear-gradient(90deg, #38bdf8, #818cf8);
+    animation: toastProgressBar 3.6s linear forwards;
+}
+
+.cyber-hud-toast.success .cyber-toast-bar {
+    background: linear-gradient(90deg, #4ade80, #22c55e);
+}
+
+.cyber-hud-toast.error .cyber-toast-bar {
+    background: linear-gradient(90deg, #f87171, #ef4444);
+}
+
+@keyframes toastProgressBar {
+    from { width: 100%; }
+    to { width: 0%; }
+}
+
+/* 4. 數位公文防偽印鑑蓋章儀式感 (Official Seal Stamp) */
+.cyber-official-seal {
+    position: absolute;
+    top: 24px;
+    right: 32px;
+    width: 120px;
+    height: 120px;
+    border: 3.5px solid #dc2626;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #dc2626;
+    text-align: center;
+    background: rgba(254, 226, 226, 0.4);
+    box-shadow: 0 0 20px rgba(220, 38, 38, 0.25), inset 0 0 12px rgba(220, 38, 38, 0.15);
+    transform: rotate(-14deg) scale(2.2);
+    opacity: 0;
+    animation: stampPress 0.45s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
+    pointer-events: none;
+    z-index: 100;
+}
+
+@keyframes stampPress {
+    0% {
+        transform: rotate(-35deg) scale(2.6);
+        opacity: 0;
+    }
+    75% {
+        transform: rotate(-12deg) scale(0.92);
+        opacity: 1;
+    }
+    100% {
+        transform: rotate(-14deg) scale(1);
+        opacity: 0.92;
+    }
+}
+
+.seal-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    font-family: 'Noto Serif TC', serif, sans-serif;
+}
+
+.seal-inner i {
+    font-size: 1.6rem;
+}
+
+.seal-inner span {
+    font-size: 0.92rem;
+    font-weight: 900;
+    letter-spacing: 2px;
+    border-top: 1px dashed #dc2626;
+    border-bottom: 1px dashed #dc2626;
+    padding: 1px 0;
+}
+
+.seal-inner small {
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+/* 5. 賽博科技儀表狀態與音效切換鈕 */
+#cyberSoundToggleBtn {
+    background: rgba(255, 255, 255, 0.85);
+    border: 1.5px solid rgba(2, 132, 199, 0.3);
+    color: #0284c7;
+    border-radius: 20px;
+    padding: 5px 14px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.25s ease;
+    box-shadow: 0 2px 8px rgba(2, 132, 199, 0.15);
+}
+
+#cyberSoundToggleBtn:hover {
+    background: #0284c7;
+    color: #ffffff;
+    border-color: #0284c7;
+    box-shadow: 0 0 15px rgba(2, 132, 199, 0.45);
+    transform: translateY(-1px);
+}
+
+#cyberSoundToggleBtn.muted {
+    border-color: #cbd5e1;
+    color: #64748b;
+    background: rgba(241, 245, 249, 0.8);
+    box-shadow: none;
+}
+
+/* 6. 課表格子全像懸浮與磁吸吸附光環 (Holographic Card & Magnetic Snap) */
+.schedule-cell.has-lesson {
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease, border-color 0.2s ease !important;
+}
+
+.schedule-cell.has-lesson:hover {
+    transform: translateY(-3px) scale(1.015) !important;
+    box-shadow: 0 8px 24px rgba(2, 132, 199, 0.16), 0 2px 6px rgba(0, 0, 0, 0.05) !important;
+    border-color: rgba(2, 132, 199, 0.45) !important;
+}
+
+/* 7. 雙視窗對照量子光束展開動效 (Split Photon Reveal) */
+#dualViewModal .modal-content {
+    animation: dualModalQuantumIn 0.38s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes dualModalQuantumIn {
+    0% {
+        opacity: 0;
+        transform: scale(0.94) translateY(20px);
+        box-shadow: 0 0 0 rgba(2, 132, 199, 0);
+    }
+    60% {
+        box-shadow: 0 0 45px rgba(2, 132, 199, 0.35);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+        box-shadow: 0 25px 60px rgba(0, 0, 0, 0.25);
+    }
+}
