@@ -11,11 +11,54 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
     <!-- Stylesheet -->
     <link rel="icon" type="image/png" href="/static/images/icon.png">
-    <link rel="stylesheet" href="/static/css/style.css?v=20260820_v340">
+    <link rel="stylesheet" href="/static/css/style.css?v=20260901_v600">
+    <link rel="stylesheet" href="/static/css/cyber_ceremony.css?v=20260901_v1">
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
+        /* Dual View Modal Enhancements - Explicitly scoped to #dualViewModal to protect main schedule edit colors */
+        #dualViewModal .crosshair-row,
+        #dualViewModal .crosshair-col {
+            background-color: #dbeafe !important;
+            transition: background-color 0.05s ease !important;
+        }
+        #dualViewModal .crosshair-target,
+        #dualViewModal .dual-hover-sync {
+            background-color: #7dd3fc !important;
+            box-shadow: inset 0 0 0 3px #0284c7, 0 4px 16px rgba(2, 132, 199, 0.55) !important;
+            z-index: 40 !important;
+            position: relative !important;
+            transition: all 0.05s ease !important;
+        }
+        #dualViewModal .crosshair-header {
+            background-color: #0284c7 !important;
+            color: #ffffff !important;
+            transition: all 0.05s ease !important;
+        }
+        #dualViewModal .dual-active-sync {
+            background-color: #7dd3fc !important;
+            box-shadow: inset 0 0 0 3px #0284c7, 0 4px 16px rgba(2, 132, 199, 0.5) !important;
+            z-index: 50 !important;
+        }
+        #dualViewModal .dual-status-free {
+            background-color: #86efac !important;
+            box-shadow: inset 0 0 0 3px #16a34a, 0 4px 16px rgba(22, 163, 74, 0.5) !important;
+            z-index: 50 !important;
+        }
+        #dualViewModal .dual-status-match {
+            background-color: #c7d2fe !important;
+            box-shadow: inset 0 0 0 3px #4338ca, 0 4px 16px rgba(67, 56, 202, 0.5) !important;
+            z-index: 50 !important;
+        }
+        #dualViewModal .dual-status-conflict {
+            background-color: #fca5a5 !important;
+            box-shadow: inset 0 0 0 3px #dc2626, 0 4px 16px rgba(220, 38, 38, 0.5) !important;
+            z-index: 50 !important;
+        }
+        #dualViewModal .dual-cell-slot {
+            cursor: pointer !important;
+        }
         /* Read-Only Query Portal Mode Overrides */
         #solverPanelBtn, #settingsModalBtn, #substituteModalBtn, 
         #examInvigilationBtn, #dataDebugBtn, #teacherPortalBtn, 
@@ -2275,13 +2318,19 @@
                 <div style="display: flex; gap: 12px; align-items: center; background: #ffffff; padding: 12px 18px; border-radius: 12px; border: 1px solid rgba(0,0,0,0.08); box-shadow: 0 2px 8px rgba(0,0,0,0.02); flex-wrap: wrap;">
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <span style="font-size: 0.9rem; color: #0071e3; font-weight: bold;"><i class="fa-solid fa-users"></i> 對照班級：</span>
-                        <select id="dualViewClassSelect" style="padding: 6px 12px; border-radius: 8px; background: #ffffff; color: #1d1d1f; border: 1px solid rgba(0,0,0,0.15); font-size: 0.9rem; font-weight: 500;"></select>
+                        <select id="dualViewClassSelect" style="padding: 6px 12px; border-radius: 8px; background: #ffffff; color: #1d1d1f; border: 1.5px solid #0071e3; font-size: 0.9rem; font-weight: 600;"></select>
                     </div>
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <span style="font-size: 0.9rem; color: #5856d6; font-weight: bold;"><i class="fa-solid fa-chalkboard-user"></i> 對照教師：</span>
-                        <select id="dualViewTeacherSelect" style="padding: 6px 12px; border-radius: 8px; background: #ffffff; color: #1d1d1f; border: 1px solid rgba(0,0,0,0.15); font-size: 0.9rem; font-weight: 500;"></select>
+                        <select id="dualViewTeacherSelect" style="padding: 6px 12px; border-radius: 8px; background: #ffffff; color: #1d1d1f; border: 1.5px solid #5856d6; font-size: 0.9rem; font-weight: 600;"></select>
+                    </div>
+                    <div style="display: inline-flex; align-items: center; gap: 6px; background: rgba(14, 165, 233, 0.08); border: 1px solid rgba(14, 165, 233, 0.25); border-radius: 8px; padding: 4px 10px; font-size: 0.8rem; color: #0284c7; font-weight: 600;">
+                        <i class="fa-solid fa-crosshairs"></i> 滑鼠懸停同步十字高亮 · 點擊任一節深度對照
                     </div>
                     <div style="margin-left: auto; display: flex; gap: 8px;">
+                        <button type="button" id="toggleDualAssistantBtn" onclick="toggleDualAssistantPanel()" class="action-btn" style="padding: 6px 13px; font-size: 0.84rem; background: rgba(100, 116, 139, 0.1); color: #334155; border: 1px solid #cbd5e1; font-weight: bold; cursor: pointer;">
+                            <i class="fa-solid fa-sliders"></i> <span id="toggleDualAssistantText">收合調代課助手</span>
+                        </button>
                         <button type="button" class="action-btn" onclick="toggleModalMaximize('dualViewModal')" style="padding: 6px 14px; font-size: 0.85rem; background: rgba(52, 199, 89, 0.12); color: #28a745; border: 1px solid rgba(52, 199, 89, 0.3); font-weight: bold; cursor: pointer;">
                             <i class="fa-solid fa-expand"></i> 全螢幕展開
                         </button>
@@ -2291,11 +2340,22 @@
                     </div>
                 </div>
 
+                <!-- Live Comparison Banner -->
+                <div id="dualLiveComparisonBanner" style="background: #ffffff; border: 1.5px solid #0284c7; border-radius: 10px; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 8px rgba(0,0,0,0.04); flex-wrap: wrap; gap: 10px;">
+                    <div id="dualLiveComparisonText" style="font-size: 0.92rem; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                        <i class="fa-solid fa-crosshairs" style="color: #0284c7;"></i>
+                        <span>請點選下方任一課表格子，系統將即時分析班級與教師時段對照狀態</span>
+                    </div>
+                    <div id="dualLiveComparisonBadge" style="font-size: 0.82rem; font-weight: 700; padding: 3px 10px; border-radius: 6px; background: rgba(2,132,199,0.1); color: #0284c7;">
+                        即時對照待命
+                    </div>
+                </div>
+
                 <!-- Split Grid Container -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; flex: 1;" id="dualViewGridSplit">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; flex: 1;" id="dualViewGridSplit">
                     <!-- Left: Class Schedule -->
-                    <div style="background: #ffffff; padding: 16px; border-radius: 14px; border: 1px solid rgba(0, 113, 227, 0.2); box-shadow: 0 4px 16px rgba(0,0,0,0.03); display: flex; flex-direction: column;">
-                        <h4 id="dualClassTitle" style="color: #0071e3; margin-top: 0; margin-bottom: 10px; font-size: 1rem; display: flex; align-items: center; justify-content: space-between;">
+                    <div style="background: #ffffff; padding: 14px; border-radius: 14px; border: 1.5px solid rgba(0, 113, 227, 0.25); box-shadow: 0 4px 16px rgba(0,0,0,0.03); display: flex; flex-direction: column;">
+                        <h4 id="dualClassTitle" style="color: #0071e3; margin-top: 0; margin-bottom: 8px; font-size: 0.98rem; display: flex; align-items: center; justify-content: space-between; min-height: 28px;">
                             <span><i class="fa-solid fa-chalkboard"></i> 班級課表</span>
                             <span id="dualClassTutor" style="font-size: 0.82rem; color: #64748b;"></span>
                         </h4>
@@ -2312,8 +2372,8 @@
                     </div>
 
                     <!-- Right: Teacher Schedule -->
-                    <div style="background: #ffffff; padding: 16px; border-radius: 14px; border: 1px solid rgba(88, 86, 214, 0.2); box-shadow: 0 4px 16px rgba(0,0,0,0.03); display: flex; flex-direction: column;">
-                        <h4 id="dualTeacherTitle" style="color: #5856d6; margin-top: 0; margin-bottom: 10px; font-size: 1rem; display: flex; align-items: center; justify-content: space-between;">
+                    <div style="background: #ffffff; padding: 14px; border-radius: 14px; border: 1.5px solid rgba(88, 86, 214, 0.25); box-shadow: 0 4px 16px rgba(0,0,0,0.03); display: flex; flex-direction: column;">
+                        <h4 id="dualTeacherTitle" style="color: #5856d6; margin-top: 0; margin-bottom: 8px; font-size: 0.98rem; display: flex; align-items: center; justify-content: space-between; min-height: 28px;">
                             <span><i class="fa-solid fa-user-graduate"></i> 教師課表</span>
                             <span id="dualTeacherRole" style="font-size: 0.82rem; color: #64748b;"></span>
                         </h4>
@@ -2714,7 +2774,8 @@
     </div>
 
     <!-- JS Scripts with Cache-Buster -->
-    <script src="/static/js/app.js?v=20260831_v2"></script>
+    <script src="/static/js/app.js?v=20260901_v1100"></script>
+    <script src="/static/js/cyber_ceremony.js?v=20260901_v1100"></script>
 
     <!-- Mobile View & Responsive Day-Card Controller -->
     <script>
@@ -2958,5 +3019,59 @@
             }
         });
     </script>
+
+    <!-- AI Chain Swap Modal -->
+    <div id="chainSwapModal" class="modal-overlay" style="display: none; z-index: 100000;">
+        <div class="modal-content glass" style="max-width: 680px; width: 94vw; padding: 24px; border-radius: 16px; background: #ffffff; border: 1px solid #e2e8f0; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);">
+            <div class="modal-header" style="padding: 0 0 16px 0; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="margin: 0; color: #b45309; font-size: 1.15rem; display: flex; align-items: center; gap: 8px; font-weight: 700;">
+                    <i class="fa-solid fa-wand-magic-sparkles" style="color: #f59e0b;"></i> <span>AI 多向連鎖環狀對調建議 (3角 / 4角調)</span>
+                </h3>
+                <div class="modal-header-actions">
+                    <button class="maximize-modal-btn" onclick="toggleModalMaximize('chainSwapModal')" title="全螢幕最大化展開/還原視窗" style="background: none; border: none; color: #64748b; cursor: pointer; padding: 4px 8px;">
+                        <i class="fa-solid fa-expand"></i>
+                    </button>
+                    <button class="close-modal-btn" onclick="document.getElementById('chainSwapModal').style.display='none'" style="background: none; border: none; font-size: 1.5rem; color: #64748b; cursor: pointer;">&times;</button>
+                </div>
+            </div>
+
+            <!-- AI Chain Swap Options Bar -->
+            <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 12px; padding: 12px 16px; margin-top: 14px; margin-bottom: 8px;">
+                <div style="font-size: 0.84rem; font-weight: 700; color: #b45309; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
+                    <span><i class="fa-solid fa-sliders"></i> AI 演算法約束與推薦選項</span>
+                    <span style="font-size: 0.75rem; color: #64748b; font-weight: normal;"><i class="fa-solid fa-circle-info"></i> 取消勾選可放寬條件尋找更多替代方案</span>
+                </div>
+                <div style="display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: 0.82rem; color: #334155;">
+                    <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; user-select: none;">
+                        <input type="checkbox" id="chainOptProtectConsec" checked onchange="reloadChainSwapSuggestions()">
+                        <span>連堂保護 (不拆散雙節課)</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; user-select: none;">
+                        <input type="checkbox" id="chainOptMaxDaily" checked onchange="reloadChainSwapSuggestions()">
+                        <span>單日同科 ≤ 2節</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; user-select: none;">
+                        <input type="checkbox" id="chainOptCheckVenue" checked onchange="reloadChainSwapSuggestions()">
+                        <span>專科教室容量守恆</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; user-select: none;">
+                        <input type="checkbox" id="chainOptMaxConsecHours" checked onchange="reloadChainSwapSuggestions()">
+                        <span>防教師連續授課 > 3節</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; user-select: none;">
+                        <input type="checkbox" id="chainOptAllow4Way" checked onchange="reloadChainSwapSuggestions()">
+                        <span>包含 4角多向連鎖</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="modal-body" style="padding: 16px 0; max-height: 60vh; overflow-y: auto;" id="chainSwapContainer">
+                <div style="text-align: center; color: #64748b; padding: 24px;">計算連鎖建議中...</div>
+            </div>
+            <div class="modal-footer" style="padding-top: 16px; border-top: 1px solid #e2e8f0; text-align: right;">
+                <button type="button" onclick="document.getElementById('chainSwapModal').style.display='none'" style="background: transparent; border: 1px solid #cbd5e1; color: #475569; padding: 6px 16px; border-radius: 8px; cursor: pointer;">關閉</button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
