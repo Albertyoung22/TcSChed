@@ -3,7 +3,7 @@ services:
     name: tcsched
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app
+    startCommand: gunicorn app:app --worker-class gthread --threads 4 --timeout 120 --bind 0.0.0.0:$PORT
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.4
