@@ -9,25 +9,76 @@ import tempfile
 import webbrowser
 import subprocess
 import io
+import atexit
+import urllib.request
+try:
+    import winreg
+except ImportError:
+    winreg = None
 
-# Handle PyInstaller --windowed mode where sys.stdout and sys.stderr are None
-class DummyStream:
-    def __init__(self, log_path=None):
+# Robust logging stream for PyInstaller --windowed mode and console mode
+class SafeLogStream:
+    def __init__(self, log_path=None, original_stream=None, max_bytes=5 * 1024 * 1024):
         self.log_path = log_path
+        self.original_stream = original_stream
+        self.encoding = "utf-8"
+        self.errors = "replace"
+        self.max_bytes = max_bytes
+        self._lock = threading.Lock()
+        self._check_rotation()
+
+    def _check_rotation(self):
+        if not self.log_path or not os.path.exists(self.log_path):
+            return
+        try:
+            if os.path.getsize(self.log_path) > self.max_bytes:
+                bak_path = self.log_path + ".old"
+                if os.path.exists(bak_path):
+                    os.remove(bak_path)
+                os.rename(self.log_path, bak_path)
+        except Exception:
+            pass
 
     def write(self, s):
-        if self.log_path and s:
+        if not s:
+            return 0
+        text = str(s)
+        # Write to original stream (console) if available
+        if self.original_stream and hasattr(self.original_stream, 'write'):
             try:
-                with open(self.log_path, "a", encoding="utf-8", errors="replace") as f:
-                    f.write(str(s))
+                self.original_stream.write(text)
             except Exception:
                 pass
-        return len(s) if s else 0
+
+        # Write to log file safely
+        if self.log_path:
+            with self._lock:
+                try:
+                    with open(self.log_path, "a", encoding="utf-8", errors="replace") as f:
+                        f.write(text)
+                except Exception:
+                    pass
+        return len(text)
 
     def flush(self):
-        pass
+        if self.original_stream and hasattr(self.original_stream, 'flush'):
+            try:
+                self.original_stream.flush()
+            except Exception:
+                pass
 
     def isatty(self):
+        if self.original_stream and hasattr(self.original_stream, 'isatty'):
+            try:
+                return self.original_stream.isatty()
+            except Exception:
+                return False
+        return False
+
+    def writable(self):
+        return True
+
+    def readable(self):
         return False
 
 # Ensure working directory is set to the application directory
@@ -36,10 +87,15 @@ if getattr(sys, 'frozen', False):
     meipass = getattr(sys, '_MEIPASS', base_dir)
     bundled_cfg = os.path.join(meipass, 'config_rules.json')
     target_cfg = os.path.join(base_dir, 'config_rules.json')
-    if not os.path.exists(target_cfg) and os.path.exists(bundled_cfg):
+    data_cfg = os.path.join(base_dir, 'data', 'config_rules.json')
+    if os.path.exists(bundled_cfg):
         import shutil
         try:
-            shutil.copy2(bundled_cfg, target_cfg)
+            if not os.path.exists(target_cfg):
+                shutil.copy2(bundled_cfg, target_cfg)
+            if not os.path.exists(data_cfg):
+                os.makedirs(os.path.dirname(data_cfg), exist_ok=True)
+                shutil.copy2(bundled_cfg, data_cfg)
         except Exception:
             pass
 else:
@@ -53,21 +109,9 @@ if base_dir:
 
 log_path = os.path.join(base_dir, "desktop_app.log")
 
-if sys.stdout is None or not hasattr(sys.stdout, 'write'):
-    sys.stdout = DummyStream(log_path)
-elif hasattr(sys.stdout, 'reconfigure'):
-    try:
-        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
-    except Exception:
-        pass
-
-if sys.stderr is None or not hasattr(sys.stderr, 'write'):
-    sys.stderr = DummyStream(log_path)
-elif hasattr(sys.stderr, 'reconfigure'):
-    try:
-        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
-    except Exception:
-        pass
+# Setup safe dual-stream logging (both to console and logfile)
+sys.stdout = SafeLogStream(log_path, sys.stdout)
+sys.stderr = SafeLogStream(log_path, sys.stderr)
 
 # Safely import webview without crashing if pythonnet/WebView2 DLLs are missing
 try:
@@ -75,11 +119,10 @@ try:
 except Exception:
     webview = None
 
-# Set a unique WebView2 user data directory to fix HRESULT 0x800700AA (Resource in use file lock)
-user_data_dir = os.path.join(tempfile.gettempdir(), f"tucheng_wv2_{os.getpid()}")
-os.environ["WEBVIEW2_USER_DATA_FOLDER"] = user_data_dir
-
-
+# Dedicated profile directory to retain user window sizing/preferences without cluttering %TEMP%
+desktop_profile_dir = os.path.join(os.environ.get("LOCALAPPDATA", tempfile.gettempdir()), "School_Schedule_Desktop")
+os.makedirs(desktop_profile_dir, exist_ok=True)
+os.environ["WEBVIEW2_USER_DATA_FOLDER"] = os.path.join(desktop_profile_dir, "webview2_data")
 
 from app import app, load_schedule_data
 
@@ -105,16 +148,11 @@ def get_local_ip():
 
 def run_server(host, port):
     """Runs the WSGI server using Waitress for production performance and stability."""
-    try:
-        load_schedule_data()
-    except Exception as e:
-        print(f"[警告] 預先載入課表資料時發生錯誤: {e}")
-        
     local_ip = get_local_ip()
     try:
         from waitress import serve
         print(f"\n==================================================")
-        print(f" [系統] 智慧排課系統已啟動 (Waitress WSGI)")
+        print(f" [系統] 智慧排課系統已啟動 (Waitress WSGI 高效能模式)")
         print(f" [本機電腦] http://127.0.0.1:{port}")
         print(f" [區域網路] http://{local_ip}:{port} (手機/平板在同Wi-Fi連線)")
         print(f" [Render雲端] https://tcsched.onrender.com (全球免開機直連)")
@@ -127,42 +165,93 @@ def run_server(host, port):
         except Exception as e2:
             print(f"[錯誤] Flask 伺服器啟動失敗: {e2}")
 
-def launch_standalone_window(url, title):
-    """Launches standalone app window using Chrome App mode, Edge App mode, or PyWebView/browser."""
-    # Method 1: Chrome / Edge App mode (Standalone desktop window without tabs/address bar)
-    browser_paths = [
-        # Google Chrome paths (Prioritized)
+def find_browser_executable():
+    """Finds Google Chrome, Microsoft Edge, or other Chromium browsers via Windows Registry and system paths."""
+    candidates = []
+
+    # 1. Query Windows Registry for accurate installation paths (even on non-C drives)
+    if winreg:
+        reg_keys = [
+            (winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\App Paths\chrome.exe"),
+            (winreg.HKEY_LOCAL_MACHINE, r"Software\Microsoft\Windows\CurrentVersion\App Paths\chrome.exe"),
+            (winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\App Paths\msedge.exe"),
+            (winreg.HKEY_LOCAL_MACHINE, r"Software\Microsoft\Windows\CurrentVersion\App Paths\msedge.exe"),
+            (winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\App Paths\brave.exe"),
+            (winreg.HKEY_LOCAL_MACHINE, r"Software\Microsoft\Windows\CurrentVersion\App Paths\brave.exe"),
+        ]
+        for root, subkey in reg_keys:
+            try:
+                with winreg.OpenKey(root, subkey) as key:
+                    val, _ = winreg.QueryValueEx(key, "")
+                    if val and os.path.exists(val) and val not in candidates:
+                        candidates.append(val)
+            except Exception:
+                pass
+
+    # 2. Standard filesystem paths (Google Chrome prioritized, then Edge, Brave)
+    std_paths = [
+        # Google Chrome
         r"C:\Program Files\Google\Chrome\Application\chrome.exe",
         r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
         os.path.expandvars(r"%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe"),
         os.path.expandvars(r"%PROGRAMFILES%\Google\Chrome\Application\chrome.exe"),
         os.path.expandvars(r"%PROGRAMFILES(X86)%\Google\Chrome\Application\chrome.exe"),
-        # Microsoft Edge fallback paths
-        r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+        # Microsoft Edge (Fixed 64-bit and 32-bit paths)
         r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
-        os.path.expandvars(r"%LOCALAPPDATA%\Microsoft\Edge\Application\msedge.exe")
+        r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+        os.path.expandvars(r"%LOCALAPPDATA%\Microsoft\Edge\Application\msedge.exe"),
+        os.path.expandvars(r"%PROGRAMFILES%\Microsoft\Edge\Application\msedge.exe"),
+        os.path.expandvars(r"%PROGRAMFILES(X86)%\Microsoft\Edge\Application\msedge.exe"),
+        # Brave Browser
+        os.path.expandvars(r"%LOCALAPPDATA%\BraveSoftware\Brave-Browser\Application\brave.exe"),
+        r"C:\Program Files\BraveSoftware\Brave-Browser\Application\brave.exe",
     ]
-    browser_exe = None
-    for p in browser_paths:
-        if os.path.exists(p):
-            browser_exe = p
-            break
+    for p in std_paths:
+        if p and os.path.exists(p) and p not in candidates:
+            candidates.append(p)
+
+    return candidates[0] if candidates else None
+
+def is_server_ready(port):
+    """Verifies that the web server is answering HTTP requests."""
+    try:
+        req = urllib.request.Request(f"http://127.0.0.1:{port}/", headers={"User-Agent": "DesktopApp-HealthCheck"})
+        with urllib.request.urlopen(req, timeout=0.6) as resp:
+            return resp.status in (200, 302)
+    except Exception:
+        return False
+
+def launch_standalone_window(url, title):
+    """Launches standalone app window using Chrome App mode, Edge App mode, or PyWebView/browser."""
+    browser_exe = find_browser_executable()
 
     if browser_exe:
         try:
             print(f"[資訊] 使用獨立視窗模式開啟: {browser_exe}")
-            chrome_user_data = os.path.join(tempfile.gettempdir(), f"tucheng_chrome_{os.getpid()}")
-            proc = subprocess.Popen([
-                browser_exe, 
-                f"--app={url}", 
-                f"--window-size=1400,900",
-                f"--user-data-dir={chrome_user_data}"
-            ])
+            # Use dedicated profile dir to retain window size/position without filling %TEMP% with hundreds of folders
+            chrome_user_data = os.path.join(desktop_profile_dir, "browser_profile")
+            os.makedirs(chrome_user_data, exist_ok=True)
+
+            cmd = [
+                browser_exe,
+                f"--app={url}",
+                "--window-size=1440,900",
+                "--window-position=center",
+                f"--user-data-dir={chrome_user_data}",
+                "--disable-features=Translate,OptimizationHints",
+                "--no-first-run",
+                "--no-default-browser-check",
+                "--disable-pinch",
+                "--disable-sync",
+                "--disable-background-networking"
+            ]
+            proc = subprocess.Popen(cmd)
+            
             # Keep the app alive while the browser window is open.
             start_time = time.time()
             while proc.poll() is None:
                 time.sleep(1)
-            
+
             # If the process exited in less than 3 seconds, it was likely delegated
             # to an existing Chrome/Edge process. Keep the server alive so the user can browse it.
             if time.time() - start_time < 3:
@@ -180,7 +269,7 @@ def launch_standalone_window(url, title):
             window = webview.create_window(
                 title=title,
                 url=url,
-                width=1400,
+                width=1440,
                 height=900,
                 min_size=(1024, 700),
                 resizable=True,
@@ -203,13 +292,34 @@ def launch_standalone_window(url, title):
 def main():
     bind_host = "0.0.0.0"
     port = 5000
-    
+
+    cfg = {}
+    current_semester = "115-1"
+    try:
+        if os.path.exists("config_rules.json"):
+            with open("config_rules.json", "r", encoding="utf-8") as f:
+                cfg = json.load(f)
+                current_semester = cfg.get("current_semester", "115-1")
+    except Exception:
+        pass
+    school_name = cfg.get("school_name", "學校名稱")
+    title = f"智慧排課系統 - {school_name} ({current_semester}學期)"
+
+    # Single Instance Detection: If 5000 is already active and running this system, just bring up the window
+    if is_server_ready(port):
+        print(f"[資訊] 偵測到智慧排課系統已在背景執行中 (連接埠 {port})，直接開啟視窗...")
+        url = f"http://127.0.0.1:{port}"
+        launch_standalone_window(url, title)
+        return
+
+    # Check if port 5000 is occupied by something else
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     res = sock.connect_ex(("127.0.0.1", port))
     sock.close()
     if res == 0:
         port = get_free_port()
 
+    # Load schedule data once before starting server thread
     try:
         load_schedule_data()
     except Exception as e:
@@ -221,17 +331,12 @@ def main():
     server_thread = threading.Thread(target=run_server, args=(bind_host, port), daemon=True)
     server_thread.start()
 
-    # Wait until server is ACTUALLY listening on localhost
+    # Wait until HTTP server is ACTUALLY answering requests
     print(f"[資訊] 正在等待 Web 伺服器於連接埠 {port} 啟動...")
-    for _ in range(100):
-        try:
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            s.settimeout(0.2)
-            s.connect(('127.0.0.1', port))
-            s.close()
+    for _ in range(120):
+        if is_server_ready(port):
             break
-        except Exception:
-            time.sleep(0.1)
+        time.sleep(0.1)
 
     url = f"http://127.0.0.1:{port}"
     lan_url = f"http://{local_ip}:{port}" if local_ip and local_ip != "127.0.0.1" else url
@@ -240,17 +345,12 @@ def main():
     print(f"[資訊] 區域網路手機連線: {lan_url}/teacher (請使用 http:// 勿用 https://)")
     print(f"[資訊] ☁️ Render 雲端全球網址: https://tcsched.onrender.com/teacher")
     print(f"[資訊] 系統亮點與 AI 導覽 Showcase: {url}/showcase")
-    cfg = {}
-    try:
-        if os.path.exists("config_rules.json"):
-            with open("config_rules.json", "r", encoding="utf-8") as f:
-                cfg = json.load(f)
-    except Exception:
-        pass
-    school_name = cfg.get("school_name", "學校名稱")
-    title = f"智慧排課系統 - {school_name}"
 
     launch_standalone_window(url, title)
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\n[系統] 收到中斷信號 (Ctrl+C)，智慧排課系統已安全關閉。")
+        sys.exit(0)
