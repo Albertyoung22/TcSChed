@@ -400,16 +400,23 @@ function renderQuickSelectGrids() {
     });
 
     // 3. Classrooms
-    if (Array.isArray(metadata.classrooms)) {
+    if (Array.isArray(metadata.classrooms) && metadata.classrooms.length > 0) {
         metadata.classrooms.forEach(room => {
             const item = document.createElement('a');
             const rcode = typeof room === 'string' ? room : (room.code || room.name);
             const rname = typeof room === 'string' ? room : (room.name || room.code);
             item.href = `#room/${encodeURIComponent(rname || rcode)}`;
-            item.className = 'grid-item';
-            item.innerHTML = `${rname}`;
+            item.className = 'grid-item room-item';
+            item.innerHTML = `<i class="fa-solid fa-door-open" style="margin-right:6px; color:#38bdf8;"></i>${rname}`;
             roomsGrid.appendChild(item);
         });
+    } else {
+        roomsGrid.innerHTML = `
+        <div style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 32px 16px; background: rgba(15, 23, 42, 0.4); border-radius: 12px; border: 1px dashed var(--border-color);">
+            <i class="fa-solid fa-school" style="font-size: 2.2rem; color: #38bdf8; margin-bottom: 10px; display: block;"></i>
+            <div style="font-size: 1rem; font-weight: 600; color: #f8fafc; margin-bottom: 6px;">目前未登記專科教室或場地</div>
+            <div style="font-size: 0.85rem; color: #94a3b8;">當前排課資料未包含專科教室排程，或可於排課設定中啟用專科教室功能。</div>
+        </div>`;
     }
 }
 
@@ -576,8 +583,9 @@ function renderScheduleGrid(type, code, slots) {
     } else if (type === 'room') {
         const room = Array.isArray(metadata.classrooms) ? metadata.classrooms.find(r => (typeof r === 'object' ? (r.code === code || r.name === code) : r === code)) : null;
         const roomName = room ? (typeof room === 'object' ? room.name : room) : code;
+        const countText = slots && slots.length > 0 ? ` (共 ${slots.length} 節)` : ` (本週尚無排課)`;
         title = `${roomName} 教室課表`;
-        subtitle = `專科教室 / 專用場地課表`;
+        subtitle = `專科教室 / 專用場地課表${countText}`;
         printScheduleTitle.textContent = title;
         printTutorInfo.textContent = subtitle;
         document.title = `${roomName} 教室課表 - 智慧排課查詢`;
