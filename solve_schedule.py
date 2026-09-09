@@ -867,42 +867,6 @@ def run_solver():
             period_vars = period_vars3
             x = x3
 
-        # Class Conflicts
-        for cc, ulist in cls_units.items():
-            grp_reps = {}
-            for u in ulist:
-                ckey = get_unit_collapse_key(u, custom_sim_groups)
-                if ckey not in grp_reps:
-                    grp_reps[ckey] = u
-            reps = list(grp_reps.values())
-            for d in days:
-                for p in periods:
-                    model3.AddAtMostOne(x3[u["unit_id"], d, p] for u in reps if u["week_mode"] in (0, 1))
-                    model3.AddAtMostOne(x3[u["unit_id"], d, p] for u in reps if u["week_mode"] in (0, 2))
-
-        # Teacher Conflicts
-        for tc, ulist in teacher_units.items():
-            grp_reps = {}
-            for u in ulist:
-                tkey = get_unit_collapse_key(u, custom_sim_groups)
-                if tkey not in grp_reps:
-                    grp_reps[tkey] = u
-            reps = list(grp_reps.values())
-            for d in days:
-                for p in periods:
-                    model3.AddAtMostOne(x3[u["unit_id"], d, p] for u in reps if u["week_mode"] in (0, 1))
-                    model3.AddAtMostOne(x3[u["unit_id"], d, p] for u in reps if u["week_mode"] in (0, 2))
-
-        solver3 = cp_model.CpSolver()
-        solver3.parameters.max_time_in_seconds = 10.0
-        solver3.parameters.num_search_workers = 4
-        status = solver3.Solve(model3)
-        if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
-            solver = solver3
-            day_vars = day_vars3
-            period_vars = period_vars3
-            x = x3
-
     if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
         log(f"Solution FOUND! (Status: {solver.StatusName(status)})")
 
