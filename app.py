@@ -248,27 +248,29 @@ def load_xinhe_excel(excel_path, classes=None, teacher_name_map=None, teacher_co
                 return ""
             return str(code).strip().lstrip('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz')
 
-        def get_col(row, name, default=""):
-            i = col.get(name)
-            if i is None:
-                return default
-            v = row[i]
-            return str(v).strip() if v is not None else default
+        def get_col(row, *aliases, default=""):
+            for name in aliases:
+                i = col.get(name)
+                if i is not None:
+                    v = row[i]
+                    if v is not None and str(v).strip() != "":
+                        return str(v).strip()
+            return default
 
         for idx, row in enumerate(rows_iter):
-            class_code_raw = get_col(row, '班級')
-            class_name_raw = get_col(row, '班級名稱')
-            subj_code_raw  = get_col(row, '科目')
-            subj_name      = get_col(row, '科目名稱')
-            teach_code_raw = get_col(row, '教師')
-            teach_name     = get_col(row, '教師名稱')
-            room_code      = get_col(row, '教室')
-            room_name      = get_col(row, '教室名稱')
-            day            = get_col(row, '星期', '0')
-            period         = get_col(row, '節次', '0')
-            jian_dai       = get_col(row, '兼代')
-            week_mode_raw  = get_col(row, '週別設定', '0')
-            ud_raw         = get_col(row, '上下修', '0')
+            class_code_raw = get_col(row, '班級代碼', '班級', '班級碼', 'class_code', 'class_no')
+            class_name_raw = get_col(row, '班級名稱', '班級名', 'class_name')
+            subj_code_raw  = get_col(row, '科目代碼', '科目', '科目碼', 'subject_code', 'sub_no')
+            subj_name      = get_col(row, '科目名稱', '科目簡稱', '國教署科目', 'subject_name')
+            teach_code_raw = get_col(row, '教師代碼', '教師', '教師碼', '人事編號', 'teacher_code', 'tea_no')
+            teach_name     = get_col(row, '教師名稱', '教師名', 'teacher_name')
+            room_code      = get_col(row, '教室代碼', '教室', '教室碼', '場地代碼', '場地', '專科教室代碼', '專科教室', 'room_code', 'room_no')
+            room_name      = get_col(row, '教室名稱', '教室名', '場地名稱', '場地名', '專科教室名稱', '地點名稱', 'room_name')
+            day            = get_col(row, '星期', '星期幾', 'day', '週次', default='0')
+            period         = get_col(row, '節次', '節', 'period', default='0')
+            jian_dai       = get_col(row, '兼代', '超鐘點全名', '超鐘點簡稱', '不計鐘點費', '不計鍾點費')
+            week_mode_raw  = get_col(row, '週別設定', '單雙週', '週別', 'week_mode', default='0')
+            ud_raw         = get_col(row, '上下修', 'ud', default='0')
 
             # 1. 班級代碼精確轉換 (國中: J701->101, 高中: S101->401)
             class_code = xinhe_class_to_dbf(class_code_raw) or xinhe_class_to_dbf(class_name_raw) or class_code_raw
@@ -309,8 +311,16 @@ def load_xinhe_excel(excel_path, classes=None, teacher_name_map=None, teacher_co
             except Exception:
                 ud = 0
 
-            if room_code and room_name:
-                classrooms[room_code] = room_name
+            # 5. 專科教室與場地註冊 (雙向補齊與對照登記)
+            if not room_code and room_name:
+                room_code = room_name
+            if not room_name and room_code:
+                room_name = room_code
+
+            if room_code or room_name:
+                rc = room_code or room_name
+                rn = room_name or room_code
+                classrooms[rc] = rn
 
             schedules.append({
                 "id": idx,
@@ -716,21 +726,84 @@ def load_schedule_data(force_reload=False):
 
             classes_list = sorted(list(classes_map.values()), key=lambda x: natural_sort_key(x["code"]))
             teachers_list = sorted(list(teachers_map.values()), key=lambda x: natural_sort_key(x["code"]))
-            classrooms_list = [{"code": k, "name": v} for k, v in classrooms_dict.items()]
+            
+            # 建立完整專科教室/場地清單 (包含欣河匯入、已排課表、規則設定之場地容量與預設教室)
+            default_venues = [
+                {"code": "電腦教室", "name": "電腦教室"},
+                {"code": "理化實驗室", "name": "理化實驗室"},
+                {"code": "高中化學實驗室", "name": "高中化學實驗室"},
+                {"code": "高中生物實驗室", "name": "高中生物實驗室"},
+                {"code": "高中物理實驗室", "name": "高中物理實驗室"},
+                {"code": "生活科技教室", "name": "生活科技教室"},
+                {"code": "數位學習教室", "name": "數位學習教室"},
+                {"code": "音樂教室", "name": "音樂教室"},
+                {"code": "美術教室", "name": "美術教室"},
+                {"code": "城中館", "name": "城中館"},
+                {"code": "體育場/館", "name": "體育場/館"},
+                {"code": "家政教室", "name": "家政教室"},
+                {"code": "無限未來探索教室", "name": "無限未來探索教室"},
+                {"code": "高中多功能教室", "name": "高中多功能教室"},
+                {"code": "高中社會科教室", "name": "高中社會科教室"}
+            ]
+            
+            room_map = {}
+            for k, v in classrooms_dict.items():
+                rname = str(v).strip() if v else str(k).strip()
+                rcode = str(k).strip() if k else rname
+                if rname and rname not in room_map:
+                    room_map[rname] = rcode
+                    
+            all_sample_schedules = list(schedules) + list(cfg.get("solved_schedules", []))
+            for s in all_sample_schedules:
+                if not isinstance(s, dict): continue
+                rn = str(s.get("room_name", "")).strip()
+                rc = str(s.get("room_code", "")).strip()
+                if rn and rn not in room_map:
+                    room_map[rn] = rc or rn
+                elif rc and rc not in room_map and not any(v == rc for v in room_map.values()):
+                    room_map[rc] = rc
+                    
+            for vn in cfg.get("venue_capacities", {}).keys():
+                vn_str = str(vn).strip()
+                if vn_str and vn_str not in room_map:
+                    room_map[vn_str] = vn_str
+                    
+            for dv in default_venues:
+                if dv["name"] in room_map:
+                    continue
+                if any(dv["name"] in str(s.get("subject_name", "")) or dv["name"] in str(s.get("room_name", "")) for s in all_sample_schedules if isinstance(s, dict)):
+                    room_map[dv["name"]] = dv["code"]
 
-            # 智慧判斷是否為新匯入的排課檔案（若檔案變動，自動生效新課表）
+            # 若已有中文/場地名稱對應相同的代碼，去除純數字代碼的獨立項目
+            code_to_names = {}
+            for rname, rcode in room_map.items():
+                code_to_names.setdefault(rcode, []).append(rname)
+                
+            clean_room_map = {}
+            for rname, rcode in room_map.items():
+                names_for_code = code_to_names.get(rcode, [])
+                has_meaningful_name = any(not n.isdigit() for n in names_for_code)
+                if rname.isdigit() and has_meaningful_name:
+                    continue
+                clean_room_map[rname] = rcode
+
+            classrooms_list = sorted([{"code": rcode, "name": rname} for rname, rcode in clean_room_map.items()], key=lambda x: natural_sort_key(x["code"]))
+
+            # 智慧判斷是否為新匯入的排課檔案（若檔案變動或尚未同步教室欄位，自動生效新課表）
             current_mtime = os.path.getmtime(xinhe_path) if os.path.exists(xinhe_path) else 0
             last_mtime = cfg.get("last_synced_xinhe_mtime", 0)
             active_solved = cfg.get("solved_schedules", [])
+            has_missing_rooms = any(not s.get("room_code") for s in active_solved if s.get("room_name"))
 
-            if (current_mtime > last_mtime + 1) or not active_solved:
-                # 偵測到新版排課資料，全面生效
+            if (current_mtime > last_mtime + 1) or not active_solved or has_missing_rooms or not cfg.get("rooms_synced_v2"):
+                # 偵測到新版排課資料或教室資料更新，全面生效
                 schedules = [normalize_schedule_record(r) for r in schedules if isinstance(r, dict)]
                 cfg["solved_schedules"] = schedules
                 cfg["last_synced_xinhe_mtime"] = current_mtime
                 cfg["last_synced_xinhe_file"] = os.path.basename(xinhe_path)
+                cfg["rooms_synced_v2"] = True
                 save_config_rules(cfg)
-                print(f"[欣河排課更新] 已自動載入並生效最新排課資料 ({os.path.basename(xinhe_path)})，共 {len(schedules)} 節！", flush=True)
+                print(f"[欣河排課更新] 已自動載入並生效最新排課資料與教室課表 ({os.path.basename(xinhe_path)})，共 {len(schedules)} 節！", flush=True)
             else:
                 schedules = [normalize_schedule_record(r) for r in active_solved if isinstance(r, dict)]
 
@@ -2377,22 +2450,52 @@ def api_schedule_room(room_code):
         data = load_schedule_data()
         classrooms = data.get("classrooms", []) if isinstance(data, dict) else []
         
-        # 建立代碼與名稱反查
-        matched_names = set()
-        matched_names.add(rq)
+        # 建立代碼與名稱雙向反查
+        matched_keys = set()
+        matched_keys.add(rq)
+        if rq.isdigit():
+            matched_keys.add(str(int(rq)))
+            matched_keys.add(rq.zfill(2))
+            
         for r in classrooms:
             rcode = str(r.get("code", "")).strip() if isinstance(r, dict) else str(r)
             rname = str(r.get("name", "")).strip() if isinstance(r, dict) else str(r)
-            if rq == rcode or rq == rname or (rcode and rq == rcode.lstrip("0")) or (rq and rq.isdigit() and rcode and int(float(rq)) == int(float(rcode)) if rcode.replace(".", "").isdigit() else False):
+            is_match = False
+            if rq in (rcode, rname) or (rcode and rq == rcode.lstrip("0")):
+                is_match = True
+            elif rq.isdigit() and rcode.isdigit() and int(rq) == int(rcode):
+                is_match = True
+            elif rq and (rq in rname or rname in rq):
+                is_match = True
+                
+            if is_match:
                 if rname:
-                    matched_names.add(rname)
+                    matched_keys.add(rname)
+                if rcode:
+                    matched_keys.add(rcode)
+                    if rcode.isdigit():
+                        matched_keys.add(str(int(rcode)))
+                        matched_keys.add(rcode.zfill(2))
 
         solved = get_current_solved_schedules()
         filtered = []
         for s in solved:
             rname = str(s.get("room_name", "")).strip()
             rcode = str(s.get("room_code", "")).strip()
-            if rname in matched_names or rcode == rq or (rname and (rq == rname or rq in rname or rname in rq)):
+            if not rname and not rcode:
+                continue
+                
+            is_hit = False
+            if rname in matched_keys or rcode in matched_keys:
+                is_hit = True
+            elif rq == rname or rq == rcode:
+                is_hit = True
+            elif rq.isdigit() and rcode.isdigit() and int(rq) == int(rcode):
+                is_hit = True
+            elif len(rq) >= 2 and (rq in rname or rname in rq):
+                is_hit = True
+                
+            if is_hit:
                 filtered.append(s)
         return jsonify(filtered)
     except Exception as e:
@@ -7397,10 +7500,15 @@ def normalize_schedule_record(r):
             t_code = v_str
         elif "教師" in k_str or k_str == "TEA_NAME" or k_str == "teacher_name":
             t_name = v_str
-        elif "教室代碼" in k_str or k_str == "ROOM_NO" or k_str == "room_code":
+        elif "教室代碼" in k_str or "場地代碼" in k_str or k_str == "ROOM_NO" or k_str == "room_code":
             r_code = v_str
-        elif "教室" in k_str or k_str == "ROOM_NAME" or k_str == "room_name":
+        elif "教室名稱" in k_str or "場地名稱" in k_str or k_str == "ROOM_NAME" or k_str == "room_name":
             r_name = v_str
+        elif "教室" in k_str or "場地" in k_str:
+            if not r_name:
+                r_name = v_str
+            if not r_code:
+                r_code = v_str
         elif "星期" in k_str or k_str == "DAY" or k_str == "day":
             day = v_str
         elif "節次" in k_str or k_str == "PERIOD" or k_str == "period":
@@ -7422,6 +7530,22 @@ def normalize_schedule_record(r):
     if t_name.endswith(".0"): t_name = t_name[:-2]
     if t_name.lower() in ("nan", "none", "null"): t_name = ""
 
+    if not r_code and r.get("room_code"): r_code = str(r["room_code"])
+    if not r_name and r.get("room_name"): r_name = str(r["room_name"])
+
+    r_code = str(r_code or "").strip()
+    if r_code.endswith(".0"): r_code = r_code[:-2]
+    if r_code.lower() in ("nan", "none", "null"): r_code = ""
+
+    r_name = str(r_name or "").strip()
+    if r_name.endswith(".0"): r_name = r_name[:-2]
+    if r_name.lower() in ("nan", "none", "null"): r_name = ""
+
+    if not r_code and r_name:
+        r_code = r_name
+    if not r_name and r_code:
+        r_name = r_code
+
     # If t_name is numeric or empty, look up in teachers config
     if (not t_name or t_name.isdigit()) and t_code:
         try:
@@ -7442,9 +7566,12 @@ def normalize_schedule_record(r):
         "subject_name": s_name or str(r.get("subject_name", "")),
         "teacher_code": t_code or str(r.get("teacher_code", "")),
         "teacher_name": t_name or str(r.get("teacher_name", "")),
+        "room_code": r_code,
+        "room_name": r_name,
         "day": str(day or "1"),
         "period": str(period or "1"),
-        "room_name": r_name or str(r.get("room_name", ""))
+        "week_mode": r.get("week_mode", 0),
+        "ud": r.get("ud", 0)
     }
 
 def get_current_solved_schedules():
