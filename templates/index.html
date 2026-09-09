@@ -106,10 +106,21 @@
                     <i class="fa-solid fa-clipboard-user" style="color: #d97706;"></i> 段考監考
                 </button>
 
-                <!-- Direct Xinhe Excel File Picker Input -->
-                <input type="file" id="directXinheFileInput" accept=".xlsx,.xls,.xlsm" style="display: none;" onchange="uploadXinheDirectly(this)">
-                <button id="importXinheModalBtn" type="button" class="solver-panel-btn" onclick="document.getElementById('directXinheFileInput').click()" style="background: linear-gradient(135deg, #0284c7, #0369a1); border: none; color: #ffffff; padding: 6px 14px; font-size: 0.86rem; height: 36px; font-weight: 800; box-shadow: 0 2px 8px rgba(2,132,199,0.35); display: inline-flex; align-items: center; gap: 6px; cursor: pointer;" title="點擊直接選擇欣河排課系統匯出的配課 Excel 檔案 (例如 預設排課資料匯出_20260825.xlsx)">
+                <!-- Direct Xinhe Excel File Picker Input (支援單檔或按住Ctrl多選) -->
+                <input type="file" id="directXinheFileInput" accept=".xlsx,.xls,.xlsm" multiple style="display: none;" onchange="uploadXinheDirectly(this)">
+                <button id="importXinheModalBtn" type="button" class="solver-panel-btn" onclick="document.getElementById('directXinheFileInput').click()" style="background: linear-gradient(135deg, #0284c7, #0369a1); border: none; color: #ffffff; padding: 6px 14px; font-size: 0.86rem; height: 36px; font-weight: 800; box-shadow: 0 2px 8px rgba(2,132,199,0.35); display: inline-flex; align-items: center; gap: 6px; cursor: pointer;" title="點擊直接選擇欣河排課系統匯出的配課 Excel 檔案（可單選或按住 Ctrl 多選：排課表、教師代碼、班級代碼、科目代碼）">
                     <i class="fa-solid fa-file-excel" style="color: #7dd3fc;"></i> 📥 匯入欣河課表
+                </button>
+                <button type="button" class="solver-panel-btn" onclick="syncLatestXinheData()" style="background: #ffffff; border: 1.5px solid #0284c7; color: #0284c7; padding: 6px 12px; font-size: 0.84rem; height: 36px; font-weight: 700; display: inline-flex; align-items: center; gap: 5px; cursor: pointer;" title="一鍵掃描 data/ 底下最新日期資料夾（例如 20260909）並即時同步全校課表與代碼主檔">
+                    <i class="fa-solid fa-arrows-rotate" style="color: #0284c7;"></i> 🔄 載入最新目錄
+                </button>
+
+                <!-- 🚀 AI 彈性匯入與版本時光機 -->
+                <button type="button" class="solver-panel-btn" onclick="openAiSmartImportModal()" style="background: linear-gradient(135deg, #8b5cf6, #6d28d9); border: none; color: #ffffff; padding: 6px 14px; font-size: 0.86rem; height: 36px; font-weight: 800; box-shadow: 0 2px 8px rgba(139,92,246,0.35); display: inline-flex; align-items: center; gap: 6px; cursor: pointer;" title="上傳非固定/非標準格式 Excel、CSV、矩陣課表，或貼上自由文字條件 (如 LINE 請託)，由 AI 智慧對齊欄位與提取規則">
+                    <i class="fa-solid fa-wand-magic-sparkles" style="color: #f3e8ff;"></i> ✨ AI 彈性匯入
+                </button>
+                <button type="button" class="solver-panel-btn" onclick="openSnapshotModal()" style="background: #ffffff; border: 1.5px solid #6366f1; color: #4f46e5; padding: 6px 12px; font-size: 0.84rem; height: 36px; font-weight: 700; display: inline-flex; align-items: center; gap: 5px; cursor: pointer;" title="開啟版本時光機：每次匯入或排課皆自動快照存檔，隨時一鍵秒級安全回滾">
+                    <i class="fa-solid fa-clock-rotate-left" style="color: #6366f1;"></i> ⏱️ 版本時光機
                 </button>
 
                 <div class="solver-panel-btn" style="background: #ffffff; border: 1.5px solid #059669; color: #047857; display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; height: 36px;" title="匯出課表與行政資料表">
@@ -117,6 +128,8 @@
                     <select id="shinherExportSelect" onchange="exportShinHerExcel(this.value)" style="background: transparent; color: #047857; border: none; font-weight: 700; cursor: pointer; outline: none; font-size: 0.84rem; font-family: inherit;">
                     <option value="" style="background: #ffffff; color: #1e293b;" disabled selected>課表匯出與行政資料</option>
                         <option value="formal_timetable" style="background: #ffffff; color: #1e293b;">正式課表轉出檔 (國教署23碼格式)</option>
+                        <option value="calendar_ics" style="background: #ffffff; color: #1e293b;">📅 匯出行事曆檔 (.ics - 支援 iPhone/Google 日曆)</option>
+                        <option value="github_sync" style="background: #ffffff; color: #0284c7; font-weight: 800;">☁️ 一鍵同步至 GitHub 雲端 (Render 自動部署)</option>
                         <option value="batch_zip" style="background: #ffffff; color: #1e293b;">📦 一鍵打包全校行政總表 (ZIP)</option>
                         <option value="overtime_rates" style="background: #ffffff; color: #1e293b;">💰 鐘點費率算費與核算表</option>
                         <option value="moe_23_codes" style="background: #ffffff; color: #1e293b;">📜 國教署 23 碼對映維護</option>
@@ -2930,14 +2943,8 @@
 
     <script>
         async function uploadXinheDirectly(input) {
-            if (!input.files || !input.files[0]) return;
-            var file = input.files[0];
-            var fn = file.name.toLowerCase();
-            if (!fn.endsWith('.xlsx') && !fn.endsWith('.xls') && !fn.endsWith('.xlsm')) {
-                alert("僅支援 .xlsx 或 .xls 格式之 Excel 檔案！");
-                input.value = '';
-                return;
-            }
+            if (!input.files || input.files.length === 0) return;
+            var files = input.files;
 
             var btn = document.getElementById('importXinheModalBtn');
             var originalText = btn ? btn.innerHTML : '';
@@ -2948,7 +2955,9 @@
 
             try {
                 var formData = new FormData();
-                formData.append('file', file);
+                for (var i = 0; i < files.length; i++) {
+                    formData.append('files', files[i]);
+                }
 
                 var resp = await fetch('/api/import/xinhe', {
                     method: 'POST',
@@ -2957,7 +2966,7 @@
                 var res = await resp.json();
 
                 if (res.success) {
-                    alert('🎉 欣河排課 Excel (' + file.name + ') 匯入成功！\n共成功讀取並生效 ' + (res.count || 810) + ' 節全校課表。');
+                    alert(res.message || ('🎉 匯入成功！已生效 ' + (res.count || 829) + ' 節全校課表。'));
                     window.location.reload();
                 } else {
                     alert('匯入失敗：' + (res.error || '未知錯誤'));
@@ -2974,6 +2983,23 @@
             }
         }
         window.uploadXinheDirectly = uploadXinheDirectly;
+
+        async function syncLatestXinheData() {
+            if (!confirm('是否立即掃描 data/ 目錄下的最新日期排課資料（如 20260909）並即時生效？')) return;
+            try {
+                var resp = await fetch('/api/xinhe/sync-latest', { method: 'POST' });
+                var res = await resp.json();
+                if (res.status === 'success') {
+                    alert(res.message || '🎉 成功同步最新排課資料！');
+                    window.location.reload();
+                } else {
+                    alert('同步失敗: ' + (res.message || '未知錯誤'));
+                }
+            } catch (e) {
+                alert('連線失敗: ' + e);
+            }
+        }
+        window.syncLatestXinheData = syncLatestXinheData;
 
         function openXinheModalDirect() {
             var m = document.getElementById('importXinheModal');
@@ -2993,7 +3019,321 @@
         }
         window.openImportXinheModal = openXinheModalDirect;
         window.closeImportXinheModal = closeXinheModalDirect;
+
+        // ─────────────────────────────────────────────────────────────────────────────
+        // 🚀 AI 彈性匯入 (非固定欄位/矩陣課表/自然語言請託條件) Modal 控制器
+        // ─────────────────────────────────────────────────────────────────────────────
+        var currentAiAnalysisResult = null;
+
+        function openAiSmartImportModal() {
+            var m = document.getElementById('aiSmartImportModal');
+            if (m) {
+                m.style.setProperty('display', 'flex', 'important');
+                m.classList.add('active');
+            }
+        }
+        function closeAiSmartImportModal() {
+            var m = document.getElementById('aiSmartImportModal');
+            if (m) {
+                m.style.setProperty('display', 'none', 'important');
+                m.classList.remove('active');
+            }
+        }
+        window.openAiSmartImportModal = openAiSmartImportModal;
+        window.closeAiSmartImportModal = closeAiSmartImportModal;
+
+        function switchAiTab(tab) {
+            document.querySelectorAll('.ai-tab-btn').forEach(function(b){ b.classList.remove('active'); });
+            document.querySelectorAll('.ai-tab-content').forEach(function(c){ c.style.display = 'none'; });
+            var activeBtn = document.getElementById('aiTabBtn_' + tab);
+            var activeContent = document.getElementById('aiTabContent_' + tab);
+            if (activeBtn) activeBtn.classList.add('active');
+            if (activeContent) activeContent.style.display = 'block';
+        }
+        window.switchAiTab = switchAiTab;
+
+        async function triggerAiAnalyze() {
+            var fileInput = document.getElementById('aiFileInput');
+            var textInput = document.getElementById('aiTextInput').value.trim();
+            var btn = document.getElementById('aiAnalyzeSubmitBtn');
+            var previewArea = document.getElementById('aiPreviewArea');
+            var previewContent = document.getElementById('aiPreviewContent');
+
+            if ((!fileInput.files || fileInput.files.length === 0) && !textInput) {
+                alert('請先上傳非固定格式檔案，或在文字框中貼上排課條件！');
+                return;
+            }
+
+            var formData = new FormData();
+            if (fileInput.files && fileInput.files.length > 0) {
+                formData.append('file', fileInput.files[0]);
+            }
+            if (textInput) {
+                formData.append('text', textInput);
+            }
+            formData.append('auto_apply', 'false');
+
+            try {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> AI 深度語意分析中...';
+                previewArea.style.display = 'block';
+                previewContent.innerHTML = '<div style="text-align: center; padding: 20px; color: #64748b;"><i class="fa-solid fa-brain fa-fade" style="font-size: 2rem; color: #8b5cf6;"></i><p style="margin-top: 10px;">AI 正在剖析資料結構、進行欄位對稱與排課條件提取...</p></div>';
+
+                var resp = await fetch('/api/import/ai-smart-analyze', { method: 'POST', body: formData });
+                var res = await resp.json();
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> 重新分析';
+
+                if (res.status !== 'success') {
+                    previewContent.innerHTML = '<div style="color: #ef4444; padding: 12px; background: #fee2e2; border-radius: 8px;">❌ 分析失敗: ' + (res.message || '未知錯誤') + '</div>';
+                    return;
+                }
+
+                currentAiAnalysisResult = res;
+
+                var html = '<div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; margin-bottom: 15px;">';
+                html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">';
+                html += '<span style="font-size: 0.95rem; font-weight: 800; color: #1e293b;">🤖 引擎辨識結果: <span style="color: #7c3aed;">' + (res.ai_engine || 'AI 啟發式語意引擎') + '</span></span>';
+                html += '<span style="font-size: 0.8rem; background: #e0e7ff; color: #4338ca; padding: 3px 10px; border-radius: 20px; font-weight: 700;">' + (res.is_matrix_table ? '矩陣型課表' : (res.detected_type || '一般資料')) + '</span>';
+                html += '</div>';
+                html += '<p style="font-size: 0.88rem; color: #334155; line-height: 1.5; margin: 0 0 10px 0;">' + res.ai_summary + '</p>';
+
+                // 顯示提取的不排課/連堂限制
+                if (res.detected_constraints && res.detected_constraints.length > 0) {
+                    html += '<div style="margin-top: 10px; padding: 10px; background: #fdf4ff; border: 1px dashed #d946ef; border-radius: 8px;">';
+                    html += '<strong style="color: #a21caf; font-size: 0.85rem;"><i class="fa-solid fa-filter"></i> 提取之排課限制條件 (' + res.detected_constraints.length + ' 條)：</strong><ul style="margin: 6px 0 0 0; padding-left: 20px; font-size: 0.84rem; color: #701a75;">';
+                    res.detected_constraints.forEach(function(c) {
+                        html += '<li><strong>' + (c.teacher_name || '') + '</strong>: 星期' + c.day + ' 第' + (c.periods || []).join(',') + '節 (' + (c.description || '') + ')</li>';
+                    });
+                    html += '</ul></div>';
+                }
+
+                // 顯示課程預覽
+                if (res.preview_samples && res.preview_samples.length > 0) {
+                    html += '<div style="margin-top: 12px; max-height: 180px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 6px;">';
+                    html += '<table style="width: 100%; border-collapse: collapse; font-size: 0.8rem; text-align: left;">';
+                    html += '<tr style="background: #f1f5f9; border-bottom: 1px solid #cbd5e1;"><th style="padding: 6px 8px;">星期</th><th style="padding: 6px 8px;">節次</th><th style="padding: 6px 8px;">班級</th><th style="padding: 6px 8px;">科目</th><th style="padding: 6px 8px;">教師</th><th style="padding: 6px 8px;">教室</th></tr>';
+                    res.preview_samples.forEach(function(row) {
+                        html += '<tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 5px 8px;">' + (row.day || '') + '</td><td style="padding: 5px 8px;">' + (row.period || '') + '</td><td style="padding: 5px 8px; font-weight: 700;">' + (row.class_name || '') + '</td><td style="padding: 5px 8px; color: #0284c7;">' + (row.subject_name || '') + '</td><td style="padding: 5px 8px; color: #059669;">' + (row.teacher_name || '') + '</td><td style="padding: 5px 8px; color: #64748b;">' + (row.room_name || '') + '</td></tr>';
+                    });
+                    html += '</table></div>';
+                }
+                html += '</div>';
+
+                html += '<div style="display: flex; justify-content: flex-end; gap: 10px;">';
+                html += '<button type="button" onclick="applyAiSmartImportResult()" style="background: linear-gradient(135deg, #10b981, #059669); color: #fff; border: none; padding: 9px 20px; border-radius: 8px; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(16,185,129,0.35);"><i class="fa-solid fa-check-circle"></i> ✅ 確認匯入並立即生效 (自動快照保護)</button>';
+                html += '</div>';
+
+                previewContent.innerHTML = html;
+            } catch (err) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> 重新分析';
+                previewContent.innerHTML = '<div style="color: #ef4444; padding: 12px; background: #fee2e2; border-radius: 8px;">連線失敗: ' + err + '</div>';
+            }
+        }
+        window.triggerAiAnalyze = triggerAiAnalyze;
+
+        async function applyAiSmartImportResult() {
+            if (!currentAiAnalysisResult) {
+                alert('無可套用之分析結果');
+                return;
+            }
+            if (!confirm('確定要套用 AI 解析結果至課表嗎？系統將自動產生安全時光機快照，若不滿意可隨時 1 鍵還原！')) {
+                return;
+            }
+            var fileInput = document.getElementById('aiFileInput');
+            var textInput = document.getElementById('aiTextInput').value.trim();
+            var formData = new FormData();
+            if (fileInput.files && fileInput.files.length > 0) formData.append('file', fileInput.files[0]);
+            if (textInput) formData.append('text', textInput);
+            formData.append('auto_apply', 'true');
+
+            try {
+                var resp = await fetch('/api/import/ai-smart-analyze', { method: 'POST', body: formData });
+                var res = await resp.json();
+                if (res.status === 'success' && res.applied) {
+                    alert('🎉 恭喜！AI 分析資料已全數套用生效！\n已正規化 ' + res.normalized_count + ' 節課表，並更新排課限制。');
+                    closeAiSmartImportModal();
+                    window.location.reload();
+                } else {
+                    alert('套用失敗: ' + (res.message || '未知錯誤'));
+                }
+            } catch (e) {
+                alert('連線失敗: ' + e);
+            }
+        }
+        window.applyAiSmartImportResult = applyAiSmartImportResult;
+
+        // ─────────────────────────────────────────────────────────────────────────────
+        // ⏱️ 排課版本時光機 (Snapshots & 1-Click Rollback) Modal 控制器
+        // ─────────────────────────────────────────────────────────────────────────────
+        function openSnapshotModal() {
+            var m = document.getElementById('snapshotTimeMachineModal');
+            if (m) {
+                m.style.setProperty('display', 'flex', 'important');
+                m.classList.add('active');
+                loadSnapshotsList();
+            }
+        }
+        function closeSnapshotModal() {
+            var m = document.getElementById('snapshotTimeMachineModal');
+            if (m) {
+                m.style.setProperty('display', 'none', 'important');
+                m.classList.remove('active');
+            }
+        }
+        window.openSnapshotModal = openSnapshotModal;
+        window.closeSnapshotModal = closeSnapshotModal;
+
+        async function loadSnapshotsList() {
+            var container = document.getElementById('snapshotListContainer');
+            if (!container) return;
+            container.innerHTML = '<div style="text-align: center; padding: 25px; color: #64748b;"><i class="fa-solid fa-spinner fa-spin" style="font-size: 1.5rem;"></i><p style="margin-top: 8px;">讀取版本時光機存檔中...</p></div>';
+
+            try {
+                var resp = await fetch('/api/snapshots');
+                var res = await resp.json();
+                if (res.status !== 'success' || !res.snapshots || res.snapshots.length === 0) {
+                    container.innerHTML = '<div style="text-align: center; padding: 30px; color: #64748b; background: #f8fafc; border-radius: 10px;"><i class="fa-solid fa-box-open" style="font-size: 2rem; color: #94a3b8; margin-bottom: 8px;"></i><p>目前尚無歷史快照。當您匯入欣河資料、進行 AI 解析或排課時，系統將自動為您拍照留存！</p></div>';
+                    return;
+                }
+
+                var html = '<table style="width: 100%; border-collapse: collapse; font-size: 0.85rem; text-align: left;">';
+                html += '<tr style="background: #f1f5f9; border-bottom: 2px solid #cbd5e1;"><th style="padding: 8px 10px;">快照時間</th><th style="padding: 8px 10px;">觸發原因</th><th style="padding: 8px 10px;">課表筆數</th><th style="padding: 8px 10px;">檔案大小</th><th style="padding: 8px 10px; text-align: right;">安全操作</th></tr>';
+                res.snapshots.forEach(function(s) {
+                    html += '<tr style="border-bottom: 1px solid #e2e8f0;">';
+                    html += '<td style="padding: 8px 10px; font-weight: 700; color: #334155;"><i class="fa-solid fa-calendar-check" style="color: #6366f1; margin-right: 5px;"></i>' + s.timestamp + '</td>';
+                    html += '<td style="padding: 8px 10px; color: #0284c7; font-weight: 600;">' + s.action + '</td>';
+                    html += '<td style="padding: 8px 10px;"><span style="background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 12px; font-weight: 700; font-size: 0.78rem;">' + s.solved_count + ' 節</span></td>';
+                    html += '<td style="padding: 8px 10px; color: #64748b; font-size: 0.8rem;">' + s.size_kb + ' KB</td>';
+                    html += '<td style="padding: 8px 10px; text-align: right;">';
+                    html += '<button type="button" onclick="rollbackToSnapshot(\'' + s.filename + '\', \'' + s.action + '\', \'' + s.timestamp + '\')" style="background: #4f46e5; color: #fff; border: none; padding: 5px 12px; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 0.8rem; box-shadow: 0 2px 6px rgba(79,70,229,0.25); display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-rotate-left"></i> 一鍵還原</button>';
+                    html += '</td></tr>';
+                });
+                html += '</table>';
+                container.innerHTML = html;
+            } catch (e) {
+                container.innerHTML = '<div style="color: #ef4444; padding: 15px;">讀取快照失敗: ' + e + '</div>';
+            }
+        }
+        window.loadSnapshotsList = loadSnapshotsList;
+
+        async function rollbackToSnapshot(filename, action, timestamp) {
+            if (!confirm('⚠️ 確定要將全校課表與規則回滾還原至：\n【' + action + '】(' + timestamp + ') 嗎？\n\n別擔心，系統在還原前也會自動替當前狀態建立一份快照！')) {
+                return;
+            }
+            try {
+                var resp = await fetch('/api/snapshots/rollback', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filename: filename })
+                });
+                var res = await resp.json();
+                if (res.status === 'success') {
+                    alert('🎉 ' + res.message);
+                    closeSnapshotModal();
+                    window.location.reload();
+                } else {
+                    alert('還原失敗: ' + (res.message || '未知錯誤'));
+                }
+            } catch (e) {
+                alert('連線失敗: ' + e);
+            }
+        }
+        window.rollbackToSnapshot = rollbackToSnapshot;
     </script>
+
+    <!-- ───────────────────────────────────────────────────────────────────────────── -->
+    <!-- 🚀 AI 彈性匯入 Modal 結構 -->
+    <!-- ───────────────────────────────────────────────────────────────────────────── -->
+    <div id="aiSmartImportModal" class="modal-overlay" style="display: none; z-index: 100000; position: fixed; inset: 0; background: rgba(15,23,42,0.65); backdrop-filter: blur(4px); align-items: center; justify-content: center;">
+        <div style="background: #ffffff; border-radius: 16px; width: 90%; max-width: 680px; max-height: 90vh; overflow-y: auto; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); border: 1px solid #e2e8f0; display: flex; flex-direction: column;">
+            <div style="padding: 18px 24px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #faf5ff, #f3e8ff); border-radius: 16px 16px 0 0;">
+                <div>
+                    <h3 style="margin: 0; font-size: 1.15rem; color: #581c87; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+                        <i class="fa-solid fa-wand-magic-sparkles" style="color: #9333ea;"></i> ✨ AI 智慧非固定格式資料分析與匯入
+                    </h3>
+                    <p style="margin: 4px 0 0 0; font-size: 0.82rem; color: #7e22ce;">
+                        支援非固定欄位 Excel/CSV、橫向星期矩陣課表、或自由文字條件 (如 LINE 請託訊息)
+                    </p>
+                </div>
+                <button type="button" onclick="closeAiSmartImportModal()" style="background: transparent; border: none; font-size: 1.5rem; cursor: pointer; color: #9333ea; line-height: 1;">&times;</button>
+            </div>
+
+            <div style="padding: 20px 24px; display: flex; flex-direction: column; gap: 16px;">
+                <!-- Tab 導航 -->
+                <div style="display: flex; gap: 8px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px;">
+                    <button type="button" id="aiTabBtn_file" class="ai-tab-btn active" onclick="switchAiTab('file')" style="background: #f1f5f9; border: 1px solid #cbd5e1; padding: 7px 16px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.85rem; color: #334155;">
+                        <i class="fa-solid fa-file-excel" style="color: #10b981; margin-right: 5px;"></i> 上傳非標準檔案 (Excel / CSV / 矩陣課表)
+                    </button>
+                    <button type="button" id="aiTabBtn_text" class="ai-tab-btn" onclick="switchAiTab('text')" style="background: transparent; border: 1px solid transparent; padding: 7px 16px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.85rem; color: #64748b;">
+                        <i class="fa-solid fa-comment-dots" style="color: #8b5cf6; margin-right: 5px;"></i> 貼上自由文字 / LINE 排課請託
+                    </button>
+                </div>
+
+                <!-- Tab 1: 檔案上傳 -->
+                <div id="aiTabContent_file" class="ai-tab-content">
+                    <div style="border: 2px dashed #c084fc; background: #faf5ff; border-radius: 12px; padding: 24px; text-align: center; cursor: pointer;" onclick="document.getElementById('aiFileInput').click()">
+                        <i class="fa-solid fa-cloud-arrow-up" style="font-size: 2.2rem; color: #9333ea; margin-bottom: 8px;"></i>
+                        <p style="margin: 0; font-weight: 700; color: #4c1d95; font-size: 0.95rem;">點擊選擇或拖曳非標準檔案至此</p>
+                        <p style="margin: 4px 0 0 0; font-size: 0.78rem; color: #7e22ce;">支援 .xlsx, .xls, .csv（任何欄位名稱皆可，例如「任課師資」、「週別」、「第幾節」）</p>
+                        <input type="file" id="aiFileInput" accept=".xlsx,.xls,.xlsm,.csv" style="display: none;" onchange="if(this.files[0]) document.getElementById('aiFileNameDisplay').innerText = '📁 已選擇: ' + this.files[0].name;">
+                        <div id="aiFileNameDisplay" style="margin-top: 10px; font-size: 0.85rem; font-weight: 800; color: #16a34a;"></div>
+                    </div>
+                </div>
+
+                <!-- Tab 2: 自由文字 / 請託筆記 -->
+                <div id="aiTabContent_text" class="ai-tab-content" style="display: none;">
+                    <label style="display: block; font-size: 0.85rem; font-weight: 700; color: #334155; margin-bottom: 6px;">
+                        請貼上自由文字、LINE 訊息、或教師特殊排課要求筆記：
+                    </label>
+                    <textarea id="aiTextInput" rows="5" style="width: 100%; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px; font-family: inherit; font-size: 0.88rem; box-sizing: border-box; resize: vertical;" placeholder="例如：&#10;王大明老師每週三上午不排課&#10;李淑芬主任週五第7-8節開行政會議不排課&#10;801班的理化課要連排兩節"></textarea>
+                </div>
+
+                <!-- 操作按鈕 -->
+                <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                    <button type="button" id="aiAnalyzeSubmitBtn" onclick="triggerAiAnalyze()" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: #ffffff; border: none; padding: 9px 22px; border-radius: 8px; font-weight: 800; cursor: pointer; font-size: 0.9rem; box-shadow: 0 4px 12px rgba(139,92,246,0.35); display: inline-flex; align-items: center; gap: 6px;">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> 啟動 AI 深度語意分析
+                    </button>
+                </div>
+
+                <!-- 預覽與確認區塊 -->
+                <div id="aiPreviewArea" style="display: none; border-top: 1px solid #e2e8f0; padding-top: 14px;">
+                    <div id="aiPreviewContent"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ───────────────────────────────────────────────────────────────────────────── -->
+    <!-- ⏱️ 排課版本時光機 Modal 結構 -->
+    <!-- ───────────────────────────────────────────────────────────────────────────── -->
+    <div id="snapshotTimeMachineModal" class="modal-overlay" style="display: none; z-index: 100000; position: fixed; inset: 0; background: rgba(15,23,42,0.65); backdrop-filter: blur(4px); align-items: center; justify-content: center;">
+        <div style="background: #ffffff; border-radius: 16px; width: 90%; max-width: 750px; max-height: 85vh; overflow-y: auto; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); border: 1px solid #e2e8f0; display: flex; flex-direction: column;">
+            <div style="padding: 18px 24px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #eef2ff, #e0e7ff); border-radius: 16px 16px 0 0;">
+                <div>
+                    <h3 style="margin: 0; font-size: 1.15rem; color: #3730a3; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+                        <i class="fa-solid fa-clock-rotate-left" style="color: #4f46e5;"></i> ⏱️ 排課版本時光機 (歷史快照與一鍵安全回滾)
+                    </h3>
+                    <p style="margin: 4px 0 0 0; font-size: 0.82rem; color: #4338ca;">
+                        每次匯入新資料、AI 分析或演算法求解皆自動保存快照，隨時可一鍵還原至任一歷史狀態
+                    </p>
+                </div>
+                <button type="button" onclick="closeSnapshotModal()" style="background: transparent; border: none; font-size: 1.5rem; cursor: pointer; color: #4338ca; line-height: 1;">&times;</button>
+            </div>
+
+            <div style="padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; background: #faf5ff; border-bottom: 1px solid #f1f5f9;">
+                <span style="font-size: 0.84rem; color: #64748b;"><i class="fa-solid fa-shield-halved" style="color: #10b981;"></i> 自動安全保護：還原時系統會先自動為當前狀態拍下快照，零風險無後顧之憂</span>
+                <button type="button" onclick="loadSnapshotsList()" style="background: #ffffff; border: 1px solid #cbd5e1; padding: 4px 12px; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 0.8rem; color: #475569;">
+                    <i class="fa-solid fa-arrows-rotate"></i> 重新整理
+                </button>
+            </div>
+
+            <div style="padding: 20px 24px;" id="snapshotListContainer">
+                <!-- 動態注入快照清單 -->
+            </div>
+        </div>
+    </div>
 
     <!-- JS Scripts with Cache-Buster -->
     <script src="/static/js/app.js?v=20260901_v1100"></script>
