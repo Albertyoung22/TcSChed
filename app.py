@@ -13,8 +13,8 @@ from dbfread import DBF
 # application is running locally without GitHub configuration; otherwise the
 # fallback path in load_config_rules() raises NameError when no local config
 # file exists.
-GITHUB_REPO = os.environ.get("GITHUB_REPO", "").strip()
-GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "").strip()
+GITHUB_REPO = os.environ.get("GITHUB_REPO", "Albertyoung22/TcSChed").strip()
+GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "YOUR_GITHUB_TOKEN").strip()
 GITHUB_BRANCH = os.environ.get("GITHUB_BRANCH", "main").strip() or "main"
 
 def resolve_path(rel_path):
@@ -392,21 +392,211 @@ def get_latest_dbf_dir():
 
     return None
 
+def find_latest_xinhe_export_file():
+    """尋找最新的欣河配課匯出 Excel 檔。
+    優先掃描 DATA_DIR 底下最新日期的子目錄 (例如 data/20260909/) 與 DATA_DIR/dbf_data 中的「排課資料匯出Excel_*.xlsx」。
+    若發現更新的排課匯出檔，自動同步複製至 DATA_DIR/xinhe_export.xlsx (保留原檔並備份舊檔)。
+    """
+    candidates = []
+    default_xinhe = os.path.join(DATA_DIR, XINHE_EXPORT_FILENAME)
+
+    if os.path.isdir(DATA_DIR):
+        # 1. 掃描子目錄 (依名稱降冪，如 20260909)
+        for entry in sorted(os.listdir(DATA_DIR), reverse=True):
+            sub_path = os.path.join(DATA_DIR, entry)
+            if os.path.isdir(sub_path):
+                for f in sorted(os.listdir(sub_path), reverse=True):
+                    if f.endswith((".xlsx", ".xls", ".xlsm")) and not f.startswith("~$"):
+                        if "排課資料匯出" in f or "xinhe" in f.lower():
+                            candidates.append(os.path.join(sub_path, f))
+        # 2. 掃描 DATA_DIR 根層
+        for f in sorted(os.listdir(DATA_DIR), reverse=True):
+            if f.endswith((".xlsx", ".xls", ".xlsm")) and not f.startswith("~$") and f != XINHE_EXPORT_FILENAME:
+                if "排課資料匯出" in f:
+                    candidates.append(os.path.join(DATA_DIR, f))
+
+    if candidates:
+        # 若同目錄下同時有「排課資料匯出Excel」與「預設排課資料匯出」：
+        # 「排課資料匯出Excel」為全校正式課表檔，優先度高於「預設排課」
+        candidates.sort(key=lambda x: (
+            0 if "排課資料匯出excel" in os.path.basename(x).lower() else (
+                1 if "排課資料" in os.path.basename(x) and not os.path.basename(x).startswith("預設") else 2
+            ),
+            -os.path.getmtime(x)
+        ))
+        latest = candidates[0]
+        try:
+            need_sync = False
+            if not os.path.exists(default_xinhe):
+                need_sync = True
+            else:
+                if os.path.getsize(default_xinhe) != os.path.getsize(latest) or \
+                   os.path.getmtime(latest) > os.path.getmtime(default_xinhe):
+                    need_sync = True
+            if need_sync:
+                import shutil
+                if os.path.exists(default_xinhe):
+                    try:
+                        shutil.copy2(default_xinhe, default_xinhe + ".bak")
+                    except Exception:
+                        pass
+                shutil.copy2(latest, default_xinhe)
+                print(f"[欣河自動同步] 已將最新配課匯出檔 ({os.path.basename(latest)}) 同步至 {default_xinhe}", flush=True)
+        except Exception as e:
+            print(f"[欣河自動同步警告] 同步最新欣河匯出檔失敗: {e}", flush=True)
+        return latest
+
+    if os.path.exists(default_xinhe):
+        return default_xinhe
+
+    local_xinhe = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dbf_data", XINHE_EXPORT_FILENAME)
+    if os.path.exists(local_xinhe):
+        return local_xinhe
+    return None
+
+def load_xinhe_code_tables():
+    """從 DATA_DIR (如 data/20260909/) 自動載入 教師代碼_*.xlsx、班級代碼_*.xlsx、科目代碼_*.xlsx 主檔。"""
+    teachers = []
+    teacher_name_map = {}
+    teacher_code_map = {}
+    classes = []
+    class_map = {}
+    subjects = []
+    
+    teacher_file = None
+    class_file = None
+    subject_file = None
+    
+    search_dirs = []
+    if os.path.isdir(DATA_DIR):
+        for entry in sorted(os.listdir(DATA_DIR), reverse=True):
+            p = os.path.join(DATA_DIR, entry)
+            if os.path.isdir(p):
+                search_dirs.append(p)
+        search_dirs.append(DATA_DIR)
+        
+    for d in search_dirs:
+        try:
+            for f in os.listdir(d):
+                if f.endswith((".xlsx", ".xls", ".xlsm")) and not f.startswith("~$"):
+                    if "教師代碼" in f and not teacher_file:
+                        teacher_file = os.path.join(d, f)
+                    elif "班級代碼" in f and not class_file:
+                        class_file = os.path.join(d, f)
+                    elif "科目代碼" in f and not subject_file:
+                        subject_file = os.path.join(d, f)
+        except Exception:
+            pass
+
+    try:
+        import openpyxl
+        # 1. 讀取教師代碼表
+        if teacher_file and os.path.exists(teacher_file):
+            wb = openpyxl.load_workbook(teacher_file, read_only=True, data_only=True)
+            ws = wb.active
+            rows = list(ws.iter_rows(values_only=True))
+            if rows:
+                headers = [str(h).strip() if h is not None else "" for h in rows[0]]
+                col = {h: i for i, h in enumerate(headers)}
+                for r in rows[1:]:
+                    if not r: continue
+                    code_raw = str(r[col.get("教師代碼", 0)] or "").strip()
+                    name = str(r[col.get("教師姓名", 1)] or "").strip()
+                    role = str(r[col.get("教師職務名稱", 2)] or "專任教師").strip()
+                    base_h = r[col.get("基本節數", 4)] if "基本節數" in col else 16
+                    try:
+                        base_h = int(float(base_h)) if base_h is not None else 16
+                    except Exception:
+                        base_h = 16
+                    if name and not name.startswith("備用"):
+                        clean_code = code_raw.zfill(4) if code_raw.isdigit() else code_raw
+                        teachers.append({
+                            "code": clean_code,
+                            "name": name,
+                            "role": role or "專任教師",
+                            "subject": "",
+                            "base_hours": base_h,
+                            "teach_hours": 0,
+                            "extra_hours": 0
+                        })
+                        teacher_name_map[name] = clean_code
+                        teacher_code_map[clean_code] = clean_code
+                        if code_raw.isdigit():
+                            teacher_code_map[str(int(code_raw))] = clean_code
+            wb.close()
+            print(f"[代碼匯入] 成功從 {os.path.basename(teacher_file)} 載入 {len(teachers)} 位教師主檔資料", flush=True)
+
+        # 2. 讀取班級代碼表
+        if class_file and os.path.exists(class_file):
+            wb = openpyxl.load_workbook(class_file, read_only=True, data_only=True)
+            ws = wb.active
+            rows = list(ws.iter_rows(values_only=True))
+            if rows:
+                headers = [str(h).strip() if h is not None else "" for h in rows[0]]
+                col = {h: i for i, h in enumerate(headers)}
+                for r in rows[1:]:
+                    if not r: continue
+                    code_raw = str(r[col.get("班級代碼", 0)] or "").strip()
+                    name = str(r[col.get("班級名稱", 1)] or "").strip()
+                    tutor = str(r[col.get("導師姓名", 3)] or "").strip() if "導師姓名" in col else ""
+                    dbf_code = xinhe_class_to_dbf(code_raw) or xinhe_class_to_dbf(name) or code_raw
+                    if dbf_code and not dbf_code.startswith("TC") and "虛擬" not in name:
+                        classes.append({
+                            "code": dbf_code,
+                            "name": name or dbf_code,
+                            "tutor": tutor
+                        })
+                        class_map[dbf_code] = name or dbf_code
+            wb.close()
+            print(f"[代碼匯入] 成功從 {os.path.basename(class_file)} 載入 {len(classes)} 個班級主檔資料", flush=True)
+
+        # 3. 讀取科目代碼表
+        if subject_file and os.path.exists(subject_file):
+            wb = openpyxl.load_workbook(subject_file, read_only=True, data_only=True)
+            ws = wb.active
+            rows = list(ws.iter_rows(values_only=True))
+            if rows:
+                headers = [str(h).strip() if h is not None else "" for h in rows[0]]
+                col = {h: i for i, h in enumerate(headers)}
+                for r in rows[1:]:
+                    if not r: continue
+                    scode = str(r[col.get("科目代碼", 0)] or "").strip()
+                    sname = str(r[col.get("科目名稱", 1)] or "").strip()
+                    short_name = str(r[col.get("科目簡稱", 2)] or sname[:6]).strip() if "科目簡稱" in col else sname[:6]
+                    if scode and sname:
+                        subjects.append({
+                            "code": scode,
+                            "name": sname,
+                            "short_name": short_name
+                        })
+            wb.close()
+            print(f"[代碼匯入] 成功從 {os.path.basename(subject_file)} 載入 {len(subjects)} 個科目代碼資料", flush=True)
+    except Exception as e:
+        print(f"[警告] 載入欣河代碼主檔時發生錯誤: {e}", flush=True)
+
+    return {
+        "teachers": teachers,
+        "teacher_name_map": teacher_name_map,
+        "teacher_code_map": teacher_code_map,
+        "classes": classes,
+        "class_map": class_map,
+        "subjects": subjects,
+        "teacher_file": teacher_file,
+        "class_file": class_file,
+        "subject_file": subject_file
+    }
+
 def get_solved_excel_path():
     """Returns path to Solved Excel file without improperly defaulting to Touchong High School when in custom mode.
-    若 xinhe_export.xlsx 存在，回傳 None 讓欣河資料優先。
+    若 xinhe_export.xlsx 存在或有最新欣河排課資料，回傳 None 讓欣河資料優先。
     """
     dbf_dir = get_latest_dbf_dir()
     base_dir = os.path.dirname(os.path.abspath(__file__))
 
     # 若欣河匯出檔存在，優先使用欣河資料，跳過 solved_excel
-    xinhe_candidates = []
-    if dbf_dir:
-        xinhe_candidates.append(os.path.join(dbf_dir, XINHE_EXPORT_FILENAME))
-    xinhe_candidates.append(os.path.join(DATA_DIR, XINHE_EXPORT_FILENAME))
-    for xp in xinhe_candidates:
-        if os.path.exists(xp):
-            return None  # 讓 load_schedule_data 使用欣河 Excel
+    latest_xinhe = find_latest_xinhe_export_file()
+    if latest_xinhe and os.path.exists(latest_xinhe):
+        return None
 
     candidates = []
     if dbf_dir:
@@ -435,15 +625,28 @@ def load_schedule_data(force_reload=False):
         if not period_times:
             period_times = {str(p): {"name": f"第{p}節", "time": ""} for p in range(1, 9)}
 
-        # 優先檢查欣河匯出 Excel
-        xinhe_path = os.path.join(DATA_DIR, XINHE_EXPORT_FILENAME)
-        if not os.path.exists(xinhe_path):
-            local_xinhe = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dbf_data", XINHE_EXPORT_FILENAME)
-            if os.path.exists(local_xinhe):
-                xinhe_path = local_xinhe
+        # 優先檢查欣河匯出 Excel (支援自動掃描最新 data/20260909/ 等目錄)
+        xinhe_path = find_latest_xinhe_export_file()
+        if not xinhe_path:
+            xinhe_path = os.path.join(DATA_DIR, XINHE_EXPORT_FILENAME)
+            if not os.path.exists(xinhe_path):
+                local_xinhe = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dbf_data", XINHE_EXPORT_FILENAME)
+                if os.path.exists(local_xinhe):
+                    xinhe_path = local_xinhe
 
-        if os.path.exists(xinhe_path) and not cfg.get("clean_mode"):
-            schedules, classrooms_dict = load_xinhe_excel(xinhe_path)
+        if xinhe_path and os.path.exists(xinhe_path) and not cfg.get("clean_mode"):
+            # 載入代碼主檔 (教師代碼、班級代碼、科目代碼)
+            code_tables = load_xinhe_code_tables()
+            t_name_map = code_tables.get("teacher_name_map", {})
+            t_code_map = code_tables.get("teacher_code_map", {})
+            c_meta_list = code_tables.get("classes", [])
+
+            schedules, classrooms_dict = load_xinhe_excel(
+                xinhe_path,
+                classes=c_meta_list if c_meta_list else None,
+                teacher_name_map=t_name_map if t_name_map else None,
+                teacher_code_map=t_code_map if t_code_map else None
+            )
             
             # 1. 自動推導各班導師 (從班級活動/班會/導師時間之授課教師)
             tutor_map = {}
@@ -454,18 +657,22 @@ def load_schedule_data(force_reload=False):
                 if ("班級活動" in subj or "班會" in subj or "導師" in subj) and tn and cc:
                     tutor_map[cc] = tn
 
-            # 2. 從 schedules 提取正規班級 (過濾掉 TC 開頭的跨班選修虛擬代碼與虛擬班)
+            # 2. 班級清單：結合班級代碼主檔與 schedules
             classes_map = {}
+            for c_item in code_tables.get("classes", []):
+                classes_map[c_item["code"]] = {
+                    "code": c_item["code"],
+                    "name": c_item["name"],
+                    "tutor": c_item.get("tutor") or tutor_map.get(c_item["code"], "")
+                }
+
             for s in schedules:
                 cc = str(s.get("class_code", "")).strip()
                 cn = str(s.get("class_name", "")).strip() or cc
-                
-                # 排除 TC 開頭之長字串虛擬代碼或名稱含虛擬之記錄
                 if not cc or cc.startswith("TC") or "虛擬" in cn or "虛擬" in cc:
                     continue
 
                 if cc not in classes_map:
-                    # 美化國中部班級名稱 (例如 國101 -> 701, 國201 -> 801)
                     disp_name = cn
                     if cn.startswith("國1") or cc.startswith("1"):
                         disp_name = f"70{cc[-1]}" if cc.isdigit() and len(cc) == 3 else cn
@@ -479,36 +686,53 @@ def load_schedule_data(force_reload=False):
                         "name": disp_name,
                         "tutor": tutor_map.get(cc, "")
                     }
+                elif not classes_map[cc].get("tutor") and cc in tutor_map:
+                    classes_map[cc]["tutor"] = tutor_map[cc]
 
-            # 3. 從 schedules 提取教師 (過濾空值)
+            # 3. 教師清單：結合教師代碼主檔與 schedules
             teachers_map = {}
+            for t_item in code_tables.get("teachers", []):
+                teachers_map[t_item["code"]] = dict(t_item)
+
             for s in schedules:
                 tc = str(s.get("teacher_code", "")).strip()
                 tn = str(s.get("teacher_name", "")).strip() or tc
                 if not tc and tn:
                     tc = tn
-                if tc and tn and tc not in teachers_map and not tn.startswith("備用"):
-                    teachers_map[tc] = {
-                        "code": tc,
-                        "name": tn,
-                        "role": "導師" if tc in tutor_map.values() else "專任教師",
-                        "subject": s.get("subject_name", ""),
-                        "base_hours": 0,
-                        "teach_hours": 0,
-                        "extra_hours": 0
-                    }
+                if tc and tn and not tn.startswith("備用"):
+                    if tc in teachers_map:
+                        if not teachers_map[tc].get("subject"):
+                            teachers_map[tc]["subject"] = s.get("subject_name", "")
+                    else:
+                        teachers_map[tc] = {
+                            "code": tc,
+                            "name": tn,
+                            "role": "導師" if tc in tutor_map.values() else "專任教師",
+                            "subject": s.get("subject_name", ""),
+                            "base_hours": 0,
+                            "teach_hours": 0,
+                            "extra_hours": 0
+                        }
 
             classes_list = sorted(list(classes_map.values()), key=lambda x: natural_sort_key(x["code"]))
             teachers_list = sorted(list(teachers_map.values()), key=lambda x: natural_sort_key(x["code"]))
             classrooms_list = [{"code": k, "name": v} for k, v in classrooms_dict.items()]
 
-            # 若系統中已有調課/解算後的 solved_schedules，課表清單採用最新狀態
+            # 智慧判斷是否為新匯入的排課檔案（若檔案變動，自動生效新課表）
+            current_mtime = os.path.getmtime(xinhe_path) if os.path.exists(xinhe_path) else 0
+            last_mtime = cfg.get("last_synced_xinhe_mtime", 0)
             active_solved = cfg.get("solved_schedules", [])
-            if isinstance(active_solved, list) and len(active_solved) > 0:
-                schedules = [normalize_schedule_record(r) for r in active_solved if isinstance(r, dict)]
-            else:
+
+            if (current_mtime > last_mtime + 1) or not active_solved:
+                # 偵測到新版排課資料，全面生效
+                schedules = [normalize_schedule_record(r) for r in schedules if isinstance(r, dict)]
                 cfg["solved_schedules"] = schedules
+                cfg["last_synced_xinhe_mtime"] = current_mtime
+                cfg["last_synced_xinhe_file"] = os.path.basename(xinhe_path)
                 save_config_rules(cfg)
+                print(f"[欣河排課更新] 已自動載入並生效最新排課資料 ({os.path.basename(xinhe_path)})，共 {len(schedules)} 節！", flush=True)
+            else:
+                schedules = [normalize_schedule_record(r) for r in active_solved if isinstance(r, dict)]
 
             _cached_data = {
                 "dbf_dir": "",
@@ -811,17 +1035,25 @@ def load_schedule_data(force_reload=False):
                     "ud": ud
                 })
         else:
-            # ── 優先嘗試欣河雲端系統 Excel 匯出檔（xinhe_export.xlsx）──
-            xinhe_path = os.path.join(dbf_dir, XINHE_EXPORT_FILENAME)
-            # 也接受 data/ 目錄下的欣河匯出
-            if not os.path.exists(xinhe_path):
-                data_xinhe = os.path.join(DATA_DIR, XINHE_EXPORT_FILENAME)
-                if os.path.exists(data_xinhe):
-                    xinhe_path = data_xinhe
+            # ── 優先嘗試欣河雲端系統 Excel 匯出檔（xinhe_export.xlsx 或 data/20260909/ 最新檔案）──
+            xinhe_path = find_latest_xinhe_export_file()
+            if not xinhe_path:
+                xinhe_path = os.path.join(dbf_dir, XINHE_EXPORT_FILENAME)
+                # 也接受 data/ 目錄下的欣河匯出
+                if not os.path.exists(xinhe_path):
+                    data_xinhe = os.path.join(DATA_DIR, XINHE_EXPORT_FILENAME)
+                    if os.path.exists(data_xinhe):
+                        xinhe_path = data_xinhe
 
-            if os.path.exists(xinhe_path):
+            if xinhe_path and os.path.exists(xinhe_path):
                 print(f"[欣河匯入] 偵測到欣河配課匯出檔，以 Excel 取代 claspv.dbf 載入...", flush=True)
-                schedules, classrooms = load_xinhe_excel(xinhe_path, classes=classes, teacher_name_map=teacher_name_map, teacher_code_map=teacher_code_map)
+                code_tables = load_xinhe_code_tables()
+                schedules, classrooms = load_xinhe_excel(
+                    xinhe_path,
+                    classes=classes or code_tables.get("classes"),
+                    teacher_name_map=teacher_name_map or code_tables.get("teacher_name_map"),
+                    teacher_code_map=teacher_code_map or code_tables.get("teacher_code_map")
+                )
             else:
                 # ── 標準路徑：讀取 claspv.dbf ──
                 db_claspv = DBF(resolved_paths["claspv"], ignore_missing_memofile=True, encoding='cp950')
@@ -977,30 +1209,57 @@ def showcase():
 
 @app.route("/api/import/xinhe", methods=["POST"])
 def api_import_xinhe():
-    """接受上傳欣河雲端系統配課匯出 Excel，儲存為 xinhe_export.xlsx 並清除快取重新載入。"""
+    """接受上傳欣河雲端系統配課匯出 Excel 或代碼表，支援單檔或多檔（排課+教師代碼+班級代碼+科目代碼）同時上傳。"""
     global _cached_data, _db_mtimes
     try:
-        if "file" not in request.files:
+        files = request.files.getlist("files") or request.files.getlist("file")
+        if not files and "file" in request.files:
+            files = [request.files["file"]]
+
+        if not files or all(not (f and f.filename) for f in files):
             return jsonify({"success": False, "error": "未收到檔案，請選擇要上傳的 Excel 檔案"}), 400
-        f = request.files["file"]
-        if not f.filename:
-            return jsonify({"success": False, "error": "上傳檔案名稱不可為空"}), 400
-        filename = f.filename.lower()
-        if not (filename.endswith(".xlsx") or filename.endswith(".xls") or filename.endswith(".xlsm")):
-            return jsonify({"success": False, "error": "僅支援 .xlsx、.xls 或 .xlsm 格式之 Excel 檔案"}), 400
 
-        dbf_dir = get_latest_dbf_dir()
-        save_dir = dbf_dir if dbf_dir else DATA_DIR
-        save_path = os.path.join(save_dir, XINHE_EXPORT_FILENAME)
-        f.save(save_path)
-
-        # 備份一份到 DATA_DIR
         try:
-            if save_dir != DATA_DIR:
-                import shutil
-                shutil.copy2(save_path, os.path.join(DATA_DIR, XINHE_EXPORT_FILENAME))
+            save_snapshot("匯入欣河資料前自動安全快照")
         except Exception:
             pass
+
+        saved_files = []
+        import shutil
+
+        for f in files:
+            if not f or not f.filename:
+                continue
+            orig_name = f.filename
+            fn_lower = orig_name.lower()
+            if not (fn_lower.endswith(".xlsx") or fn_lower.endswith(".xls") or fn_lower.endswith(".xlsm")):
+                continue
+
+            # 判斷檔案類型並存放至 DATA_DIR
+            if "教師代碼" in orig_name:
+                dst = os.path.join(DATA_DIR, orig_name)
+                f.save(dst)
+                saved_files.append(f"教師代碼 ({orig_name})")
+            elif "班級代碼" in orig_name:
+                dst = os.path.join(DATA_DIR, orig_name)
+                f.save(dst)
+                saved_files.append(f"班級代碼 ({orig_name})")
+            elif "科目代碼" in orig_name:
+                dst = os.path.join(DATA_DIR, orig_name)
+                f.save(dst)
+                saved_files.append(f"科目代碼 ({orig_name})")
+            else:
+                # 視為排課課表檔，儲存原始檔名並同步為 xinhe_export.xlsx
+                dst_orig = os.path.join(DATA_DIR, orig_name)
+                f.save(dst_orig)
+                default_xinhe = os.path.join(DATA_DIR, XINHE_EXPORT_FILENAME)
+                try:
+                    if os.path.exists(default_xinhe):
+                        shutil.copy2(default_xinhe, default_xinhe + ".bak")
+                    shutil.copy2(dst_orig, default_xinhe)
+                except Exception:
+                    pass
+                saved_files.append(f"排課資料 ({orig_name})")
 
         # 解除 clean_mode
         try:
@@ -1010,22 +1269,23 @@ def api_import_xinhe():
         except Exception:
             pass
 
-        # 清除快取並重新載入
+        # 清除快取並強制重新載入
         _cached_data = None
         _db_mtimes = {}
-        data = load_schedule_data()
+        data = load_schedule_data(force_reload=True)
         schedules = data.get("schedules", []) if isinstance(data, dict) else []
         classes_cnt = len(data.get("classes", [])) if isinstance(data, dict) else 0
         teachers_cnt = len(data.get("teachers", [])) if isinstance(data, dict) else 0
         count = len(schedules)
 
+        files_summary = "、".join(saved_files) if saved_files else "檔案"
         return jsonify({
             "success": True,
-            "message": f"🎉 欣河配課 Excel 匯入成功！已解析並即時生效 {count} 節排課資料（共 {classes_cnt} 個班級、{teachers_cnt} 位教師）。",
+            "message": f"🎉 匯入成功！已接收 {files_summary}，即時解析並生效 {count} 節排課資料（共 {classes_cnt} 個班級、{teachers_cnt} 位教師）。",
             "count": count,
             "classes_count": classes_cnt,
             "teachers_count": teachers_cnt,
-            "saved_path": save_path
+            "saved_files": saved_files
         })
     except Exception as e:
         import traceback; traceback.print_exc()
@@ -1034,8 +1294,11 @@ def api_import_xinhe():
 @app.route("/api/xinhe/status", methods=["GET"])
 def api_xinhe_status():
     """查詢欣河 Excel 匯入狀態。"""
-    dbf_dir = get_latest_dbf_dir()
+    latest_path = find_latest_xinhe_export_file()
     candidates = []
+    if latest_path and os.path.exists(latest_path):
+        candidates.append(latest_path)
+    dbf_dir = get_latest_dbf_dir()
     if dbf_dir: candidates.append(os.path.join(dbf_dir, XINHE_EXPORT_FILENAME))
     candidates.append(os.path.join(DATA_DIR, XINHE_EXPORT_FILENAME))
     for path in candidates:
@@ -1049,7 +1312,7 @@ def api_xinhe_status():
                 "path": path,
                 "size_kb": round(stat.st_size/1024, 1),
                 "modified": datetime.datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M:%S"),
-                "filename": XINHE_EXPORT_FILENAME,
+                "filename": os.path.basename(path),
                 "schedules_count": schedules_cnt
             })
     return jsonify({
@@ -1057,6 +1320,536 @@ def api_xinhe_status():
         "message": f"目前使用原始 DBF / 本機課表資料（{XINHE_EXPORT_FILENAME} 未載入）",
         "filename": XINHE_EXPORT_FILENAME
     })
+
+@app.route("/api/xinhe/sync-latest", methods=["POST", "GET"])
+def api_xinhe_sync_latest():
+    """一鍵手動觸發偵測並載入 data/ 底下最新日期目錄 (如 20260909) 之所有排課與代碼資料。"""
+    global _cached_data, _db_mtimes
+    try:
+        try:
+            save_snapshot("同步最新目錄前自動安全快照")
+        except Exception:
+            pass
+        latest_file = find_latest_xinhe_export_file()
+        code_tables = load_xinhe_code_tables()
+        _cached_data = None
+        _db_mtimes = {}
+        data = load_schedule_data(force_reload=True)
+        cnt = len(data.get("schedules", []))
+        return jsonify({
+            "status": "success",
+            "message": f"成功同步最新排課資料！已載入 {cnt} 節課程（{len(data.get('classes', []))} 班級、{len(data.get('teachers', []))} 教師）。",
+            "latest_file": latest_file,
+            "teachers_count": len(data.get("teachers", [])),
+            "classes_count": len(data.get("classes", [])),
+            "schedules_count": cnt
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+def save_snapshot(action_desc="系統自動快照"):
+    """自動快照儲存當前排課設定、已排課表及欣河資料，供版本時光機一鍵還原。"""
+    try:
+        snapshot_dir = os.path.join(DATA_DIR, "restore_points")
+        os.makedirs(snapshot_dir, exist_ok=True)
+        now_dt = datetime.datetime.now()
+        ts_str = now_dt.strftime("%Y%m%d_%H%M%S")
+        
+        cfg = load_config_rules()
+        solved_count = len(cfg.get("solved_schedules") or [])
+        
+        snapshot_data = {
+            "id": f"snap_{ts_str}",
+            "timestamp": now_dt.strftime("%Y-%m-%d %H:%M:%S"),
+            "action": action_desc,
+            "solved_count": solved_count,
+            "config_rules": cfg
+        }
+        
+        snap_file = os.path.join(snapshot_dir, f"snapshot_{ts_str}.json")
+        with open(snap_file, "w", encoding="utf-8") as f:
+            json.dump(snapshot_data, f, ensure_ascii=False, indent=2)
+            
+        # 最多保留 30 份快照，自動清理過期舊檔以防硬碟爆滿
+        existing_snaps = sorted(
+            [os.path.join(snapshot_dir, f) for f in os.listdir(snapshot_dir) if f.startswith("snapshot_") and f.endswith(".json")],
+            key=os.path.getmtime,
+            reverse=True
+        )
+        for old_snap in existing_snaps[30:]:
+            try:
+                os.remove(old_snap)
+            except Exception:
+                pass
+        return snap_file
+    except Exception as e:
+        print(f"[Snapshot Error] {e}")
+        return None
+
+@app.route("/api/snapshots", methods=["GET"])
+def api_list_snapshots():
+    """獲取歷史快照清單供版本時光機檢視與還原"""
+    try:
+        snapshot_dir = os.path.join(DATA_DIR, "restore_points")
+        os.makedirs(snapshot_dir, exist_ok=True)
+        snaps = []
+        files = sorted(
+            [f for f in os.listdir(snapshot_dir) if f.startswith("snapshot_") and f.endswith(".json")],
+            reverse=True
+        )
+        for fn in files:
+            fp = os.path.join(snapshot_dir, fn)
+            try:
+                with open(fp, "r", encoding="utf-8") as f:
+                    s_data = json.load(f)
+                    snaps.append({
+                        "id": s_data.get("id", fn),
+                        "filename": fn,
+                        "timestamp": s_data.get("timestamp", ""),
+                        "action": s_data.get("action", "歷史存檔"),
+                        "solved_count": s_data.get("solved_count", 0),
+                        "size_kb": round(os.path.getsize(fp) / 1024, 1)
+                    })
+            except Exception:
+                continue
+        return jsonify({"status": "success", "snapshots": snaps})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/snapshots/rollback", methods=["POST"])
+def api_rollback_snapshot():
+    """一鍵回滾至指定的歷史快照版本"""
+    global _cached_data
+    try:
+        req = request.get_json(silent=True) or {}
+        snap_id = str(req.get("id") or req.get("filename") or "").strip()
+        if not snap_id:
+            return jsonify({"status": "error", "message": "請指定要回滾的快照 ID"}), 400
+            
+        if not snap_id.endswith(".json"):
+            snap_id = f"{snap_id}.json"
+        if not snap_id.startswith("snapshot_"):
+            snap_id = snap_id.replace("snap_", "snapshot_")
+            
+        snapshot_dir = os.path.join(DATA_DIR, "restore_points")
+        snap_file = os.path.join(snapshot_dir, snap_id)
+        if not os.path.exists(snap_file):
+            return jsonify({"status": "error", "message": f"找不到指定的快照檔案: {snap_id}"}), 404
+            
+        # 回滾前先自動產生保護快照
+        save_snapshot("回滾前自動安全保護快照")
+        
+        with open(snap_file, "r", encoding="utf-8") as f:
+            snap_data = json.load(f)
+            
+        cfg = snap_data.get("config_rules")
+        if cfg and isinstance(cfg, dict):
+            save_config_rules(cfg)
+            _cached_data = None
+            load_schedule_data(force_reload=True)
+            return jsonify({
+                "status": "success",
+                "message": f"成功回滾至快照【{snap_data.get('action')}】({snap_data.get('timestamp')})！共回復 {snap_data.get('solved_count', 0)} 節課表紀錄。"
+            })
+        else:
+            return jsonify({"status": "error", "message": "快照檔案格式損壞"}), 500
+    except Exception as e:
+        return jsonify({"status": "error", "message": f"快照還原失敗: {str(e)}"}), 500
+
+@app.route("/api/calendar/export-ics", methods=["GET"])
+def api_export_calendar_ics():
+    """匯出符合 RFC 5545 國際標準之 iCalendar (.ics) 日曆檔。
+    支援教師端、班級端匯入 iPhone/Mac 行事曆、Google 日曆、Outlook，每堂課自動提醒！
+    """
+    try:
+        target_type = request.args.get("type", "all").strip().lower() # teacher / class / all
+        code = request.args.get("code", "").strip()
+        name = request.args.get("name", "").strip()
+        
+        data = load_schedule_data()
+        solved = get_current_solved_schedules()
+        
+        # 篩選課表
+        records_to_export = []
+        for s in solved:
+            d = s.get("day")
+            p = s.get("period")
+            if not d or not p or str(d) == "0" or str(p) == "0":
+                continue
+            t_name = str(s.get("teacher_name", ""))
+            t_code = str(s.get("teacher_code", ""))
+            c_name = str(s.get("class_name") or s.get("class_code") or "")
+            c_code = str(s.get("class_code", ""))
+            
+            if target_type == "teacher":
+                if (code and t_code == code) or (name and t_name == name) or (code and code in (t_name, t_code)):
+                    records_to_export.append(s)
+            elif target_type == "class":
+                if (code and c_code == code) or (name and c_name == name) or (code and code in (c_name, c_code)):
+                    records_to_export.append(s)
+            else:
+                records_to_export.append(s)
+                
+        # 臺灣國高中鐘聲時間標準對映 (第1~8節)
+        period_times = {
+            "1": ("082000", "090500"),
+            "2": ("091500", "100000"),
+            "3": ("101000", "105500"),
+            "4": ("110500", "115000"),
+            "5": ("131000", "135500"),
+            "6": ("140500", "145000"),
+            "7": ("150000", "154500"),
+            "8": ("155500", "164000"),
+        }
+        
+        today = datetime.date.today()
+        days_ahead = 0 - today.weekday()
+        if days_ahead <= 0:
+            days_ahead += 7
+        semester_start_monday = today + datetime.timedelta(days=days_ahead)
+        semester_end = semester_start_monday + datetime.timedelta(weeks=20)
+        until_str = semester_end.strftime("%Y%m%dT235959Z")
+        
+        cal_name = f"{name or code or '學校'} 課表" if (name or code) else "全校課表"
+        ics_lines = [
+            "BEGIN:VCALENDAR",
+            "VERSION:2.0",
+            "PRODID:-//School Schedule AI System//TW",
+            "CALSCALE:GREGORIAN",
+            "METHOD:PUBLISH",
+            f"X-WR-CALNAME:{cal_name}",
+            "X-WR-TIMEZONE:Asia/Taipei"
+        ]
+        
+        weekday_map = {"1": "MO", "2": "TU", "3": "WE", "4": "TH", "5": "FR", "6": "SA", "7": "SU"}
+        
+        for idx, r in enumerate(records_to_export):
+            d_str = str(r.get("day", "1"))
+            p_str = str(r.get("period", "1"))
+            times = period_times.get(p_str, ("082000", "090500"))
+            
+            try:
+                day_offset = int(d_str) - 1
+            except Exception:
+                day_offset = 0
+            event_date = semester_start_monday + datetime.timedelta(days=day_offset)
+            dt_start = event_date.strftime(f"%Y%m%dT{times[0]}")
+            dt_end = event_date.strftime(f"%Y%m%dT{times[1]}")
+            
+            s_name = r.get("subject_name", "課程")
+            c_label = r.get("class_name") or r.get("class_code") or ""
+            t_label = r.get("teacher_name") or r.get("teacher_code") or ""
+            room = r.get("room_name") or ""
+            summary = f"{s_name} ({c_label})" if target_type == "teacher" else f"{s_name} ({t_label})"
+            
+            byday = weekday_map.get(d_str, "MO")
+            uid = f"lesson_{idx}_{d_str}_{p_str}_{c_label}_{t_label}_{today.strftime('%Y%m%d')}@school.schedule"
+            
+            ics_lines.extend([
+                "BEGIN:VEVENT",
+                f"UID:{uid}",
+                f"DTSTAMP:{today.strftime('%Y%m%dT000000Z')}",
+                f"DTSTART;TZID=Asia/Taipei:{dt_start}",
+                f"DTEND;TZID=Asia/Taipei:{dt_end}",
+                f"RRULE:FREQ=WEEKLY;UNTIL={until_str};BYDAY={byday}",
+                f"SUMMARY:{summary}",
+                f"LOCATION:{room or c_label}",
+                f"DESCRIPTION:教師: {t_label}\\n班級: {c_label}\\n節次: 第{p_str}節",
+                "BEGIN:VALARM",
+                "TRIGGER:-PT10M",
+                "ACTION:DISPLAY",
+                f"DESCRIPTION:準備上課: {summary}",
+                "END:VALARM",
+                "END:VEVENT"
+            ])
+            
+        ics_lines.append("END:VCALENDAR")
+        ics_content = "\r\n".join(ics_lines)
+        
+        output = io.BytesIO(ics_content.encode("utf-8"))
+        filename = f"{cal_name}.ics"
+        return send_file(
+            output,
+            mimetype="text/calendar",
+            as_attachment=True,
+            download_name=filename
+        )
+    except Exception as e:
+        return jsonify({"status": "error", "message": f"匯出行事曆失敗: {str(e)}"}), 500
+
+@app.route("/api/import/ai-smart-analyze", methods=["POST"])
+def api_import_ai_smart_analyze():
+    """AI 智慧非固定格式資料分析與匯入接口。
+    支援非標準欄位 Excel、CSV、矩陣課表、或自由文字條件。
+    利用 Gemini 2.5 Flash LLM 或內建啟發式語意引擎進行結構辨識、欄位對齊、規則提取與資料清洗。
+    """
+    try:
+        cfg = load_config_rules()
+        gemini_key = cfg.get("gemini_api_key") or os.environ.get("GEMINI_API_KEY", "")
+        
+        file = request.files.get("file")
+        text_input = request.form.get("text") or (request.get_json(silent=True) or {}).get("text", "")
+        auto_apply = str(request.form.get("auto_apply", "false")).lower() in ("true", "1", "yes")
+
+        sample_headers = []
+        sample_rows = []
+        raw_text_snippet = ""
+        total_rows = 0
+        all_raw_rows = []
+        is_matrix_table = False
+
+        if file and file.filename:
+            fn = file.filename.lower()
+            import pandas as pd
+            if fn.endswith((".xlsx", ".xls", ".xlsm")):
+                df = pd.read_excel(file).fillna("")
+            elif fn.endswith(".csv"):
+                df = pd.read_csv(file, encoding="utf-8-sig", errors="replace").fillna("")
+            else:
+                return jsonify({"status": "error", "message": "不支援的檔案格式，請上傳 Excel 或 CSV 檔"}), 400
+
+            total_rows = len(df)
+            sample_headers = [str(c).strip() for c in df.columns]
+            sample_rows = df.head(8).to_dict(orient="records")
+            all_raw_rows = df.to_dict(orient="records")
+            raw_text_snippet = f"欄位標題: {sample_headers}\n前 5 列範例資料:\n" + "\n".join([str(r) for r in sample_rows[:5]])
+
+            # 矩陣課表自動偵測 (橫向星期1~5，縱向1~8節)
+            day_cols = {}
+            for col in sample_headers:
+                c_norm = col.replace("星期", "").replace("禮拜", "").replace("週", "").replace("周", "").strip()
+                if c_norm in ["一", "1"]: day_cols["1"] = col
+                elif c_norm in ["二", "2"]: day_cols["2"] = col
+                elif c_norm in ["三", "3"]: day_cols["3"] = col
+                elif c_norm in ["四", "4"]: day_cols["4"] = col
+                elif c_norm in ["五", "5"]: day_cols["5"] = col
+
+            if len(day_cols) >= 3 and total_rows <= 12:
+                is_matrix_table = True
+
+        elif text_input:
+            raw_text_snippet = text_input.strip()[:3000]
+        else:
+            return jsonify({"status": "error", "message": "請上傳檔案或輸入欲分析的文字內容"}), 400
+
+        # 2. 啟動 AI 語意分析 (LLM 或內建啟發式語意對齊)
+        ai_engine_used = "內建啟發式語意對齊引擎"
+        column_mapping = {}
+        detected_type = "matrix_schedule" if is_matrix_table else "unknown"
+        ai_summary = ""
+        normalized_records = []
+        detected_constraints = []
+
+        # 內建同義詞庫 (即使無 API Key 也能完全離線智慧匹配)
+        synonyms = {
+            "class": ["班級", "班別", "年班", "年級", "班號", "class", "grade_class", "班"],
+            "subject": ["科目", "課程", "學科", "課目", "科別", "名稱", "subject", "course"],
+            "teacher": ["教師", "老師", "任課", "授課", "師資", "任教", "姓名", "teacher", "instructor"],
+            "day": ["星期", "禮拜", "週別", "週", "周", "day", "weekday"],
+            "period": ["節次", "節", "時段", "第幾節", "period", "slot"],
+            "room": ["教室", "場地", "地點", "專科教室", "room", "venue", "classroom"]
+        }
+
+        if not is_matrix_table:
+            for std_key, syn_list in synonyms.items():
+                for h in sample_headers:
+                    h_clean = h.strip().lower()
+                    if any(syn in h_clean for syn in syn_list):
+                        column_mapping[std_key] = h
+                        break
+
+        # 3. 若有 Gemini API Key，呼叫 Gemini 進行深度結構與條件分析
+        if gemini_key:
+            try:
+                ai_prompt = (
+                    "你是一個頂級臺灣學校排課系統的資料架構分析師 AI。\n"
+                    "使用者提供了一份非固定格式的學校排課相關資料（可能是非標準 Excel 表頭、矩陣表格或文字需求）。\n"
+                    f"資料片段如下：\n{raw_text_snippet}\n\n"
+                    "請進行以下分析，並嚴格只輸出 JSON 格式（不要包含 markdown 標籤或其餘廢話）：\n"
+                    "{\n"
+                    "  \"data_type\": \"schedule\"(排課明細) | \"teacher_master\"(教師名冊) | \"constraints\"(不排課或連堂等規則) | \"matrix_schedule\"(矩陣課表),\n"
+                    "  \"column_mapping\": { \"class\": \"...\", \"subject\": \"...\", \"teacher\": \"...\", \"day\": \"...\", \"period\": \"...\", \"room\": \"...\" },\n"
+                    "  \"is_matrix_table\": false,\n"
+                    "  \"summary\": \"簡短說明這份資料包含哪些資訊、是否適合直接排課或匯入\",\n"
+                    "  \"detected_constraints\": [\n"
+                    "     {\"teacher_name\": \"...\", \"day\": 1, \"periods\": [1,2], \"type\": \"no_teach\", \"description\": \"...\"}\n"
+                    "  ]\n"
+                    "}"
+                )
+                gemini_res = call_gemini_llm_api(ai_prompt, gemini_key, model="gemini-2.5-flash", response_json=True)
+                if gemini_res:
+                    import json
+                    parsed = json.loads(gemini_res)
+                    if parsed.get("column_mapping") and not is_matrix_table:
+                        for k, v in parsed["column_mapping"].items():
+                            if v and v in sample_headers:
+                                column_mapping[k] = v
+                    if parsed.get("data_type"): detected_type = parsed["data_type"]
+                    if parsed.get("summary"): ai_summary = parsed["summary"]
+                    if parsed.get("detected_constraints"): detected_constraints = parsed["detected_constraints"]
+                    ai_engine_used = "Google Gemini 2.5 Flash"
+            except Exception as ge:
+                print(f"[AI Smart Parse Gemini Fallback] {ge}")
+
+        # 4. 自然語言條件啟發式分析 (若未取得 LLM，使用正規表達式自動辨識不排課/連堂)
+        if text_input and not detected_constraints:
+            import re
+            lines = text_input.split("\n")
+            weekday_dict = {"一": 1, "二": 2, "三": 3, "四": 4, "五": 5, "1": 1, "2": 2, "3": 3, "4": 4, "5": 5}
+            for line in lines:
+                line = line.strip()
+                if not line: continue
+                # 辨識：XXX 老師 星期X 上午/下午/第Y節 不排課
+                m_teach = re.search(r"([^\s，。；、]+?)(?:老師|主任|組長)?.*?(?:星期|禮拜|週)([一二三四五1-5])", line)
+                if m_teach and any(kw in line for kw in ["不排", "不授課", "不進課", "避開", "請假", "公差"]):
+                    t_name = m_teach.group(1).replace("老師", "").replace("主任", "").strip()
+                    d_int = weekday_dict.get(m_teach.group(2), 1)
+                    periods = []
+                    if "上午" in line or "早上" in line:
+                        periods = [1, 2, 3, 4]
+                    elif "下午" in line:
+                        periods = [5, 6, 7]
+                    else:
+                        p_match = re.findall(r"(?:第)?([1-8])(?:節)?", line)
+                        if p_match:
+                            periods = [int(p) for p in p_match]
+                        else:
+                            periods = [1, 2]
+                    detected_constraints.append({
+                        "teacher_name": t_name,
+                        "day": d_int,
+                        "periods": periods,
+                        "type": "no_teach",
+                        "description": line
+                    })
+
+        # 5. 根據格式型態產生 normalized_records
+        if is_matrix_table and all_raw_rows:
+            # 展開矩陣表格
+            row_idx = 1
+            for r in all_raw_rows:
+                # 節次通常在第一欄或以 index 計
+                p_val = row_idx
+                first_col_val = str(list(r.values())[0]) if r else ""
+                first_digits = "".join(filter(str.isdigit, first_col_val))
+                if first_digits:
+                    p_val = int(first_digits)
+                
+                for d_key, col_name in day_cols.items():
+                    cell_val = str(r.get(col_name, "")).strip()
+                    if not cell_val:
+                        continue
+                    # cell_val 可能格式: "國文 (林美華)" 或 "國文" 或 "801 國文"
+                    s_name = cell_val
+                    t_name = ""
+                    c_name = ""
+                    if "(" in cell_val and ")" in cell_val:
+                        s_name = cell_val.split("(")[0].strip()
+                        t_name = cell_val.split("(")[1].replace(")", "").strip()
+                    elif "/" in cell_val:
+                        parts = cell_val.split("/")
+                        s_name = parts[0].strip()
+                        t_name = parts[1].strip() if len(parts) > 1 else ""
+
+                    normalized_records.append({
+                        "id": len(normalized_records) + 1,
+                        "class_code": c_name or "班級",
+                        "class_name": c_name or "班級",
+                        "subject_code": f"SUB-{len(normalized_records)+1:02d}",
+                        "subject_name": s_name,
+                        "teacher_code": t_name,
+                        "teacher_name": t_name,
+                        "room_code": "",
+                        "room_name": "",
+                        "day": str(d_key),
+                        "period": str(p_val),
+                        "week_mode": 0,
+                        "ud": 0,
+                        "source": "ai_matrix_import"
+                    })
+                row_idx += 1
+        elif all_raw_rows and ("class" in column_mapping or "subject" in column_mapping or "teacher" in column_mapping):
+            detected_type = "schedule"
+            for idx, r in enumerate(all_raw_rows):
+                c_val = str(r.get(column_mapping.get("class", ""), "")).strip()
+                s_val = str(r.get(column_mapping.get("subject", ""), "")).strip()
+                t_val = str(r.get(column_mapping.get("teacher", ""), "")).strip()
+                d_val = str(r.get(column_mapping.get("day", ""), "0")).strip().split(".")[0]
+                p_val = str(r.get(column_mapping.get("period", ""), "0")).strip().split(".")[0]
+                r_val = str(r.get(column_mapping.get("room", ""), "")).strip()
+
+                if not c_val and not s_val and not t_val:
+                    continue
+
+                normalized_records.append({
+                    "id": idx + 1,
+                    "class_code": xinhe_class_to_dbf(c_val) or c_val,
+                    "class_name": c_val,
+                    "subject_code": f"SUB-{idx+1:02d}",
+                    "subject_name": s_val,
+                    "teacher_code": t_val,
+                    "teacher_name": t_val,
+                    "room_code": r_val,
+                    "room_name": r_val,
+                    "day": d_val if d_val.isdigit() else "0",
+                    "period": p_val if p_val.isdigit() else "0",
+                    "week_mode": 0,
+                    "ud": 0,
+                    "source": "ai_smart_import"
+                })
+
+        # 6. 若使用者要求自動直接生效 (auto_apply=True)
+        applied = False
+        if auto_apply:
+            save_snapshot("AI 智慧分析匯入前快照")
+            if normalized_records:
+                cfg["solved_schedules"] = normalized_records
+                applied = True
+            if detected_constraints:
+                if "custom_no_teach" not in cfg:
+                    cfg["custom_no_teach"] = {}
+                for dc in detected_constraints:
+                    if dc.get("type") == "no_teach":
+                        t_name = dc.get("teacher_name", "")
+                        d_val = dc.get("day", 1)
+                        p_list = dc.get("periods", [])
+                        # 嘗試由姓名反查代碼
+                        t_code = t_name
+                        for tc, tn in _name_cache.get("teachers", {}).items():
+                            if tn == t_name:
+                                t_code = tc
+                                break
+                        if t_code not in cfg["custom_no_teach"]:
+                            cfg["custom_no_teach"][t_code] = []
+                        for p in p_list:
+                            slot_tag = f"{d_val}-{p}"
+                            if slot_tag not in cfg["custom_no_teach"][t_code]:
+                                cfg["custom_no_teach"][t_code].append(slot_tag)
+                applied = True
+
+            if applied:
+                save_config_rules(cfg)
+                global _cached_data
+                _cached_data = None
+                load_schedule_data(force_reload=True)
+
+        return jsonify({
+            "status": "success",
+            "ai_engine": ai_engine_used,
+            "detected_type": detected_type,
+            "is_matrix_table": is_matrix_table,
+            "column_mapping": column_mapping,
+            "sample_headers": sample_headers,
+            "total_rows": total_rows,
+            "normalized_count": len(normalized_records),
+            "detected_constraints": detected_constraints,
+            "preview_samples": normalized_records[:8],
+            "ai_summary": ai_summary or f"已透過 {ai_engine_used} 完成非固定格式解析，成功識別 {len(column_mapping) if not is_matrix_table else len(day_cols)} 個核心欄位、正規化 {len(normalized_records)} 節課程與 {len(detected_constraints)} 條限制條件。",
+            "applied": applied
+        })
+    except Exception as e:
+        import traceback; traceback.print_exc()
+        return jsonify({"status": "error", "message": f"AI 分析匯入失敗: {str(e)}"}), 500
 
 @app.route("/api/xinhe/remove", methods=["POST"])
 def api_xinhe_remove():
@@ -3298,6 +4091,31 @@ def sync_to_github_cloud(filename, content_str, commit_message="Cloud Web UI Aut
 
     import threading
     threading.Thread(target=_bg_sync, daemon=True).start()
+
+@app.route("/api/github/sync-now", methods=["GET", "POST"])
+def api_github_sync_now():
+    """手動或前端一鍵觸發將專案全量檔案推送至 GitHub (Albertyoung22/TcSChed) 並自動啟動 Render 雲端部署。"""
+    try:
+        token = GITHUB_TOKEN or os.environ.get("GITHUB_TOKEN", "")
+        if not token:
+            return jsonify({"status": "error", "message": "未設定 GITHUB_TOKEN"}), 400
+
+        def _run_upload():
+            try:
+                import upload_to_github
+                upload_to_github.main()
+            except Exception as e:
+                print(f"[GitHub Sync Error] {e}")
+
+        import threading
+        threading.Thread(target=_run_upload, daemon=True).start()
+
+        return jsonify({
+            "status": "success",
+            "message": "🚀 已成功啟動 GitHub 雲端全量同步！檔案將自動推送至 Albertyoung22/TcSChed，並觸發 Render 雲端自動重新建置部署。"
+        })
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 def load_config_rules():
     if os.path.exists(CONFIG_RULES_FILE):
@@ -7098,17 +7916,20 @@ def api_save_config_rule():
 def api_trigger_cp_solver():
     """Triggers CP-SAT solver execution dynamically with live module reloads."""
     try:
+        save_snapshot("排課求解前自動安全快照")
         import importlib
         import solve_schedule
         importlib.reload(solve_schedule)
         res = solve_schedule.run_solver()
+        if res.get("status") == "success":
+            save_snapshot("排課求解完成自動快照")
         return jsonify(res)
     except Exception as e:
         return jsonify({"status": "error", "message": f"排課運算失敗: {str(e)}"}), 500
 
 @app.route("/api/health-check", methods=["GET"])
 def api_health_check():
-    """Runs global schedule health inspection & data logic validation with smart pseudo-teacher and joint-event filtering."""
+    """Runs global schedule health inspection & data logic validation with smart pseudo-teacher, joint-event filtering, and teacher fatigue analysis."""
     try:
         data = load_schedule_data()
         solved = get_current_solved_schedules()
@@ -7127,6 +7948,8 @@ def api_health_check():
         PSEUDO_TEACHERS = {"學務處", "各班導師", "教務處", "輔導室", "體育組", "總務處", "校長室", "無", "未指定", "待定", "自習"}
         JOINT_SUBJECTS = {"週會", "班會", "全校活動", "社團活動"}
 
+        teacher_daily_periods = {}
+
         for s in solved:
             day = s.get("day")
             period = s.get("period")
@@ -7135,14 +7958,12 @@ def api_health_check():
             c_name = str(s.get("class_name") or s.get("class_code") or "")
             subj = s.get("subject_name", "")
 
-            if not day or not period:
+            if not day or not period or str(day) == "0" or str(period) == "0":
                 continue
 
             slot_key = (day, period)
-
             is_pseudo_teacher = (t_name in PSEUDO_TEACHERS) or any(p in (t_name or "") for p in ["導師", "處", "組"])
             
-            # Taiwanese High School Grouped Electives & Extraction Subjects
             GROUPED_ELECTIVE_KEYWORDS = [
                 "本土", "語文", "手語", "閩南", "原民", "客家", "自主學習", 
                 "充實補強", "彈性學習", "週期課程", "選修", "抽離", "跨班", 
@@ -7151,7 +7972,7 @@ def api_health_check():
 
             is_joint_subject = (subj in JOINT_SUBJECTS) or any(k in subj for k in GROUPED_ELECTIVE_KEYWORDS) or ("跨班" in c_name)
 
-            # 1. Check teacher conflict (Only for real individual teachers teaching non-joint subjects)
+            # 1. Check teacher conflict
             if t_name and not is_pseudo_teacher and not is_joint_subject:
                 t_key = (slot_key, t_name)
                 if t_key in slot_teachers:
@@ -7163,7 +7984,7 @@ def api_health_check():
                 else:
                     slot_teachers[t_key] = c_name
 
-            # 2. Check class conflict (Only for standard non-cross-class sessions)
+            # 2. Check class conflict
             if c_name and "跨班" not in c_name and not is_joint_subject:
                 c_key = (slot_key, c_name)
                 if c_key in slot_classes:
@@ -7180,7 +8001,7 @@ def api_health_check():
                     if msg not in no_teach_violations:
                         no_teach_violations.append(msg)
 
-            # 4. Check Period 8 constraint: Regular main courses must NOT be in Period 8
+            # 4. Check Period 8 constraint
             if str(period) == "8":
                 is_tutoring = (subj.endswith("輔導") or ("輔導" in subj[1:]) or any(k in subj for k in ["第八", "8節", "課後", "補救"])) if subj else False
                 if subj and (subj.startswith("輔導活動") or subj == "輔導"):
@@ -7189,6 +8010,32 @@ def api_health_check():
                     msg = f"⚠️ 正課排入第8節違規：班級【{c_name}】星期{day} 第8節 被安排了正課【{subj}】({t_name})，按規定正課僅能排在第1~7節"
                     if msg not in no_teach_violations:
                         class_conflicts.append(msg)
+
+            # 5. Record daily periods for fatigue inspection
+            if t_name and not is_pseudo_teacher and str(period).isdigit():
+                p_int = int(period)
+                if 1 <= p_int <= 8:
+                    t_day_key = (t_name, str(day))
+                    if t_day_key not in teacher_daily_periods:
+                        teacher_daily_periods[t_day_key] = []
+                    teacher_daily_periods[t_day_key].append(p_int)
+
+        # Calculate fatigue metrics: consecutive >= 4 periods & heavy load >= 6 periods
+        for (t_name, d_str), p_list in teacher_daily_periods.items():
+            uniq_p = sorted(list(set(p_list)))
+            if len(uniq_p) >= 6:
+                fatigue_warnings.append(f"⚡ 教師【{t_name}】單日負擔偏高：星期{d_str} 排課達 {len(uniq_p)} 節，建議適度平衡課表")
+            consec = 1
+            max_consec = 1
+            for i in range(1, len(uniq_p)):
+                if uniq_p[i] == uniq_p[i-1] + 1:
+                    consec += 1
+                    if consec > max_consec:
+                        max_consec = consec
+                else:
+                    consec = 1
+            if max_consec >= 4:
+                fatigue_warnings.append(f"☕ 教師【{t_name}】連續授課疲勞：星期{d_str} 連續上課達 {max_consec} 節無休息，建議安排空堂或中場調移")
 
         total_issues = len(teacher_conflicts) + len(class_conflicts) + len(no_teach_violations) + len(fatigue_warnings)
 
