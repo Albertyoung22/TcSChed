@@ -8047,6 +8047,16 @@ function exportShinHerExcel(type) {
     if (!type) return;
     if (type === 'formal_timetable') {
         window.location.href = '/api/formal-timetable/export';
+    } else if (type === 'calendar_ics') {
+        window.location.href = '/api/calendar/export-ics?type=all';
+    } else if (type === 'github_sync') {
+        if (!confirm('確定要將當前所有程式碼、最新排課資料與設定一鍵同步至 GitHub (Albertyoung22/TcSChed) 嗎？\n完成後將自動觸發 Render 雲端重啟建置！')) return;
+        fetch('/api/github/sync-now', { method: 'POST' })
+            .then(r => r.json())
+            .then(res => {
+                alert(res.message || '已啟動 GitHub 雲端同步！');
+            })
+            .catch(err => alert('連線失敗: ' + err));
     } else if (type === 'batch_zip') {
         window.location.href = '/api/reports/batch-export-zip';
     } else if (type === 'overtime_rates') {
