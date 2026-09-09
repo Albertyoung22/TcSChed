@@ -325,6 +325,15 @@ def main():
     except Exception as e:
         print(f"[警告] 預先載入課表資料時發生錯誤: {e}")
 
+    # 自動偵測是否傳入上傳參數進行同步
+    if any(arg in sys.argv for arg in ["--upload", "-u", "upload"]):
+        print("\n[系統] 🚀 收到上傳指令，正在自動全量同步至 GitHub (Albertyoung22/TcSChed)...")
+        try:
+            import upload_to_github
+            upload_to_github.main()
+        except Exception as e_up:
+            print(f"[錯誤] 上傳至 GitHub 失敗: {e_up}")
+
     local_ip = get_local_ip()
 
     # Start Flask/Waitress server thread
@@ -344,6 +353,7 @@ def main():
     print(f"[資訊] 本機教師課表專頁: {url}/teacher")
     print(f"[資訊] 區域網路手機連線: {lan_url}/teacher (請使用 http:// 勿用 https://)")
     print(f"[資訊] ☁️ Render 雲端全球網址: https://tcsched.onrender.com/teacher")
+    print(f"[資訊] ☁️ GitHub 雲端同步: https://github.com/Albertyoung22/TcSChed (已配置 Access Token)")
     print(f"[資訊] 系統亮點與 AI 導覽 Showcase: {url}/showcase")
 
     launch_standalone_window(url, title)
